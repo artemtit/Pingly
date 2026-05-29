@@ -34,8 +34,29 @@ class AddHomework(StatesGroup):
     waiting_description = State()
 
 
+class EditProfile(StatesGroup):
+    waiting_name = State()
+
+
 def _username(message: Message) -> str | None:
     return message.from_user.username if message.from_user else None
+
+
+def role_choice_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="👨‍🏫 Я репетитор", callback_data="role:tutor"),
+        InlineKeyboardButton(text="🎓 Я ученик", callback_data="role:student"),
+    ]])
+
+
+def settings_keyboard(role: str) -> InlineKeyboardMarkup:
+    next_role = "student" if role == "tutor" else "tutor"
+    next_label = "🎓 Стать учеником" if next_role == "student" else "👨‍🏫 Стать репетитором"
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ Изменить имя", callback_data="settings:name")],
+        [InlineKeyboardButton(text=next_label, callback_data=f"settings:role:{next_role}")],
+        [InlineKeyboardButton(text="🌐 Открыть веб-кабинет", callback_data="settings:web")],
+    ])
 
 
 @router.message(CommandStart())
@@ -63,44 +84,86 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
 
     user = await services.accounts.get_by_tg_id(uid)
     if user and user["role"] == "student":
-        await message.answer("Привет! Выбери действие на кнопках ниже.", reply_markup=student_menu_keyboard())
+        await message.answer(
+            "С возвращением! 🎓\n\n"
+            "Здесь можно посмотреть ближайшее занятие, открыть задания, отметить ДЗ выполненным и зайти в веб-кабинет.",
+            reply_markup=student_menu_keyboard(),
+        )
+        return
+    if user and user["role"] == "tutor":
+        await message.answer(
+            "С возвращением! 👨‍🏫\n\n"
+            "Здесь можно управлять учениками, занятиями, заданиями и быстро открыть веб-кабинет.",
+            reply_markup=tutor_menu_keyboard(),
+        )
         return
 
-    await services.students.ensure_tutor(uid, message.from_user.full_name, _username(message))
     await message.answer(
         f"Привет, {message.from_user.first_name}! 👋\n\n"
-        "Pingly теперь объединяет бот и веб-кабинет.\n\n"
-        "Команды:\n"
-        "/menu — быстрые действия\n"
-        "/add_student — добавить ученика\n"
-        "/schedule — добавить занятие\n"
-        "/add_homework — выдать задание\n"
-        "/my_students — мои ученики\n"
-        "/calendar — календарь\n"
-        "/web — открыть кабинет",
-        reply_markup=tutor_menu_keyboard(),
+        "Я Pingly. Помогаю репетиторам и ученикам держать занятия, домашки и уведомления в одном месте.\n\n"
+        "Сначала выбери роль. Потом её можно поменять в настройках ⚙️",
+        reply_markup=role_choice_keyboard(),
     )
+
+
+@router.callback_query(F.data.startswith("role:"))
+async def choose_role(callback: CallbackQuery) -> None:
+    role = callback.data.split(":")[1]
+    user = await services.accounts.choose_role(
+        role,
+        callback.from_user.id,
+        callback.from_user.full_name,
+        callback.from_user.username,
+    )
+    if user["role"] == "student":
+        await callback.message.answer(
+            "Готово, ты вошёл как ученик 🎓\n\n"
+            "Что можно делать:\n"
+            "📚 видеть следующее занятие\n"
+            "📝 смотреть и сдавать задания\n"
+            "📈 отслеживать прогресс\n"
+            "🌐 открывать веб-кабинет",
+            reply_markup=student_menu_keyboard(),
+        )
+    else:
+        await callback.message.answer(
+            "Готово, ты вошёл как репетитор 👨‍🏫\n\n"
+            "Что можно делать:\n"
+            "👥 вести CRM учеников\n"
+            "📅 добавлять занятия\n"
+            "📝 выдавать задания\n"
+            "📊 смотреть аналитику\n"
+            "🌐 открывать веб-кабинет",
+            reply_markup=tutor_menu_keyboard(),
+        )
+    await callback.answer()
 
 
 @router.message(Command("menu"))
 async def cmd_menu(message: Message) -> None:
     user = await services.accounts.get_by_tg_id(message.from_user.id)
+    if not user:
+        await message.answer("Сначала выбери роль 👇", reply_markup=role_choice_keyboard())
+        return
     if user and user["role"] == "student":
         text = (
-            "Меню ученика:\n\n"
-            "/next_lesson — следующее занятие\n"
-            "/my_homework — мои задания\n"
-            "/progress — мой прогресс\n"
-            "/web — открыть веб-кабинет"
+            "Меню ученика 🎓\n\n"
+            "📚 Следующее занятие — когда следующий урок\n"
+            "📝 Мои задания — список ДЗ и сдача\n"
+            "📈 Мой прогресс — занятия и выполнение\n"
+            "⚙️ Настройки — имя и роль\n"
+            "🌐 Веб-кабинет — полный кабинет"
         )
     else:
         text = (
-            "Меню репетитора:\n\n"
-            "/my_students — мои ученики\n"
-            "/schedule — добавить занятие\n"
-            "/add_homework — добавить задание\n"
-            "/calendar — календарь\n"
-            "/web — открыть веб-кабинет"
+            "Меню репетитора 👨‍🏫\n\n"
+            "👥 Мои ученики — CRM и список\n"
+            "➕ Добавить ученика — приглашение по ссылке\n"
+            "📅 Календарь — ближайшие занятия\n"
+            "📝 Добавить задание — выдать ДЗ\n"
+            "📊 Аналитика — ученики, ДЗ, посещаемость\n"
+            "⚙️ Настройки — имя и роль\n"
+            "🌐 Веб-кабинет — полный кабинет"
         )
     await message.answer(text, reply_markup=student_menu_keyboard() if user and user["role"] == "student" else tutor_menu_keyboard())
 
@@ -140,13 +203,74 @@ async def btn_analytics(message: Message) -> None:
     await cmd_analytics(message)
 
 
+@router.message(F.text == "⚙️ Настройки")
+@router.message(Command("settings"))
+async def cmd_settings(message: Message) -> None:
+    user = await services.accounts.get_by_tg_id(message.from_user.id)
+    if not user:
+        await message.answer("Сначала выбери роль 👇", reply_markup=role_choice_keyboard())
+        return
+    role_text = "репетитор 👨‍🏫" if user["role"] == "tutor" else "ученик 🎓"
+    await message.answer(
+        "⚙️ Настройки Pingly\n\n"
+        f"Имя: {user['full_name']}\n"
+        f"Роль: {role_text}\n\n"
+        "Здесь можно поменять роль или обновить информацию о себе.",
+        reply_markup=settings_keyboard(user["role"]),
+    )
+
+
+@router.callback_query(F.data == "settings:name")
+async def settings_change_name(callback: CallbackQuery, state: FSMContext) -> None:
+    await state.set_state(EditProfile.waiting_name)
+    await callback.message.answer("Напиши, как тебя показывать в Pingly ✏️")
+    await callback.answer()
+
+
+@router.message(EditProfile.waiting_name)
+async def settings_save_name(message: Message, state: FSMContext) -> None:
+    name = (message.text or "").strip()
+    if len(name) < 2:
+        await message.answer("Имя слишком короткое. Напиши минимум 2 символа.")
+        return
+    user = await services.accounts.update_name(message.from_user.id, name)
+    await state.clear()
+    keyboard = student_menu_keyboard() if user and user["role"] == "student" else tutor_menu_keyboard()
+    await message.answer(f"✅ Готово! Теперь в Pingly ты: {name}", reply_markup=keyboard)
+
+
+@router.callback_query(F.data.startswith("settings:role:"))
+async def settings_change_role(callback: CallbackQuery) -> None:
+    role = callback.data.split(":")[2]
+    user = await services.accounts.change_role(callback.from_user.id, role)
+    if not user:
+        await callback.message.answer("Сначала нажми /start.")
+        await callback.answer()
+        return
+    if role == "student":
+        await callback.message.answer("✅ Роль изменена: теперь ты ученик 🎓", reply_markup=student_menu_keyboard())
+    else:
+        await callback.message.answer("✅ Роль изменена: теперь ты репетитор 👨‍🏫", reply_markup=tutor_menu_keyboard())
+    await callback.answer()
+
+
+@router.callback_query(F.data == "settings:web")
+async def settings_web(callback: CallbackQuery) -> None:
+    link = await services.web_auth.create_login_link_for_tg(callback.from_user.id)
+    if not link:
+        await callback.message.answer("Сначала нажми /start.")
+    else:
+        await callback.message.answer(f"🌐 Веб-кабинет Pingly:\n{link}\n\nСсылка действует 10 минут.")
+    await callback.answer()
+
+
 @router.message(Command("web"))
 async def cmd_web(message: Message) -> None:
     link = await services.web_auth.create_login_link_for_tg(message.from_user.id)
     if not link:
         await message.answer("Сначала нажми /start, чтобы я создал аккаунт.")
         return
-    await message.answer(f"Веб-кабинет Pingly:\n{link}\n\nСсылка действует 10 минут.")
+    await message.answer(f"🌐 Веб-кабинет Pingly:\n{link}\n\nСсылка действует 10 минут.")
 
 
 @router.message(Command("add_student"))

@@ -32,7 +32,19 @@ class HomeworkService:
         return await self.repo.list_homework_for_student_user(student_user_id)
 
     async def mark_submitted(self, student_user_id: str, homework_id: str) -> dict | None:
-        return await self.repo.update_homework_status(student_user_id, homework_id, HomeworkStatus.SUBMITTED.value)
+        homework = await self.repo.update_homework_status(student_user_id, homework_id, HomeworkStatus.SUBMITTED.value)
+        if homework:
+            await self.repo.create_notification(
+                homework["tutor_user_id"],
+                NotificationType.HOMEWORK_SUBMITTED.value,
+                "Ученик сдал домашнее задание",
+                homework["title"],
+                {"homework_id": homework_id, "student_id": homework.get("student_id")},
+            )
+        return homework
+
+    async def mark_in_progress(self, student_user_id: str, homework_id: str) -> dict | None:
+        return await self.repo.update_homework_status(student_user_id, homework_id, HomeworkStatus.IN_PROGRESS.value)
 
     async def review(self, tutor_user_id: str, homework_id: str, comment: str | None = None) -> dict | None:
         homework = await self.repo.update_homework_status(tutor_user_id, homework_id, HomeworkStatus.REVIEWED.value, comment)

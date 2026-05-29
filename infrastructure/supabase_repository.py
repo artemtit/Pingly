@@ -22,22 +22,71 @@ class SupabasePinglyRepository:
         result = await self._db().table("users").select("*").eq("id", user_id).execute()
         return _one(result)
 
-    async def upsert_tutor_user(self, tg_id: int, full_name: str, tg_username: str | None) -> dict[str, Any]:
+    async def upsert_user(self, role: str, tg_id: int, full_name: str, tg_username: str | None) -> dict[str, Any]:
         existing = await self.get_user_by_tg_id(tg_id)
         if existing:
+            if existing["role"] != role:
+                updated = await self.update_user_profile(existing["id"], role=role)
+                return updated or existing
             return existing
+
         result = await self._db().table("users").insert({
-            "role": "tutor",
+            "role": role,
             "tg_id": tg_id,
             "tg_username": tg_username,
             "full_name": full_name,
         }).execute()
         user = result.data[0]
-        await self._db().table("tutor_profiles").insert({
-            "user_id": user["id"],
-            "display_name": full_name,
-        }).execute()
+        if role == "tutor":
+            await self._db().table("tutor_profiles").insert({
+                "user_id": user["id"],
+                "display_name": full_name,
+            }).execute()
+        else:
+            await self._db().table("student_profiles").insert({
+                "user_id": user["id"],
+                "name": full_name,
+                "tg_username": tg_username,
+                "invite_token": f"self_{user['id']}",
+                "status": "active",
+            }).execute()
         return user
+
+    async def update_user_profile(self, user_id: str, full_name: str | None = None, role: str | None = None) -> dict[str, Any] | None:
+        patch: dict[str, Any] = {}
+        if full_name:
+            patch["full_name"] = full_name
+        if role:
+            patch["role"] = role
+        if not patch:
+            return await self.get_user_by_id(user_id)
+        result = await self._db().table("users").update(patch).eq("id", user_id).execute()
+        user = _one(result)
+        if not user:
+            return None
+        if full_name:
+            if user["role"] == "tutor":
+                await self._db().table("tutor_profiles").update({"display_name": full_name}).eq("user_id", user_id).execute()
+            else:
+                await self._db().table("student_profiles").update({"name": full_name}).eq("user_id", user_id).execute()
+        if role == "tutor":
+            profile = await self._db().table("tutor_profiles").select("id").eq("user_id", user_id).execute()
+            if not profile.data:
+                await self._db().table("tutor_profiles").insert({"user_id": user_id, "display_name": user["full_name"]}).execute()
+        if role == "student":
+            profile = await self._db().table("student_profiles").select("id").eq("user_id", user_id).execute()
+            if not profile.data:
+                await self._db().table("student_profiles").insert({
+                    "user_id": user_id,
+                    "name": user["full_name"],
+                    "tg_username": user.get("tg_username"),
+                    "invite_token": f"self_{user_id}",
+                    "status": "active",
+                }).execute()
+        return user
+
+    async def upsert_tutor_user(self, tg_id: int, full_name: str, tg_username: str | None) -> dict[str, Any]:
+        return await self.upsert_user("tutor", tg_id, full_name, tg_username)
 
     async def create_invited_student(self, tutor_user_id: str, name: str, tg_username: str, invite_token: str) -> dict[str, Any]:
         result = await self._db().table("student_profiles").insert({

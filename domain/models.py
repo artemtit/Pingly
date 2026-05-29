@@ -29,6 +29,7 @@ class NotificationType(str, Enum):
     LESSON_DAY_BEFORE = "lesson_day_before"
     LESSON_HOUR_BEFORE = "lesson_hour_before"
     HOMEWORK_CREATED = "homework_created"
+    HOMEWORK_SUBMITTED = "homework_submitted"
     HOMEWORK_REVIEWED = "homework_reviewed"
     LESSON_RESCHEDULED = "lesson_rescheduled"
 
