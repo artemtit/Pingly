@@ -28,6 +28,16 @@ async def create_tutor(tg_id: int, name: str) -> dict:
 
 # --- Students ---
 
+async def get_student_by_username(tg_username: str) -> dict | None:
+    result = await _db().table("students").select("*").eq("tg_username", tg_username).execute()
+    return result.data[0] if result.data else None
+
+
+async def get_student_by_tg_id(tg_id: int) -> dict | None:
+    result = await _db().table("students").select("*").eq("tg_id", tg_id).execute()
+    return result.data[0] if result.data else None
+
+
 async def get_students(tutor_id: int) -> list[dict]:
     result = await _db().table("students").select("*").eq("tutor_id", tutor_id).execute()
     return result.data

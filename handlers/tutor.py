@@ -23,9 +23,27 @@ class AddLesson(StatesGroup):
 
 @router.message(CommandStart())
 async def cmd_start(message: Message) -> None:
-    tutor = await db.get_tutor(message.from_user.id)
+    uid = message.from_user.id
+    username = message.from_user.username or ""
+
+    # Проверяем: это ученик?
+    student = await db.get_student_by_tg_id(uid)
+    if not student and username:
+        student = await db.get_student_by_username(username)
+    if student:
+        if not student.get("tg_id"):
+            await db.update_student_tg_id(student["tg_username"], uid)
+        await message.answer(
+            "Привет! 👋\n\n"
+            "Я буду напоминать тебе о занятиях за 2 часа до урока.\n"
+            "Ничего настраивать не нужно — просто жди напоминание!"
+        )
+        return
+
+    # Иначе — репетитор
+    tutor = await db.get_tutor(uid)
     if not tutor:
-        await db.create_tutor(message.from_user.id, message.from_user.full_name)
+        await db.create_tutor(uid, message.from_user.full_name)
     await message.answer(
         f"Привет, {message.from_user.first_name}! 👋\n\n"
         "Я помогаю автоматически напоминать ученикам о занятиях.\n\n"

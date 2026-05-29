@@ -1,21 +1,8 @@
 from aiogram import Router, F
-from aiogram.filters import CommandStart
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery
 import db
 
 router = Router()
-
-
-@router.message(CommandStart())
-async def student_start(message: Message) -> None:
-    username = message.from_user.username
-    if username:
-        await db.update_student_tg_id(username, message.from_user.id)
-    await message.answer(
-        "Привет! 👋\n\n"
-        "Я буду напоминать тебе о занятиях с репетитором за 2 часа до урока.\n"
-        "Ничего настраивать не нужно — просто жди напоминание!"
-    )
 
 
 @router.callback_query(F.data.startswith("confirm:"))
