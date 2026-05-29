@@ -38,6 +38,11 @@ async def get_student_by_tg_id(tg_id: int) -> dict | None:
     return result.data[0] if result.data else None
 
 
+async def get_student_by_invite_token(token: str) -> dict | None:
+    result = await _db().table("students").select("*").eq("invite_token", token).execute()
+    return result.data[0] if result.data else None
+
+
 async def get_students(tutor_id: int) -> list[dict]:
     result = await _db().table("students").select("*").eq("tutor_id", tutor_id).execute()
     return result.data
@@ -48,11 +53,12 @@ async def get_student(student_id: str) -> dict | None:
     return result.data[0] if result.data else None
 
 
-async def create_student(tutor_id: int, name: str, tg_username: str) -> dict:
+async def create_student(tutor_id: int, name: str, tg_username: str, invite_token: str) -> dict:
     result = await _db().table("students").insert({
         "tutor_id": tutor_id,
         "name": name,
         "tg_username": tg_username,
+        "invite_token": invite_token,
     }).execute()
     return result.data[0]
 

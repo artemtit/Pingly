@@ -1,5 +1,8 @@
+import secrets
+import config
 from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
+from aiogram.filters.command import CommandObject
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -22,25 +25,31 @@ class AddLesson(StatesGroup):
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message) -> None:
+async def cmd_start(message: Message, command: CommandObject) -> None:
     uid = message.from_user.id
-    username = message.from_user.username or ""
 
-    # Проверяем: это ученик?
-    student = await db.get_student_by_tg_id(uid)
-    if not student and username:
-        student = await db.get_student_by_username(username)
-    if student:
-        if not student.get("tg_id"):
+    # Deep link от репетитора: /start inv_TOKEN
+    if command.args and command.args.startswith("inv_"):
+        token = command.args[4:]
+        student = await db.get_student_by_invite_token(token)
+        if student:
             await db.update_student_tg_id(student["tg_username"], uid)
-        await message.answer(
-            "Привет! 👋\n\n"
-            "Я буду напоминать тебе о занятиях за 2 часа до урока.\n"
-            "Ничего настраивать не нужно — просто жди напоминание!"
-        )
+            await message.answer(
+                "Привет! 👋\n\n"
+                "Я буду напоминать тебе о занятиях за 2 часа до урока.\n"
+                "Ничего настраивать не нужно — просто жди напоминание!"
+            )
+            return
+        await message.answer("Ссылка недействительна. Попроси репетитора прислать новую.")
         return
 
-    # Иначе — репетитор
+    # Уже зарегистрированный ученик
+    student = await db.get_student_by_tg_id(uid)
+    if student:
+        await message.answer("Привет! Жди напоминание перед занятием 👋")
+        return
+
+    # Репетитор
     tutor = await db.get_tutor(uid)
     if not tutor:
         await db.create_tutor(uid, message.from_user.full_name)
@@ -65,8 +74,8 @@ async def add_student_name(message: Message, state: FSMContext) -> None:
     await state.update_data(name=message.text.strip())
     await state.set_state(AddStudent.waiting_username)
     await message.answer(
-        "Отлично! Теперь введи его Telegram-юзернейм (без @).\n\n"
-        "Попроси ученика написать боту /start — тогда напоминания дойдут."
+        "Отлично! Теперь введи его Telegram-юзернейм (без @).\n"
+        "Если у ученика нет юзернейма — введи любое слово, ссылка всё равно сработает."
     )
 
 
@@ -74,10 +83,15 @@ async def add_student_name(message: Message, state: FSMContext) -> None:
 async def add_student_username(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     username = message.text.strip().lstrip("@")
-    await db.create_student(message.from_user.id, data["name"], username)
+    token = secrets.token_urlsafe(8)
+    student = await db.create_student(message.from_user.id, data["name"], username, token)
     await state.clear()
+
+    invite_link = f"https://t.me/{config.BOT_USERNAME}?start=inv_{student['invite_token']}"
     await message.answer(
-        f"✅ Ученик {data['name']} (@{username}) добавлен!\n\n"
+        f"✅ Ученик {data['name']} добавлен!\n\n"
+        f"Отправь ему эту ссылку — он нажмёт и бот запомнит его:\n"
+        f"{invite_link}\n\n"
         "Теперь добавь расписание: /schedule"
     )
 

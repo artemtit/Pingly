@@ -1,4 +1,5 @@
 import asyncio
+import config
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from config import BOT_TOKEN
@@ -11,6 +12,9 @@ async def main() -> None:
     await db.init_db()
 
     bot = Bot(token=BOT_TOKEN)
+    me = await bot.get_me()
+    config.BOT_USERNAME = me.username
+
     dp = Dispatcher(storage=MemoryStorage())
 
     dp.include_router(tutor.router)
