@@ -1,0 +1,103 @@
+{% extends "layout.html" %}
+{% import "macros.html" as ui %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Расписание</div>
+    <h1>🗓️ Добавить занятие</h1>
+    <p class="muted">Разовое или повторяющееся — Pingly сам создаст уроки и напоминания.</p>
+  </div>
+</div>
+
+<section class="grid two" style="align-items: start;">
+  <div class="card">
+    <h2>Новое занятие</h2>
+    {% if not students %}
+    <div class="empty"><div class="empty-emoji">👥</div><p>Сначала добавь ученика в боте.</p></div>
+    {% else %}
+    <form method="post" action="/tutor/schedule" class="form" id="schedule-form">
+      <label class="field"><span>Ученик</span>
+        <select name="student_id" required>
+          {% for s in students %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select>
+      </label>
+
+      <label class="field"><span>Повторение</span>
+        <select name="recurrence" id="recurrence" onchange="onRecurrence()">
+          <option value="once">Разовое занятие</option>
+          <option value="weekly" selected>Каждую неделю</option>
+          <option value="multiple_weekly">Несколько раз в неделю</option>
+          <option value="daily">Каждый день</option>
+          <option value="every_n_days">Каждые N дней</option>
+          <option value="every_n_weeks">Каждые N недель</option>
+        </select>
+      </label>
+
+      <div class="field" id="date-field" style="display:none;"><span>Дата</span>
+        <input class="input" type="date" name="lesson_date"></div>
+
+      <label class="field"><span>Время</span>
+        <input class="input" type="time" name="lesson_time" value="15:00" required></label>
+
+      <div class="field" id="weekdays-field"><span>Дни недели</span>
+        <div class="weekday-picker">
+          {% set names = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"] %}
+          {% for i in range(7) %}
+          <label class="wd"><input type="checkbox" name="weekdays" value="{{ i }}" {{ 'checked' if i == 0 }}><span>{{ names[i] }}</span></label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="field" id="interval-field" style="display:none;"><span>Интервал (N)</span>
+        <input class="input" type="number" name="interval_n" value="1" min="1" max="30"></div>
+
+      <button class="btn btn-primary">➕ Создать</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Будущие занятия</h2>
+    <div class="timeline">
+      {% for lesson in upcoming %}
+      <div class="timeline-row">
+        <div class="timeline-dot {{ lesson.status }}"></div>
+        <div class="timeline-body">
+          <div class="timeline-when">{{ lesson.starts_at[:16].replace("T", " ") }}</div>
+          <div class="timeline-who">{{ lesson.student_profiles.name if lesson.student_profiles else "Ученик" }}</div>
+        </div>
+        <div class="series-actions">
+          {{ ui.status_badge(lesson.status) }}
+          {% if lesson.schedule_rule_id and lesson.status == "scheduled" %}
+          <details class="resched">
+            <summary class="link-btn">серия</summary>
+            <div class="series-menu">
+              <form method="post" action="/tutor/series/{{ lesson.schedule_rule_id }}/reschedule" class="resched-form">
+                <input class="input" type="time" name="new_time" required>
+                <button class="btn btn-secondary btn-sm">🔄 Перенести всю серию</button>
+              </form>
+              <form method="post" action="/tutor/series/{{ lesson.schedule_rule_id }}/cancel">
+                <button class="btn btn-ghost btn-sm">❌ Отменить серию</button>
+              </form>
+            </div>
+          </details>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="empty"><div class="empty-emoji">🗓️</div><p>Будущих занятий нет.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<script>
+function onRecurrence() {
+  var v = document.getElementById('recurrence').value;
+  document.getElementById('date-field').style.display = (v === 'once') ? '' : 'none';
+  document.getElementById('weekdays-field').style.display = (v === 'weekly' || v === 'multiple_weekly' || v === 'every_n_weeks') ? '' : 'none';
+  document.getElementById('interval-field').style.display = (v === 'every_n_days' || v === 'every_n_weeks') ? '' : 'none';
+}
+onRecurrence();
+</script>
+{% endblock %}

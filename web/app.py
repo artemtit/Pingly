@@ -1,19 +1,21 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
-from fastapi.responses import FileResponse
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, URLSafeSerializer
 
 from application.factory import create_services
 from config import WEB_SECRET
+from web.calendar_view import STATUS_LABELS, build_calendar, parse_anchor
 
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+templates.env.globals["status_labels"] = STATUS_LABELS
 services = create_services()
 signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")
 
@@ -43,7 +45,31 @@ def _login_redirect() -> RedirectResponse:
     return RedirectResponse("/login", status_code=303)
 
 
-def register_routes(app: FastAPI) -> None:
+def _require(user: dict, role: str) -> None:
+    if user["role"] != role:
+        raise HTTPException(status_code=403)
+
+
+def _parse_local(raw: str) -> datetime | None:
+    """Parse an <input type=datetime-local> value (seconds optional) as UTC."""
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    if len(raw) == 16:  # YYYY-MM-DDTHH:MM
+        raw += ":00"
+    try:
+        return datetime.fromisoformat(raw).replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _ctx(request: Request, user: dict, active: str, **extra) -> dict:
+    base = {"request": request, "user": user, "active": active}
+    base.update(extra)
+    return base
+
+
+def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
@@ -67,11 +93,8 @@ def register_routes(app: FastAPI) -> None:
             return RedirectResponse("/login?error=expired", status_code=303)
         response = RedirectResponse("/tutor" if user["role"] == "tutor" else "/student", status_code=303)
         response.set_cookie(
-            "pingly_session",
-            signer.dumps(user["id"]),
-            httponly=True,
-            samesite="lax",
-            max_age=60 * 60 * 24 * 30,
+            "pingly_session", signer.dumps(user["id"]),
+            httponly=True, samesite="lax", max_age=60 * 60 * 24 * 30,
         )
         return response
 
@@ -85,6 +108,13 @@ def register_routes(app: FastAPI) -> None:
     async def design_tokens() -> Response:
         return FileResponse(BASE_DIR.parent / "design-tokens.css", media_type="text/css")
 
+    @app.post("/role/switch")
+    async def role_switch(role: str = Form(...), user: dict = Depends(current_user)) -> Response:
+        if role in {"tutor", "student"} and user.get("tg_id"):
+            await services.accounts.change_role(user["tg_id"], role)
+        return RedirectResponse("/", status_code=303)
+
+    # ---------------- TUTOR ----------------
     @app.get("/tutor", response_class=HTMLResponse)
     async def tutor_dashboard(request: Request, user: dict = Depends(current_user)) -> Response:
         if user["role"] != "tutor":
@@ -93,61 +123,162 @@ def register_routes(app: FastAPI) -> None:
         lessons = await services.lessons.list_tutor_calendar(user["id"])
         homework = await services.homework.list_for_tutor(user["id"])
         analytics = await services.analytics.tutor_dashboard(user["id"])
-        notifications = await services.notifications.list_for_user(user["id"])
-        return templates.TemplateResponse(
-            "tutor.html",
-            {
-                "request": request,
-                "user": user,
-                "students": students,
-                "lessons": lessons,
-                "homework": homework,
-                "analytics": analytics,
-                "notifications": notifications,
-            },
-        )
+        game = services.gamification.compute(lessons, homework)
+        now = datetime.now(timezone.utc).isoformat()
+        upcoming = [l for l in lessons if l.get("status") == "scheduled" and (l.get("starts_at") or "") >= now][:6]
+        pending_hw = [h for h in homework if h.get("status") == "submitted"]
+        return templates.TemplateResponse("tutor.html", _ctx(
+            request, user, "overview",
+            students=students, analytics=analytics, game=game,
+            upcoming=upcoming, pending_hw=pending_hw,
+        ))
 
     @app.get("/tutor/students", response_class=HTMLResponse)
     async def tutor_students(request: Request, q: str | None = None, user: dict = Depends(current_user)) -> Response:
-        if user["role"] != "tutor":
-            raise HTTPException(status_code=403)
+        _require(user, "tutor")
         students = await services.students.list_students_by_user(user["id"], q)
-        return templates.TemplateResponse("students.html", {"request": request, "user": user, "students": students, "q": q or ""})
+        return templates.TemplateResponse("students.html", _ctx(request, user, "students", students=students, q=q or ""))
 
     @app.get("/tutor/students/{student_id}", response_class=HTMLResponse)
     async def tutor_student_card(request: Request, student_id: str, user: dict = Depends(current_user)) -> Response:
-        if user["role"] != "tutor":
-            raise HTTPException(status_code=403)
+        _require(user, "tutor")
         try:
             card = await services.students.student_card(user["id"], student_id)
         except PermissionError as exc:
             raise HTTPException(status_code=404) from exc
-        return templates.TemplateResponse("student_card.html", {"request": request, "user": user, **card})
+        game = services.gamification.compute(card["lessons"], card["homework"])
+        return templates.TemplateResponse("student_card.html", _ctx(request, user, "students", game=game, **card))
 
-    @app.post("/tutor/lessons")
-    async def create_lesson(
-        student_id: str = Form(...),
-        day_of_week: int = Form(...),
-        lesson_time: str = Form(...),
+    @app.post("/tutor/students/{student_id}/profile")
+    async def update_student_profile(
+        student_id: str,
+        name: str = Form(...),
+        subject_summary: str = Form(""),
+        grade: str = Form(""),
+        goal: str = Form(""),
+        started_at: str = Form(""),
         user: dict = Depends(current_user),
     ) -> Response:
-        if user["role"] != "tutor":
-            raise HTTPException(status_code=403)
-        await services.lessons.create_recurring_lesson_for_user(user["id"], student_id, day_of_week, lesson_time)
-        return RedirectResponse("/tutor#calendar", status_code=303)
+        _require(user, "tutor")
+        await services.students.update_profile(user["id"], student_id, {
+            "name": name.strip(),
+            "subject_summary": subject_summary.strip() or None,
+            "grade": grade.strip() or None,
+            "goal": goal.strip() or None,
+            "started_at": started_at.strip() or None,
+        })
+        return RedirectResponse(f"/tutor/students/{student_id}", status_code=303)
+
+    @app.post("/tutor/students/{student_id}/note")
+    async def update_student_note(student_id: str, note: str = Form(""), user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.students.set_note(user["id"], student_id, note.strip() or None)
+        return RedirectResponse(f"/tutor/students/{student_id}", status_code=303)
+
+    @app.get("/tutor/calendar", response_class=HTMLResponse)
+    async def tutor_calendar(request: Request, view: str = "month", date: str | None = None, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        lessons = await services.lessons.list_tutor_calendar(user["id"])
+        cal = build_calendar(lessons, view if view in {"day", "week", "month"} else "month", parse_anchor(date))
+        return templates.TemplateResponse("calendar.html", _ctx(request, user, "calendar", cal=cal, base="/tutor/calendar"))
+
+    @app.get("/tutor/schedule", response_class=HTMLResponse)
+    async def tutor_schedule(request: Request, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        students = await services.students.list_students_by_user(user["id"])
+        lessons = await services.lessons.list_tutor_calendar(user["id"])
+        now = datetime.now(timezone.utc).isoformat()
+        upcoming = [l for l in lessons if (l.get("starts_at") or "") >= now][:30]
+        return templates.TemplateResponse("schedule.html", _ctx(request, user, "schedule", students=students, upcoming=upcoming))
+
+    @app.post("/tutor/schedule")
+    async def create_schedule(
+        student_id: str = Form(...),
+        recurrence: str = Form("weekly"),
+        lesson_time: str = Form("15:00"),
+        lesson_date: str = Form(""),
+        interval_n: int = Form(1),
+        weekdays: list[int] = Form(default=[]),
+        user: dict = Depends(current_user),
+    ) -> Response:
+        _require(user, "tutor")
+        time_norm = lesson_time.strip()[:5] or "15:00"
+        if recurrence == "once":
+            day = lesson_date.strip() or datetime.now(timezone.utc).date().isoformat()
+            starts_at = datetime.fromisoformat(f"{day}T{time_norm}:00").replace(tzinfo=timezone.utc)
+            await services.lessons.create_one_time_lesson(user["id"], student_id, starts_at)
+        else:
+            wd = weekdays or None
+            await services.lessons.create_schedule(
+                user["id"], student_id, recurrence, f"{time_norm}:00",
+                weekdays=wd, interval_n=interval_n,
+            )
+        return RedirectResponse("/tutor/calendar?view=month", status_code=303)
+
+    @app.get("/tutor/homework", response_class=HTMLResponse)
+    async def tutor_homework(request: Request, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        students = await services.students.list_students_by_user(user["id"])
+        homework = await services.homework.list_for_tutor(user["id"])
+        return templates.TemplateResponse("homework_tutor.html", _ctx(request, user, "homework", students=students, homework=homework))
 
     @app.post("/tutor/homework")
     async def create_homework(
         student_id: str = Form(...),
         title: str = Form(...),
         description: str = Form(""),
+        due_at: str = Form(""),
         user: dict = Depends(current_user),
     ) -> Response:
-        if user["role"] != "tutor":
-            raise HTTPException(status_code=403)
-        await services.homework.create_homework(user["id"], student_id, title, description or None)
-        return RedirectResponse("/tutor#homework", status_code=303)
+        _require(user, "tutor")
+        due = _parse_local(due_at)
+        await services.homework.create_homework(user["id"], student_id, title, description or None, due)
+        return RedirectResponse("/tutor/homework", status_code=303)
 
+    @app.post("/tutor/homework/{homework_id}/review")
+    async def review_homework(homework_id: str, comment: str = Form(""), user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.homework.review(user["id"], homework_id, comment.strip() or None)
+        return RedirectResponse("/tutor/homework", status_code=303)
+
+    @app.post("/tutor/lessons/{lesson_id}/complete")
+    async def complete_lesson(lesson_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.lessons.complete_lesson(user["id"], lesson_id)
+        return RedirectResponse("/tutor/calendar", status_code=303)
+
+    @app.post("/tutor/lessons/{lesson_id}/cancel")
+    async def cancel_lesson(lesson_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.lessons.cancel_lesson(user["id"], lesson_id)
+        return RedirectResponse("/tutor/calendar", status_code=303)
+
+    @app.post("/tutor/lessons/{lesson_id}/reschedule")
+    async def reschedule_lesson(lesson_id: str, new_at: str = Form(...), user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        new_dt = _parse_local(new_at)
+        if new_dt:
+            await services.lessons.reschedule_lesson(user["id"], lesson_id, new_dt)
+        return RedirectResponse("/tutor/calendar", status_code=303)
+
+    @app.post("/tutor/series/{rule_id}/cancel")
+    async def cancel_series(rule_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.lessons.cancel_series(user["id"], rule_id)
+        return RedirectResponse("/tutor/schedule", status_code=303)
+
+    @app.post("/tutor/series/{rule_id}/reschedule")
+    async def reschedule_series(rule_id: str, new_time: str = Form(...), user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.lessons.reschedule_series(user["id"], rule_id, new_time.strip()[:5])
+        return RedirectResponse("/tutor/schedule", status_code=303)
+
+    @app.get("/tutor/settings", response_class=HTMLResponse)
+    async def tutor_settings(request: Request, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings"))
+
+    # ---------------- STUDENT ----------------
     @app.get("/student", response_class=HTMLResponse)
     async def student_dashboard(request: Request, user: dict = Depends(current_user)) -> Response:
         if user["role"] != "student":
@@ -155,21 +286,57 @@ def register_routes(app: FastAPI) -> None:
         lessons = await services.lessons.list_student_calendar(user["id"])
         next_lesson = await services.lessons.next_lesson_for_student(user["id"])
         homework = await services.homework.list_for_student(user["id"])
-        notifications = await services.notifications.list_for_user(user["id"])
-        reviewed = len([h for h in homework if h.get("status") == "reviewed"])
+        game = services.gamification.compute(lessons, homework)
+        active_hw = [h for h in homework if h.get("status") in ("new", "in_progress")]
+        return templates.TemplateResponse("student.html", _ctx(
+            request, user, "overview",
+            next_lesson=next_lesson, game=game, active_hw=active_hw,
+        ))
+
+    @app.get("/student/calendar", response_class=HTMLResponse)
+    async def student_calendar(request: Request, view: str = "month", date: str | None = None, user: dict = Depends(current_user)) -> Response:
+        _require(user, "student")
+        lessons = await services.lessons.list_student_calendar(user["id"])
+        cal = build_calendar(lessons, view if view in {"day", "week", "month"} else "month", parse_anchor(date))
+        return templates.TemplateResponse("calendar.html", _ctx(request, user, "calendar", cal=cal, base="/student/calendar"))
+
+    @app.get("/student/homework", response_class=HTMLResponse)
+    async def student_homework(request: Request, user: dict = Depends(current_user)) -> Response:
+        _require(user, "student")
+        homework = await services.homework.list_for_student(user["id"])
+        return templates.TemplateResponse("homework_student.html", _ctx(request, user, "homework", homework=homework))
+
+    @app.post("/student/homework/{homework_id}/progress")
+    async def hw_progress(homework_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "student")
+        await services.homework.mark_in_progress(user["id"], homework_id)
+        return RedirectResponse("/student/homework", status_code=303)
+
+    @app.post("/student/homework/{homework_id}/submit")
+    async def hw_submit(homework_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "student")
+        await services.homework.mark_submitted(user["id"], homework_id)
+        return RedirectResponse("/student/homework", status_code=303)
+
+    @app.get("/student/progress", response_class=HTMLResponse)
+    async def student_progress(request: Request, user: dict = Depends(current_user)) -> Response:
+        _require(user, "student")
+        lessons = await services.lessons.list_student_calendar(user["id"])
+        homework = await services.homework.list_for_student(user["id"])
+        game = services.gamification.compute(lessons, homework)
+        completed = sorted([l for l in lessons if l.get("status") == "completed"], key=lambda l: l.get("starts_at") or "", reverse=True)
+        reviewed = [h for h in homework if h.get("status") == "reviewed"]
         progress = {
-            "completed_lessons": len([l for l in lessons if l.get("status") == "completed"]),
-            "homework_completion_percent": round(reviewed / len(homework) * 100) if homework else 0,
+            "completed_lessons": len(completed),
+            "homework_completion_percent": round(len(reviewed) / len(homework) * 100) if homework else 0,
+            "reviewed": len(reviewed),
+            "total_homework": len(homework),
         }
-        return templates.TemplateResponse(
-            "student.html",
-            {
-                "request": request,
-                "user": user,
-                "lessons": lessons,
-                "next_lesson": next_lesson,
-                "homework": homework,
-                "notifications": notifications,
-                "progress": progress,
-            },
-        )
+        return templates.TemplateResponse("student_progress.html", _ctx(
+            request, user, "progress", game=game, progress=progress, history=completed[:15],
+        ))
+
+    @app.get("/student/settings", response_class=HTMLResponse)
+    async def student_settings(request: Request, user: dict = Depends(current_user)) -> Response:
+        _require(user, "student")
+        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings"))

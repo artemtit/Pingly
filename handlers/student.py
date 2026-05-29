@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import random
+
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -9,6 +11,13 @@ from handlers.keyboards import student_menu_keyboard
 
 router = Router()
 services = create_services()
+
+PRAISE = ["🎉 Отлично!", "🔥 Супер!", "⭐ Молодец!", "🚀 Так держать!", "💪 Красавчик!"]
+
+
+def _xp_bar(percent: int) -> str:
+    filled = max(0, min(10, round(percent / 10)))
+    return "▰" * filled + "▱" * (10 - filled)
 
 
 def homework_keyboard(homework_id: str, status: str) -> InlineKeyboardMarkup | None:
@@ -83,12 +92,20 @@ async def cmd_progress(message: Message) -> None:
     homework = await services.homework.list_for_student(user["id"])
     completed = len([l for l in lessons if l.get("status") == "completed"])
     reviewed = len([h for h in homework if h.get("status") == "reviewed"])
-    percent = round(reviewed / len(homework) * 100) if homework else 0
+    game = services.gamification.compute(lessons, homework)
+
+    ach = [a for a in game["achievements"] if a["unlocked"]]
+    ach_text = " ".join(a["emoji"] for a in ach) if ach else "пока нет — всё впереди!"
+
     await message.answer(
-        "Мой прогресс:\n\n"
-        f"Проведено занятий: {completed}\n"
-        f"Проверено заданий: {reviewed}\n"
-        f"Выполнение ДЗ: {percent}%",
+        "🚀 Твой прогресс\n\n"
+        f"⭐ Уровень {game['level']} · {game['rank']}\n"
+        f"{_xp_bar(game['level_progress_percent'])} {game['level_progress_percent']}%\n"
+        f"💎 {game['xp']} XP · до следующего уровня {game['xp_to_next']} XP\n"
+        f"🔥 Серия активности: {game['streak']} дн.\n\n"
+        f"🔵 Занятий пройдено: {completed}\n"
+        f"📝 ДЗ выполнено: {reviewed}\n\n"
+        f"🏆 Достижения ({game['unlocked_count']}/{game['total_achievements']}): {ach_text}",
         reply_markup=student_menu_keyboard(),
     )
 
@@ -134,6 +151,9 @@ async def homework_submit(callback: CallbackQuery) -> None:
         await callback.answer("Задание не найдено.", show_alert=True)
         return
     await callback.message.edit_text(
-        f"✅ Задание сдано\n\n📌 {homework['title']}\n\nЯ отправил репетитору уведомление. Когда он проверит ДЗ, ты получишь сообщение."
+        f"{random.choice(PRAISE)}\n\n"
+        f"✅ Задание сдано\n📌 {homework['title']}\n\n"
+        "Я отправил репетитору уведомление. Когда он проверит ДЗ, ты получишь сообщение. "
+        "Загляни в 📈 Мой прогресс — возможно, ты приблизился к новому уровню! 🚀"
     )
-    await callback.answer("Сдано")
+    await callback.answer("Сдано 🎉")

@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+{% import "macros.html" as ui %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Задания</div>
+    <h1>📝 Домашние задания</h1>
+    <p class="muted">Выдавай задания и проверяй сданные работы.</p>
+  </div>
+</div>
+
+<section class="grid two" style="align-items: start;">
+  <div class="card">
+    <h2>Выдать задание</h2>
+    {% if not students %}
+    <div class="empty"><div class="empty-emoji">👥</div><p>Сначала добавь ученика в боте.</p></div>
+    {% else %}
+    <form method="post" action="/tutor/homework" class="form">
+      <label class="field"><span>Ученик</span>
+        <select name="student_id" required>
+          {% for s in students %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select></label>
+      <label class="field"><span>Задание</span>
+        <input class="input" name="title" placeholder="Например: решить задачи 1–5" required></label>
+      <label class="field"><span>Описание</span>
+        <textarea name="description" placeholder="Материалы, ссылки, комментарий"></textarea></label>
+      <label class="field"><span>Дедлайн (необязательно)</span>
+        <input class="input" type="datetime-local" name="due_at"></label>
+      <button class="btn btn-primary">📤 Выдать задание</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Все задания</h2>
+    <div class="hw-list">
+      {% for hw in homework %}
+      <div class="hw-item">
+        <div class="hw-head">
+          <strong>{{ hw.title }}</strong>
+          <span class="badge {{ hw.status }}">{{ hw.status }}</span>
+        </div>
+        <div class="muted">{{ hw.student_profiles.name if hw.student_profiles else "Ученик" }}{% if hw.description %} · {{ hw.description }}{% endif %}</div>
+        {% if hw.status == "submitted" %}
+        <form method="post" action="/tutor/homework/{{ hw.id }}/review" class="review-row">
+          <input class="input" name="comment" placeholder="Комментарий к проверке">
+          <button class="btn btn-primary btn-sm">✅ Проверено</button>
+        </form>
+        {% elif hw.tutor_comment %}
+        <div class="hw-comment">💬 {{ hw.tutor_comment }}</div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="empty"><div class="empty-emoji">📭</div><p>Заданий пока нет.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import config
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
@@ -24,7 +26,11 @@ class AddStudent(StatesGroup):
 
 class AddLesson(StatesGroup):
     waiting_student = State()
+    waiting_recurrence = State()
     waiting_day = State()
+    waiting_days = State()
+    waiting_interval = State()
+    waiting_date = State()
     waiting_time = State()
 
 
@@ -319,6 +325,38 @@ async def cmd_my_students(message: Message) -> None:
     await message.answer("Твои ученики:\n\n" + "\n".join(lines))
 
 
+def recurrence_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📌 Разовое занятие", callback_data="rec:once")],
+        [InlineKeyboardButton(text="🔁 Каждую неделю", callback_data="rec:weekly")],
+        [InlineKeyboardButton(text="📆 Несколько раз в неделю", callback_data="rec:multiple_weekly")],
+        [InlineKeyboardButton(text="☀️ Каждый день", callback_data="rec:daily")],
+        [InlineKeyboardButton(text="🔢 Каждые N дней", callback_data="rec:every_n_days")],
+        [InlineKeyboardButton(text="🗓️ Каждые N недель", callback_data="rec:every_n_weeks")],
+    ])
+
+
+def day_keyboard(prefix: str, selected: list[int] | None = None) -> InlineKeyboardMarkup:
+    selected = selected or []
+    rows = [
+        [InlineKeyboardButton(text=f"{'✅ ' if i in selected else ''}{day}", callback_data=f"{prefix}:{i}")]
+        for i, day in enumerate(DAYS)
+    ]
+    if prefix == "wtoggle":
+        rows.append([InlineKeyboardButton(text="➡️ Готово", callback_data="wdone")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def _parse_time(raw: str) -> tuple[int, int] | None:
+    try:
+        hours, minutes = map(int, raw.strip().split(":"))
+        if 0 <= hours <= 23 and 0 <= minutes <= 59:
+            return hours, minutes
+    except Exception:
+        return None
+    return None
+
+
 @router.message(Command("schedule"))
 async def cmd_schedule(message: Message, state: FSMContext) -> None:
     students = await services.students.list_students(message.from_user.id)
@@ -327,45 +365,144 @@ async def cmd_schedule(message: Message, state: FSMContext) -> None:
         return
     buttons = [[InlineKeyboardButton(text=s["name"], callback_data=f"sel_student:{s['id']}")] for s in students]
     await state.set_state(AddLesson.waiting_student)
-    await message.answer("Выбери ученика:", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await message.answer("Кому добавляем занятие? 🎓", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 
 @router.callback_query(AddLesson.waiting_student, F.data.startswith("sel_student:"))
 async def lesson_select_student(callback: CallbackQuery, state: FSMContext) -> None:
-    await state.update_data(student_id=callback.data.split(":")[1])
-    await state.set_state(AddLesson.waiting_day)
-    buttons = [[InlineKeyboardButton(text=day, callback_data=f"sel_day:{i}")] for i, day in enumerate(DAYS)]
-    await callback.message.edit_text("Выбери день занятия:", reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    await state.update_data(student_id=callback.data.split(":")[1], days=[])
+    await state.set_state(AddLesson.waiting_recurrence)
+    await callback.message.edit_text("Как часто проходит занятие? 🗓️", reply_markup=recurrence_keyboard())
 
 
-@router.callback_query(AddLesson.waiting_day, F.data.startswith("sel_day:"))
-async def lesson_select_day(callback: CallbackQuery, state: FSMContext) -> None:
-    await state.update_data(day=int(callback.data.split(":")[1]))
+@router.callback_query(AddLesson.waiting_recurrence, F.data.startswith("rec:"))
+async def lesson_recurrence(callback: CallbackQuery, state: FSMContext) -> None:
+    rec = callback.data.split(":")[1]
+    await state.update_data(recurrence=rec)
+    if rec == "once":
+        await state.set_state(AddLesson.waiting_date)
+        await callback.message.edit_text("На какую дату? Введи ДД.ММ.ГГГГ или напиши «сегодня» / «завтра» 📅")
+    elif rec == "daily":
+        await state.set_state(AddLesson.waiting_time)
+        await callback.message.edit_text("Во сколько занятие? Формат ЧЧ:ММ, например 15:00 ⏰")
+    elif rec in ("weekly", "every_n_weeks"):
+        await state.set_state(AddLesson.waiting_day)
+        await callback.message.edit_text("Выбери день недели:", reply_markup=day_keyboard("wday"))
+    elif rec == "multiple_weekly":
+        await state.set_state(AddLesson.waiting_days)
+        await callback.message.edit_text("Отметь дни недели и нажми «Готово»:", reply_markup=day_keyboard("wtoggle", []))
+    elif rec == "every_n_days":
+        await state.set_state(AddLesson.waiting_interval)
+        await callback.message.edit_text("Каждые сколько дней? Введи число, например 3 🔢")
+    await callback.answer()
+
+
+@router.callback_query(AddLesson.waiting_day, F.data.startswith("wday:"))
+async def lesson_pick_day(callback: CallbackQuery, state: FSMContext) -> None:
+    day = int(callback.data.split(":")[1])
+    await state.update_data(days=[day])
+    data = await state.get_data()
+    if data["recurrence"] == "every_n_weeks":
+        await state.set_state(AddLesson.waiting_interval)
+        await callback.message.edit_text("Каждые сколько недель? Введи число, например 2 🔢")
+    else:
+        await state.set_state(AddLesson.waiting_time)
+        await callback.message.edit_text("Во сколько занятие? Формат ЧЧ:ММ, например 15:00 ⏰")
+    await callback.answer()
+
+
+@router.callback_query(AddLesson.waiting_days, F.data.startswith("wtoggle:"))
+async def lesson_toggle_day(callback: CallbackQuery, state: FSMContext) -> None:
+    i = int(callback.data.split(":")[1])
+    data = await state.get_data()
+    days = set(data.get("days", []))
+    days.symmetric_difference_update({i})
+    days = sorted(days)
+    await state.update_data(days=days)
+    await callback.message.edit_reply_markup(reply_markup=day_keyboard("wtoggle", days))
+    await callback.answer()
+
+
+@router.callback_query(AddLesson.waiting_days, F.data == "wdone")
+async def lesson_days_done(callback: CallbackQuery, state: FSMContext) -> None:
+    data = await state.get_data()
+    if not data.get("days"):
+        await callback.answer("Выбери хотя бы один день", show_alert=True)
+        return
     await state.set_state(AddLesson.waiting_time)
-    await callback.message.edit_text("Введи время занятия в формате ЧЧ:ММ, например 15:00:")
+    chosen = ", ".join(DAYS[i] for i in data["days"])
+    await callback.message.edit_text(f"Дни: {chosen}\n\nВо сколько занятие? Формат ЧЧ:ММ ⏰")
+    await callback.answer()
+
+
+@router.message(AddLesson.waiting_interval)
+async def lesson_interval(message: Message, state: FSMContext) -> None:
+    try:
+        n = int((message.text or "").strip())
+        assert 1 <= n <= 60
+    except Exception:
+        await message.answer("Введи число от 1 до 60.")
+        return
+    await state.update_data(interval_n=n)
+    await state.set_state(AddLesson.waiting_time)
+    await message.answer("Во сколько занятие? Формат ЧЧ:ММ, например 15:00 ⏰")
+
+
+@router.message(AddLesson.waiting_date)
+async def lesson_date(message: Message, state: FSMContext) -> None:
+    raw = (message.text or "").strip().lower()
+    today = datetime.now(timezone.utc).date()
+    if raw in ("сегодня", "today"):
+        day = today
+    elif raw in ("завтра", "tomorrow"):
+        day = today + timedelta(days=1)
+    else:
+        try:
+            day = datetime.strptime(raw, "%d.%m.%Y").date()
+        except ValueError:
+            await message.answer("Не понял дату. Введи ДД.ММ.ГГГГ или «сегодня» / «завтра».")
+            return
+    await state.update_data(lesson_date=day.isoformat())
+    await state.set_state(AddLesson.waiting_time)
+    await message.answer("Во сколько занятие? Формат ЧЧ:ММ, например 15:00 ⏰")
 
 
 @router.message(AddLesson.waiting_time)
 async def lesson_set_time(message: Message, state: FSMContext) -> None:
-    time_str = (message.text or "").strip()
-    try:
-        hours, minutes = map(int, time_str.split(":"))
-        assert 0 <= hours <= 23 and 0 <= minutes <= 59
-    except Exception:
+    parsed = _parse_time(message.text or "")
+    if not parsed:
         await message.answer("Неверный формат. Введи время в виде ЧЧ:ММ, например 15:00")
         return
-
+    hours, minutes = parsed
+    time_str = f"{hours:02d}:{minutes:02d}:00"
     data = await state.get_data()
-    await services.lessons.create_recurring_lesson(
-        message.from_user.id,
-        data["student_id"],
-        data["day"],
-        f"{hours:02d}:{minutes:02d}:00",
-    )
+    rec = data["recurrence"]
+    user = await services.accounts.get_by_tg_id(message.from_user.id)
+
+    if rec == "once":
+        starts = datetime.fromisoformat(f"{data['lesson_date']}T{hours:02d}:{minutes:02d}:00").replace(tzinfo=timezone.utc)
+        await services.lessons.create_one_time_lesson(user["id"], data["student_id"], starts)
+        summary = f"разовое — {datetime.fromisoformat(data['lesson_date']).strftime('%d.%m')} в {hours:02d}:{minutes:02d}"
+    else:
+        await services.lessons.create_schedule(
+            user["id"], data["student_id"], rec, time_str,
+            weekdays=data.get("days") or None,
+            interval_n=int(data.get("interval_n", 1)),
+        )
+        labels = {
+            "daily": f"каждый день в {hours:02d}:{minutes:02d}",
+            "weekly": f"{DAYS[data['days'][0]]} в {hours:02d}:{minutes:02d}",
+            "multiple_weekly": f"{', '.join(DAYS[i] for i in data['days'])} в {hours:02d}:{minutes:02d}",
+            "every_n_days": f"каждые {data.get('interval_n', 1)} дн. в {hours:02d}:{minutes:02d}",
+            "every_n_weeks": f"каждые {data.get('interval_n', 1)} нед., {DAYS[data['days'][0]]} в {hours:02d}:{minutes:02d}",
+        }
+        summary = labels.get(rec, time_str)
+
     await state.clear()
     await message.answer(
-        f"✅ Повторяющееся занятие добавлено: {DAYS[data['day']]} в {hours:02d}:{minutes:02d}\n\n"
-        "Я создал ближайшие уроки и буду отправлять уведомления."
+        f"✅ Готово! Занятие добавлено: {summary} 🎉\n\n"
+        "Я создал уроки и буду присылать напоминания за день и за час. 🔔",
+        reply_markup=tutor_menu_keyboard(),
     )
 
 

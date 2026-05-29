@@ -4,27 +4,36 @@
   <div>
     <div class="eyebrow">CRM</div>
     <h1>Ученики</h1>
+    <p class="muted">{{ students|length }} {{ "ученик" if students|length == 1 else "учеников" }} в твоём кабинете</p>
   </div>
+  <a class="btn btn-secondary" href="/tutor/schedule">➕ Добавить занятие</a>
 </div>
+
 <form class="search" method="get">
-  <input class="input" name="q" value="{{ q }}" placeholder="Поиск по имени или Telegram">
+  <input class="input" name="q" value="{{ q }}" placeholder="🔍 Поиск по имени или Telegram">
   <button class="btn btn-primary">Найти</button>
 </form>
-<section class="card">
-  <table class="table">
-    <thead><tr><th>Ученик</th><th>Telegram</th><th>Статус</th><th>Заметки</th></tr></thead>
-    <tbody>
-    {% for student in students %}
-    <tr>
-      <td><a href="/tutor/students/{{ student.id }}"><strong>{{ student.name }}</strong></a><br><span class="muted">{{ student.subject_summary or "Предмет не указан" }}</span></td>
-      <td>@{{ student.tg_username or "нет" }}</td>
-      <td><span class="badge completed">{{ student.status }}</span></td>
-      <td class="muted">{{ student.progress_note or "Личные заметки можно хранить в CRM-структуре." }}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="4" class="muted">Ничего не найдено.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-</section>
+
+<div class="student-grid">
+  {% for student in students %}
+  <a class="card student-card-mini" href="/tutor/students/{{ student.id }}">
+    <div class="avatar">{{ student.name[:1]|upper }}</div>
+    <div class="student-card-mini-body">
+      <strong>{{ student.name }}</strong>
+      <div class="muted">{{ student.subject_summary or "Предмет не указан" }}{% if student.grade %} · {{ student.grade }}{% endif %}</div>
+      <div class="chips">
+        <span class="badge completed">{{ student.relation_status or student.status }}</span>
+        {% if student.tg_username %}<span class="chip">@{{ student.tg_username }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="student-card-arrow">→</div>
+  </a>
+  {% else %}
+  <div class="card empty-wide">
+    <div class="empty-emoji">👥</div>
+    <h2>Учеников пока нет</h2>
+    <p class="muted">Добавь ученика в Telegram-боте командой «➕ Добавить ученика» — он появится здесь автоматически.</p>
+  </div>
+  {% endfor %}
+</div>
 {% endblock %}

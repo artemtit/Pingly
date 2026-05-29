@@ -1,0 +1,78 @@
+{% extends "layout.html" %}
+{% import "macros.html" as ui %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Календарь</div>
+    <h1>{{ cal.title }}</h1>
+  </div>
+  <div class="view-switch">
+    <a href="{{ base }}?view=day&date={{ cal.anchor }}" class="{{ 'active' if cal.view == 'day' }}">День</a>
+    <a href="{{ base }}?view=week&date={{ cal.anchor }}" class="{{ 'active' if cal.view == 'week' }}">Неделя</a>
+    <a href="{{ base }}?view=month&date={{ cal.anchor }}" class="{{ 'active' if cal.view == 'month' }}">Месяц</a>
+  </div>
+</div>
+
+<div class="cal-nav">
+  <a class="btn btn-ghost btn-sm" href="{{ base }}?view={{ cal.view }}&date={{ cal.prev }}">‹ Назад</a>
+  <a class="btn btn-secondary btn-sm" href="{{ base }}?view={{ cal.view }}&date={{ cal.today }}">Сегодня</a>
+  <a class="btn btn-ghost btn-sm" href="{{ base }}?view={{ cal.view }}&date={{ cal.next }}">Вперёд ›</a>
+  <div class="legend">
+    <span><i class="dot scheduled"></i>Запланировано</span>
+    <span><i class="dot completed"></i>Проведено</span>
+    <span><i class="dot rescheduled"></i>Перенесено</span>
+    <span><i class="dot cancelled"></i>Отменено</span>
+  </div>
+</div>
+
+{% if cal.view == "day" %}
+<div class="card">
+  {% set day = cal.days[0] %}
+  <h2>{{ day.weekday }}, {{ day.day }}</h2>
+  <div class="day-list">
+    {% for lesson in day.lessons %}
+    <div class="day-lesson {{ lesson.status }}">
+      <div class="day-time">{{ lesson.time }}</div>
+      <div class="day-lesson-body">
+        <strong>{{ lesson.student }}</strong>
+        {{ ui.status_badge(lesson.status) }}
+      </div>
+      {% if user.role == "tutor" and lesson.status == "scheduled" %}
+      <div class="day-lesson-actions">
+        <form method="post" action="/tutor/lessons/{{ lesson.id }}/complete"><button class="btn btn-primary btn-sm">🔵 Провести</button></form>
+        <form method="post" action="/tutor/lessons/{{ lesson.id }}/cancel"><button class="btn btn-ghost btn-sm">🔴 Отменить</button></form>
+        <details class="resched">
+          <summary class="btn btn-ghost btn-sm">🟡 Перенести</summary>
+          <form method="post" action="/tutor/lessons/{{ lesson.id }}/reschedule" class="resched-form">
+            <input class="input" type="datetime-local" name="new_at" required>
+            <button class="btn btn-secondary btn-sm">Сохранить</button>
+          </form>
+        </details>
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="empty"><div class="empty-emoji">☀️</div><p>На этот день занятий нет.</p></div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+<div class="card">
+  <div class="cal-grid {{ 'cal-week' if cal.view == 'week' else 'cal-month' }}">
+    {% for wd in cal.weekday_names %}<div class="cal-weekday">{{ wd }}</div>{% endfor %}
+    {% for day in cal.days %}
+    <a class="cal-cell {{ 'out' if not day.in_month }} {{ 'today' if day.is_today }}" href="{{ base }}?view=day&date={{ day.date }}">
+      <div class="cal-daynum">{{ day.day }}</div>
+      <div class="cal-cell-lessons">
+        {% for lesson in day.lessons[:4] %}
+        <div class="cal-pill {{ lesson.status }}"><i class="dot {{ lesson.status }}"></i>{{ lesson.time }} {{ lesson.student }}</div>
+        {% endfor %}
+        {% if day.lessons|length > 4 %}<div class="cal-more">+{{ day.lessons|length - 4 }}</div>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

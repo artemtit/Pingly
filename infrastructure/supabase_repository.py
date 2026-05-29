@@ -156,16 +156,98 @@ class SupabasePinglyRepository:
         result = await self._db().table("student_profiles").select("*").eq("user_id", student_user_id).execute()
         return _one(result)
 
-    async def create_schedule_rule(self, tutor_user_id: str, student_id: str, day_of_week: int, lesson_time: str, duration_minutes: int) -> dict[str, Any]:
+    async def update_student_profile(self, student_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
+        clean = {k: v for k, v in patch.items() if v is not None}
+        if not clean:
+            result = await self._db().table("student_profiles").select("*").eq("id", student_id).execute()
+            return _one(result)
+        result = await self._db().table("student_profiles").update(clean).eq("id", student_id).execute()
+        return _one(result)
+
+    async def get_tutor_student_relation(self, tutor_user_id: str, student_id: str) -> dict[str, Any] | None:
+        result = await (
+            self._db().table("tutor_students")
+            .select("*")
+            .eq("tutor_user_id", tutor_user_id)
+            .eq("student_id", student_id)
+            .execute()
+        )
+        return _one(result)
+
+    async def set_tutor_student_note(self, tutor_user_id: str, student_id: str, note: str | None) -> None:
+        await (
+            self._db().table("tutor_students")
+            .update({"private_tutor_note": note})
+            .eq("tutor_user_id", tutor_user_id)
+            .eq("student_id", student_id)
+            .execute()
+        )
+
+    async def create_schedule_rule(
+        self,
+        tutor_user_id: str,
+        student_id: str,
+        day_of_week: int,
+        lesson_time: str,
+        duration_minutes: int,
+        recurrence: str = "weekly",
+        interval_n: int = 1,
+        weekdays: list[int] | None = None,
+        start_date: str | None = None,
+    ) -> dict[str, Any]:
         result = await self._db().table("schedule_rules").insert({
             "tutor_user_id": tutor_user_id,
             "student_id": student_id,
             "day_of_week": day_of_week,
             "lesson_time": lesson_time,
             "duration_minutes": duration_minutes,
+            "recurrence": recurrence,
+            "interval_n": interval_n,
+            "weekdays": weekdays if weekdays is not None else [day_of_week],
+            "start_date": start_date,
             "is_active": True,
         }).execute()
         return result.data[0]
+
+    async def get_schedule_rule(self, tutor_user_id: str, rule_id: str) -> dict[str, Any] | None:
+        result = await (
+            self._db().table("schedule_rules")
+            .select("*")
+            .eq("id", rule_id)
+            .eq("tutor_user_id", tutor_user_id)
+            .execute()
+        )
+        return _one(result)
+
+    async def update_schedule_rule(self, rule_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
+        result = await self._db().table("schedule_rules").update(patch).eq("id", rule_id).execute()
+        return _one(result)
+
+    async def list_future_lessons_for_rule(self, rule_id: str, after: datetime) -> list[dict[str, Any]]:
+        result = await (
+            self._db().table("lessons_v2")
+            .select("*")
+            .eq("schedule_rule_id", rule_id)
+            .eq("status", "scheduled")
+            .gte("starts_at", after.isoformat())
+            .order("starts_at")
+            .execute()
+        )
+        return result.data
+
+    async def get_lesson_for_tutor(self, tutor_user_id: str, lesson_id: str) -> dict[str, Any] | None:
+        result = await (
+            self._db().table("lessons_v2")
+            .select("*, student_profiles(name, tg_username)")
+            .eq("id", lesson_id)
+            .eq("tutor_user_id", tutor_user_id)
+            .execute()
+        )
+        return _one(result)
+
+    async def update_lesson_fields(self, lesson_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
+        result = await self._db().table("lessons_v2").update(patch).eq("id", lesson_id).execute()
+        return _one(result)
 
     async def create_lesson(self, tutor_user_id: str, student_id: str, starts_at: datetime, subject_id: str | None = None, schedule_rule_id: str | None = None) -> dict[str, Any]:
         student = await self.get_student_for_tutor(tutor_user_id, student_id)

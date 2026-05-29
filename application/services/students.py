@@ -1,8 +1,20 @@
 from __future__ import annotations
 
 import secrets
+from datetime import datetime, timezone
 
 from application.repositories import PinglyRepository
+
+PROFILE_FIELDS = ("name", "subject_summary", "grade", "level", "goal", "started_at", "progress_note", "status")
+
+
+def _parse_dt(raw: object) -> datetime | None:
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 class StudentService:
@@ -31,19 +43,52 @@ class StudentService:
     async def list_students_by_user(self, tutor_user_id: str, search: str | None = None) -> list[dict]:
         return await self.repo.list_tutor_students(tutor_user_id, search)
 
+    async def update_profile(self, tutor_user_id: str, student_id: str, fields: dict) -> dict | None:
+        relation = await self.repo.get_tutor_student_relation(tutor_user_id, student_id)
+        if not relation:
+            raise PermissionError("Student does not belong to tutor")
+        patch = {k: v for k, v in fields.items() if k in PROFILE_FIELDS}
+        return await self.repo.update_student_profile(student_id, patch)
+
+    async def set_note(self, tutor_user_id: str, student_id: str, note: str | None) -> None:
+        relation = await self.repo.get_tutor_student_relation(tutor_user_id, student_id)
+        if not relation:
+            raise PermissionError("Student does not belong to tutor")
+        await self.repo.set_tutor_student_note(tutor_user_id, student_id, note)
+
     async def student_card(self, tutor_user_id: str, student_id: str) -> dict:
         student = await self.repo.get_student_for_tutor(tutor_user_id, student_id)
         if not student:
             raise PermissionError("Student does not belong to tutor")
+        relation = await self.repo.get_tutor_student_relation(tutor_user_id, student_id)
         lessons = [l for l in await self.repo.list_lessons_for_tutor(tutor_user_id, 1000) if l.get("student_id") == student_id]
         homework = [h for h in await self.repo.list_homework_for_tutor(tutor_user_id, 1000) if h.get("student_id") == student_id]
         completed = len([l for l in lessons if l.get("status") == "completed"])
         cancelled = len([l for l in lessons if l.get("status") == "cancelled"])
         reviewed = len([h for h in homework if h.get("status") == "reviewed"])
+
+        now = datetime.now(timezone.utc)
+        future = sorted(
+            [l for l in lessons if l.get("status") == "scheduled" and (_parse_dt(l.get("starts_at")) or now) >= now],
+            key=lambda l: l.get("starts_at") or "",
+        )
+        next_lesson = future[0] if future else None
+
+        activity_dates = [
+            _parse_dt(l.get("starts_at")) for l in lessons if l.get("status") == "completed"
+        ] + [
+            _parse_dt(h.get("updated_at") or h.get("created_at")) for h in homework if h.get("status") in ("submitted", "reviewed")
+        ]
+        activity_dates = [d for d in activity_dates if d]
+        last_activity = max(activity_dates) if activity_dates else None
+
         return {
             "student": student,
-            "lessons": lessons,
+            "note": (relation or {}).get("private_tutor_note") or "",
+            "lessons": sorted(lessons, key=lambda l: l.get("starts_at") or "", reverse=True),
             "homework": homework,
+            "next_lesson": next_lesson,
+            "last_activity": last_activity.isoformat() if last_activity else None,
             "progress": {
                 "completed_lessons": completed,
                 "attendance_percent": round(completed / (completed + cancelled) * 100) if completed + cancelled else 100,

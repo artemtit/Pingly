@@ -3,30 +3,61 @@
 <div class="app">
   <aside class="sidebar">
     <a class="brand" href="/">
-      <span class="mark"></span>
+      <span class="mark">P</span>
       <span>Pingly</span>
     </a>
+
+    <div class="role-pill {{ 'is-tutor' if user.role == 'tutor' else 'is-student' }}">
+      <span class="dot"></span>
+      {{ "👨‍🏫 Репетитор" if user.role == "tutor" else "🎓 Ученик" }}
+    </div>
+
     <nav class="nav">
       {% if user.role == "tutor" %}
-      <a class="active" href="/tutor">Обзор</a>
-      <a href="/tutor/students">Ученики</a>
-      <a href="/tutor#calendar">Календарь</a>
-      <a href="/tutor#homework">Задания</a>
-      <a href="/tutor#settings">Настройки</a>
+      <a href="/tutor" class="{{ 'active' if active == 'overview' }}"><span>📊</span> Обзор</a>
+      <a href="/tutor/students" class="{{ 'active' if active == 'students' }}"><span>👥</span> Ученики</a>
+      <a href="/tutor/calendar" class="{{ 'active' if active == 'calendar' }}"><span>📅</span> Календарь</a>
+      <a href="/tutor/schedule" class="{{ 'active' if active == 'schedule' }}"><span>🗓️</span> Расписание</a>
+      <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}"><span>📝</span> Задания</a>
+      <a href="/tutor/settings" class="{{ 'active' if active == 'settings' }}"><span>⚙️</span> Настройки</a>
       {% else %}
-      <a class="active" href="/student">Главная</a>
-      <a href="/student#calendar">Календарь</a>
-      <a href="/student#homework">Задания</a>
-      <a href="/student#progress">Прогресс</a>
+      <a href="/student" class="{{ 'active' if active == 'overview' }}"><span>🏠</span> Главная</a>
+      <a href="/student/calendar" class="{{ 'active' if active == 'calendar' }}"><span>📅</span> Календарь</a>
+      <a href="/student/homework" class="{{ 'active' if active == 'homework' }}"><span>📝</span> Задания</a>
+      <a href="/student/progress" class="{{ 'active' if active == 'progress' }}"><span>🚀</span> Прогресс</a>
+      <a href="/student/settings" class="{{ 'active' if active == 'settings' }}"><span>⚙️</span> Настройки</a>
       {% endif %}
     </nav>
+
     <div class="userbox">
-      <strong>{{ user.full_name }}</strong><br>
-      {{ "Репетитор" if user.role == "tutor" else "Ученик" }} · <a href="/logout">Выйти</a>
+      <div class="userbox-name">{{ user.full_name }}</div>
+      <div class="userbox-actions">
+        <button class="link-btn" onclick="document.getElementById('role-modal').classList.add('open')">Сменить роль</button>
+        <span>·</span>
+        <a href="/logout">Выйти</a>
+      </div>
     </div>
   </aside>
+
   <main class="main">
     {% block content %}{% endblock %}
   </main>
+</div>
+
+<div class="modal-backdrop" id="role-modal">
+  <div class="modal">
+    <div class="modal-emoji">🔄</div>
+    <h2>Сменить режим?</h2>
+    {% if user.role == "tutor" %}
+    <p class="muted">Сейчас ты в режиме <strong>репетитора</strong>. Перейти в режим <strong>ученика</strong>? Данные и роль синхронизируются с ботом.</p>
+    {% else %}
+    <p class="muted">Сейчас ты в режиме <strong>ученика</strong>. Перейти в режим <strong>репетитора</strong>? Данные и роль синхронизируются с ботом.</p>
+    {% endif %}
+    <form method="post" action="/role/switch" class="modal-actions">
+      <input type="hidden" name="role" value="{{ 'student' if user.role == 'tutor' else 'tutor' }}">
+      <button type="button" class="btn btn-ghost" onclick="document.getElementById('role-modal').classList.remove('open')">Отмена</button>
+      <button type="submit" class="btn btn-primary">Переключить</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

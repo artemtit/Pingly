@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Задания</div>
+    <h1>📝 Мои домашние задания</h1>
+  </div>
+</div>
+
+<div class="hw-list-wide">
+  {% for hw in homework %}
+  <div class="card hw-card status-{{ hw.status }}">
+    <div class="hw-head">
+      <strong>{{ hw.title }}</strong>
+      <span class="badge {{ hw.status }}">{{ hw.status }}</span>
+    </div>
+    {% if hw.description %}<p class="muted">{{ hw.description }}</p>{% endif %}
+    {% if hw.due_at %}<p class="muted">⏰ Дедлайн: {{ hw.due_at[:16].replace("T", " ") }}</p>{% endif %}
+    {% if hw.tutor_comment %}<div class="hw-comment">💬 {{ hw.tutor_comment }}</div>{% endif %}
+
+    <div class="hw-actions">
+      {% if hw.status == "new" %}
+      <form method="post" action="/student/homework/{{ hw.id }}/progress"><button class="btn btn-ghost btn-sm">🚧 Взять в работу</button></form>
+      <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">✅ Сдать задание</button></form>
+      {% elif hw.status == "in_progress" %}
+      <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">✅ Сдать задание</button></form>
+      {% elif hw.status == "submitted" %}
+      <span class="hw-wait">⏳ Ждём проверки репетитора</span>
+      {% else %}
+      <span class="hw-done">🎉 Проверено!</span>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <div class="card empty-wide">
+    <div class="empty-emoji">🎒</div>
+    <h2>Заданий пока нет</h2>
+    <p class="muted">Когда репетитор выдаст задание, оно появится здесь.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

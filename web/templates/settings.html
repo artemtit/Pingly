@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Настройки</div>
+    <h1>⚙️ Настройки</h1>
+  </div>
+</div>
+
+<section class="grid two" style="align-items: start;">
+  <div class="card">
+    <h2>Профиль</h2>
+    <div class="settings-row"><span class="muted">Имя</span><strong>{{ user.full_name }}</strong></div>
+    <div class="settings-row"><span class="muted">Telegram</span><strong>@{{ user.tg_username or "—" }}</strong></div>
+    <div class="settings-row"><span class="muted">Текущая роль</span>
+      <span class="role-pill {{ 'is-tutor' if user.role == 'tutor' else 'is-student' }}">
+        <span class="dot"></span>{{ "👨‍🏫 Репетитор" if user.role == "tutor" else "🎓 Ученик" }}
+      </span>
+    </div>
+    <p class="muted" style="margin-top:14px;">Имя меняется в Telegram-боте: ⚙️ Настройки → ✏️ Изменить имя. Сайт и бот используют один аккаунт.</p>
+  </div>
+
+  <div class="card">
+    <h2>Режим работы</h2>
+    <p class="muted">Можно переключаться между режимами ученика и репетитора. Роль синхронизируется с ботом.</p>
+    <button class="btn btn-secondary" style="margin-top:14px;" onclick="document.getElementById('role-modal').classList.add('open')">🔄 Сменить роль</button>
+  </div>
+
+  <div class="card">
+    <h2>🔔 Уведомления</h2>
+    <div class="settings-row"><span>Telegram-напоминания</span><span class="badge completed">включены</span></div>
+    <p class="muted" style="margin-top:10px;">Pingly напоминает о занятиях за день и за час, а также о новых и проверенных заданиях.</p>
+  </div>
+
+  <div class="card">
+    <h2>Аккаунт</h2>
+    <p class="muted">Выход из веб-кабинета не затрагивает Telegram-бота.</p>
+    <a class="btn btn-ghost" style="margin-top:14px;" href="/logout">Выйти</a>
+  </div>
+</section>
+{% endblock %}
