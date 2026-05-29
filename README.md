@@ -58,6 +58,7 @@ WEB_ENABLED=1
 ```text
 supabase_schema.sql
 migrations/001_product_platform.sql
+migrations/002_server_runtime_policies.sql
 ```
 
 4. Запустить:

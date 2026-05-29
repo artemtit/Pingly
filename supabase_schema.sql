@@ -1,6 +1,7 @@
 -- Запусти этот SQL в Supabase: Dashboard → SQL Editor → New query
 -- Для нового веб-кабинета и единой бизнес-логики также запусти:
 -- migrations/001_product_platform.sql
+-- migrations/002_server_runtime_policies.sql
 
 create table tutors (
   tg_id bigint primary key,
