@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Кабинет ученика</div>
+    <h1>Занятия, задания и прогресс</h1>
+  </div>
+</div>
+
+<section class="grid two">
+  <div class="card">
+    <h2>Ближайшее занятие</h2>
+    {% if next_lesson %}
+    <p style="font-size: 28px; font-weight: 800;">{{ next_lesson.starts_at[:16].replace("T", " ") }}</p>
+    <p style="margin-top: 8px;"><span class="badge {{ next_lesson.status }}">{{ next_lesson.status }}</span></p>
+    {% else %}
+    <p class="muted">Ближайших занятий пока нет.</p>
+    {% endif %}
+  </div>
+  <div class="card" id="progress">
+    <h2>Прогресс</h2>
+    <p>Проведено занятий: <strong>{{ progress.completed_lessons }}</strong></p>
+    <p style="margin-top: 8px;">Выполнение ДЗ: <strong>{{ progress.homework_completion_percent }}%</strong></p>
+  </div>
+</section>
+
+<section class="grid two" style="margin-top: 18px;">
+  <div class="card" id="calendar">
+    <h2>Календарь</h2>
+    <table class="table">
+      <thead><tr><th>Когда</th><th>Статус</th></tr></thead>
+      <tbody>
+      {% for lesson in lessons[:12] %}
+      <tr><td>{{ lesson.starts_at[:16].replace("T", " ") }}</td><td><span class="badge {{ lesson.status }}">{{ lesson.status }}</span></td></tr>
+      {% else %}
+      <tr><td colspan="2" class="muted">Занятий пока нет.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card" id="homework">
+    <h2>Домашние задания</h2>
+    <table class="table">
+      <thead><tr><th>Задание</th><th>Статус</th></tr></thead>
+      <tbody>
+      {% for item in homework[:12] %}
+      <tr><td>{{ item.title }}</td><td><span class="badge {{ item.status }}">{{ item.status }}</span></td></tr>
+      {% else %}
+      <tr><td colspan="2" class="muted">Заданий пока нет.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

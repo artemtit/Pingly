@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Карточка ученика</div>
+    <h1>{{ student.name }}</h1>
+    <p class="muted">@{{ student.tg_username or "нет username" }} · {{ student.subject_summary or "предмет не указан" }}</p>
+  </div>
+  <a class="btn btn-primary" href="/tutor/students">Назад к CRM</a>
+</div>
+
+<section class="grid stats">
+  <div class="card stat"><div class="value">{{ lessons|length }}</div><div class="label">Всего занятий</div></div>
+  <div class="card stat"><div class="value">{{ progress.completed_lessons }}</div><div class="label">Проведено</div></div>
+  <div class="card stat"><div class="value">{{ homework|length }}</div><div class="label">Заданий</div></div>
+  <div class="card stat"><div class="value">{{ progress.homework_completion_percent }}%</div><div class="label">Выполнение ДЗ</div></div>
+  <div class="card stat"><div class="value">{{ progress.attendance_percent }}%</div><div class="label">Посещаемость</div></div>
+</section>
+
+<section class="grid two">
+  <div class="card">
+    <h2>История занятий</h2>
+    <table class="table">
+      <thead><tr><th>Когда</th><th>Статус</th><th>Комментарий</th></tr></thead>
+      <tbody>
+      {% for lesson in lessons %}
+      <tr>
+        <td>{{ lesson.starts_at[:16].replace("T", " ") }}</td>
+        <td><span class="badge {{ lesson.status }}">{{ lesson.status }}</span></td>
+        <td class="muted">{{ lesson.public_comment or lesson.private_tutor_note or "Нет комментария" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="muted">Занятий пока нет.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h2>История домашних заданий</h2>
+    <table class="table">
+      <thead><tr><th>Задание</th><th>Статус</th><th>Комментарий</th></tr></thead>
+      <tbody>
+      {% for item in homework %}
+      <tr>
+        <td>{{ item.title }}</td>
+        <td><span class="badge {{ item.status }}">{{ item.status }}</span></td>
+        <td class="muted">{{ item.tutor_comment or item.description or "Нет комментария" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="muted">Заданий пока нет.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card" style="margin-top: 18px;">
+  <h2>Личные заметки репетитора</h2>
+  <p class="muted">{{ student.progress_note or "Поле заметок подготовлено в CRM-структуре. Следующий шаг: добавить редактирование из карточки." }}</p>
+</section>
+{% endblock %}

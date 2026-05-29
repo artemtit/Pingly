@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="app">
+  <aside class="sidebar">
+    <a class="brand" href="/">
+      <span class="mark"></span>
+      <span>Pingly</span>
+    </a>
+    <nav class="nav">
+      {% if user.role == "tutor" %}
+      <a class="active" href="/tutor">Обзор</a>
+      <a href="/tutor/students">Ученики</a>
+      <a href="/tutor#calendar">Календарь</a>
+      <a href="/tutor#homework">Задания</a>
+      <a href="/tutor#settings">Настройки</a>
+      {% else %}
+      <a class="active" href="/student">Главная</a>
+      <a href="/student#calendar">Календарь</a>
+      <a href="/student#homework">Задания</a>
+      <a href="/student#progress">Прогресс</a>
+      {% endif %}
+    </nav>
+    <div class="userbox">
+      <strong>{{ user.full_name }}</strong><br>
+      {{ "Репетитор" if user.role == "tutor" else "Ученик" }} · <a href="/logout">Выйти</a>
+    </div>
+  </aside>
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}

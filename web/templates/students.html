@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">CRM</div>
+    <h1>Ученики</h1>
+  </div>
+</div>
+<form class="search" method="get">
+  <input class="input" name="q" value="{{ q }}" placeholder="Поиск по имени или Telegram">
+  <button class="btn btn-primary">Найти</button>
+</form>
+<section class="card">
+  <table class="table">
+    <thead><tr><th>Ученик</th><th>Telegram</th><th>Статус</th><th>Заметки</th></tr></thead>
+    <tbody>
+    {% for student in students %}
+    <tr>
+      <td><a href="/tutor/students/{{ student.id }}"><strong>{{ student.name }}</strong></a><br><span class="muted">{{ student.subject_summary or "Предмет не указан" }}</span></td>
+      <td>@{{ student.tg_username or "нет" }}</td>
+      <td><span class="badge completed">{{ student.status }}</span></td>
+      <td class="muted">{{ student.progress_note or "Личные заметки можно хранить в CRM-структуре." }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">Ничего не найдено.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
