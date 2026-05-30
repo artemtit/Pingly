@@ -94,7 +94,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         response = RedirectResponse("/tutor" if user["role"] == "tutor" else "/student", status_code=303)
         response.set_cookie(
             "pingly_session", signer.dumps(user["id"]),
-            httponly=True, samesite="lax", max_age=60 * 60 * 24 * 30,
+            httponly=True, samesite="lax", secure=True, max_age=60 * 60 * 24 * 30,
         )
         return response
 
