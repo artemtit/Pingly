@@ -123,13 +123,12 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         lessons = await services.lessons.list_tutor_calendar(user["id"])
         homework = await services.homework.list_for_tutor(user["id"])
         analytics = await services.analytics.tutor_dashboard(user["id"])
-        game = services.gamification.compute(lessons, homework)
         now = datetime.now(timezone.utc).isoformat()
         upcoming = [l for l in lessons if l.get("status") == "scheduled" and (l.get("starts_at") or "") >= now][:6]
         pending_hw = [h for h in homework if h.get("status") == "submitted"]
         return templates.TemplateResponse("tutor.html", _ctx(
             request, user, "overview",
-            students=students, analytics=analytics, game=game,
+            students=students, analytics=analytics,
             upcoming=upcoming, pending_hw=pending_hw,
         ))
 
@@ -146,8 +145,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             card = await services.students.student_card(user["id"], student_id)
         except PermissionError as exc:
             raise HTTPException(status_code=404) from exc
-        game = services.gamification.compute(card["lessons"], card["homework"])
-        return templates.TemplateResponse("student_card.html", _ctx(request, user, "students", game=game, **card))
+        return templates.TemplateResponse("student_card.html", _ctx(request, user, "students", **card))
 
     @app.post("/tutor/students/{student_id}/profile")
     async def update_student_profile(
