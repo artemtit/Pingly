@@ -16,6 +16,7 @@ from web.calendar_view import STATUS_LABELS, build_calendar, parse_anchor
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 templates.env.globals["status_labels"] = STATUS_LABELS
+templates.env.globals["role_label"] = lambda r: "Репетитор" if r == "tutor" else "Ученик"
 services = create_services()
 signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")
 
