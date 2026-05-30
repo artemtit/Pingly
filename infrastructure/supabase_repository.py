@@ -112,6 +112,8 @@ class SupabasePinglyRepository:
         if not student:
             return None
         user = await self.get_user_by_tg_id(tg_id)
+        if user and user.get("role") == "tutor":
+            return None
         if not user:
             result = await self._db().table("users").insert({
                 "role": "student",

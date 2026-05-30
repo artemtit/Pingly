@@ -71,6 +71,19 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
     uid = message.from_user.id
 
     if command.args and command.args.startswith("inv_"):
+        existing = await services.accounts.get_by_tg_id(uid)
+        if existing:
+            if existing["role"] == "tutor":
+                await message.answer(
+                    "С возвращением! 👨‍🏫\n\nЭта ссылка — для учеников. Ты уже зарегистрирован как репетитор.",
+                    reply_markup=tutor_menu_keyboard(),
+                )
+            else:
+                await message.answer(
+                    "С возвращением! 🎓\n\nТы уже в системе.",
+                    reply_markup=student_menu_keyboard(),
+                )
+            return
         token = command.args[4:]
         student = await services.students.link_student_from_invite(
             token,
