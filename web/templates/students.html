@@ -1,39 +1,46 @@
 {% extends "layout.html" %}
+{% import "macros.html" as ui %}
 {% block content %}
 <div class="topbar">
   <div>
     <div class="eyebrow">CRM</div>
     <h1>Ученики</h1>
-    <p class="muted">{{ students|length }} {{ "ученик" if students|length == 1 else "учеников" }} в твоём кабинете</p>
+    <p class="muted">{{ students|length }} {% if students|length == 1 %}ученик{% else %}учеников{% endif %} в твоём кабинете</p>
   </div>
   <a class="btn btn-secondary" href="/tutor/schedule">➕ Добавить занятие</a>
 </div>
 
 <form class="search" method="get">
-  <input class="input" name="q" value="{{ q }}" placeholder="🔍 Поиск по имени или Telegram">
+  <input class="input" name="q" value="{{ q }}" placeholder="Поиск по имени или Telegram">
   <button class="btn btn-primary">Найти</button>
 </form>
 
-<div class="student-grid">
-  {% for student in students %}
-  <a class="card student-card-mini" href="/tutor/students/{{ student.id }}">
-    <div class="avatar">{{ student.name[:1]|upper }}</div>
-    <div class="student-card-mini-body">
-      <strong>{{ student.name }}</strong>
-      <div class="muted">{{ student.subject_summary or "Предмет не указан" }}{% if student.grade %} · {{ student.grade }}{% endif %}</div>
-      <div class="chips">
-        <span class="badge completed">{{ student.relation_status or student.status }}</span>
-        {% if student.tg_username %}<span class="chip">@{{ student.tg_username }}</span>{% endif %}
-      </div>
-    </div>
-    <div class="student-card-arrow">→</div>
-  </a>
-  {% else %}
-  <div class="card empty-wide">
-    <div class="empty-emoji">👥</div>
-    <h2>Учеников пока нет</h2>
-    <p class="muted">Добавь ученика в Telegram-боте командой «➕ Добавить ученика» — он появится здесь автоматически.</p>
+{% if students %}
+<div class="students-table">
+  <div class="students-table-head">
+    <span>Ученик</span>
+    <span>Предмет</span>
+    <span></span>
   </div>
+  {% for student in students %}
+  <a class="students-table-row" href="/tutor/students/{{ student.id }}">
+    <span class="student-id">
+      <span class="avatar">{{ student.name[:1]|upper }}</span>
+      <span>
+        <span class="student-id-name">{{ student.name }}</span>
+        {% if student.tg_username %}<span class="student-id-sub">@{{ student.tg_username }}</span>{% endif %}
+      </span>
+    </span>
+    <span style="font-size: 14px; color: var(--fg2);">{{ student.subject_summary or "Предмет не указан" }}{% if student.grade %} · {{ student.grade }}{% endif %}</span>
+    <span style="color: var(--fg3); font-size: 18px;">→</span>
+  </a>
   {% endfor %}
 </div>
+{% else %}
+<div class="card empty-wide">
+  <div class="empty-emoji">👥</div>
+  <h2>Учеников пока нет</h2>
+  <p class="muted">Добавь ученика в Telegram-боте командой «➕ Добавить ученика» — он появится здесь автоматически.</p>
+</div>
+{% endif %}
 {% endblock %}

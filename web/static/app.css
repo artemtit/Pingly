@@ -63,10 +63,11 @@ h2 { font-size: 20px; letter-spacing: -.02em; margin-bottom: 14px; }
 .card-head h2 { margin: 0; }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-.stat { position: relative; overflow: hidden; }
-.stat-ico { font-size: 20px; margin-bottom: 8px; }
-.stat .value { font-size: 28px; font-weight: 800; letter-spacing: -.04em; }
-.stat .label { color: var(--color-text-muted); font-size: 13px; margin-top: 2px; }
+.stat { display: flex; align-items: center; gap: 14px; }
+.stat-icon { width: 44px; height: 44px; flex-shrink: 0; border-radius: 11px; background: var(--orange-50); color: var(--orange-600); display: flex; align-items: center; justify-content: center; }
+.stat-icon.accent { background: var(--orange-500); color: #fff; }
+.stat .value { font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: var(--fg1); line-height: 1; }
+.stat .label { color: var(--color-text-muted); font-size: 13px; margin-top: 4px; }
 
 /* ---------------- buttons ---------------- */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 44px; border-radius: 12px; border: 1px solid transparent; padding: 0 18px; font-weight: 700; font-size: 15px; cursor: pointer; transition: transform .12s, box-shadow .15s, background .15s; white-space: nowrap; }
@@ -162,6 +163,22 @@ textarea { min-height: 86px; resize: vertical; }
 .student-card-arrow { color: var(--color-text-muted); font-size: 20px; }
 .avatar { width: 46px; height: 46px; border-radius: 50%; background: var(--orange-100); color: var(--orange-700); display: grid; place-items: center; font-weight: 700; font-size: 19px; flex-shrink: 0; }
 .avatar-lg { width: 60px; height: 60px; font-size: 25px; border-radius: 50%; }
+
+/* ---------------- students table ---------------- */
+.students-table { background: #fff; border: 1px solid var(--color-border); border-radius: 14px; box-shadow: var(--shadow-sm); overflow: hidden; }
+.students-table-head { display: grid; grid-template-columns: 1.6fr 1.8fr 24px; padding: 10px 20px; border-bottom: 1px solid var(--gray-100); font-size: 12px; font-weight: 600; color: var(--fg3); text-transform: uppercase; letter-spacing: .05em; gap: 16px; align-items: center; }
+.students-table-row { display: grid; grid-template-columns: 1.6fr 1.8fr 24px; align-items: center; padding: 14px 20px; border-top: 1px solid var(--gray-100); color: inherit; text-decoration: none; transition: background .15s; gap: 16px; }
+.students-table-row:hover { background: var(--gray-50); }
+.student-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.student-id-name { font-size: 14.5px; font-weight: 600; color: var(--fg1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.student-id-sub { font-size: 13px; color: var(--fg3); display: block; }
+
+/* ---------------- next-lesson hero card ---------------- */
+.nl-hero-head { margin: -22px -22px 16px; padding: 18px 22px 16px; background: linear-gradient(135deg, #FFF7ED, #FFFFFF); border-bottom: 1px solid var(--color-neutral-100); }
+.nl-overline { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--orange-600); }
+.nl-datetime { display: flex; align-items: baseline; gap: 10px; margin-top: 12px; }
+.nl-date { font-size: 28px; font-weight: 700; letter-spacing: -.02em; color: var(--fg1); }
+.nl-time { font-family: var(--font-mono); font-size: 20px; font-weight: 600; color: var(--orange-600); }
 
 .big-date { font-size: 26px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 10px; }
 
@@ -276,4 +293,10 @@ textarea { min-height: 86px; resize: vertical; }
   .two { grid-template-columns: 1fr; }
   .main { padding: 20px; }
   .cal-cell { min-height: 72px; }
+}
+
+@media (max-width: 640px) {
+  .students-table-head { display: none; }
+  .students-table-row { grid-template-columns: 1fr 24px; }
+  .students-table-row > :nth-child(2) { display: none; }
 }

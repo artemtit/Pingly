@@ -13,11 +13,18 @@
 
 <section class="grid two" style="margin-top: 18px; align-items: start;">
   <div class="card next-lesson-card">
-    <div class="card-head"><h2>📚 Ближайшее занятие</h2><a class="link-btn" href="/student/calendar">Календарь →</a></div>
     {% if next_lesson %}
-    <p class="big-date">{{ next_lesson.starts_at[:16].replace("T", " ") }}</p>
+    <div class="nl-hero-head">
+      <div class="nl-overline">Ближайшее занятие</div>
+      <div class="nl-datetime">
+        <span class="nl-date">{{ next_lesson.starts_at[:10] }}</span>
+        <span class="nl-time">{{ next_lesson.starts_at[11:16] }}</span>
+      </div>
+    </div>
     {{ ui.status_badge(next_lesson.status) }}
+    <p class="muted" style="margin-top: 8px; font-size: 13px;">Напоминание придёт в Telegram за 2 часа.</p>
     {% else %}
+    <div class="card-head"><h2>📚 Ближайшее занятие</h2><a class="link-btn" href="/student/calendar">Календарь →</a></div>
     <div class="empty"><div class="empty-emoji">🌤️</div><p>Ближайших занятий пока нет.</p></div>
     {% endif %}
   </div>
@@ -26,7 +33,7 @@
     <div class="card-head"><h2>📝 Активные задания</h2><a class="link-btn" href="/student/homework">Все →</a></div>
     {% for hw in active_hw %}
     <div class="hw-item compact">
-      <div class="hw-head"><strong>{{ hw.title }}</strong><span class="badge {{ hw.status }}">{{ hw.status }}</span></div>
+      <div class="hw-head"><strong>{{ hw.title }}</strong>{{ ui.status_badge(hw.status) }}</div>
       <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">✅ Сдать</button></form>
     </div>
     {% else %}

@@ -11,11 +11,11 @@
 </div>
 
 <section class="grid stats" style="margin-top: 18px;">
-  <div class="card stat"><div class="stat-ico">👥</div><div class="value">{{ analytics.students_count }}</div><div class="label">Учеников</div></div>
-  <div class="card stat"><div class="stat-ico">🔵</div><div class="value">{{ analytics.completed_lessons }}</div><div class="label">Проведено</div></div>
-  <div class="card stat"><div class="stat-ico">📝</div><div class="value">{{ analytics.active_homework }}</div><div class="label">Активные ДЗ</div></div>
-  <div class="card stat"><div class="stat-ico">⭐</div><div class="value">{{ analytics.homework_completion_percent }}%</div><div class="label">Выполнение ДЗ</div></div>
-  <div class="card stat"><div class="stat-ico">📈</div><div class="value">{{ analytics.attendance_percent }}%</div><div class="label">Посещаемость</div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('users') }}</span><div><div class="value">{{ analytics.students_count }}</div><div class="label">Учеников</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('calendar-check') }}</span><div><div class="value">{{ analytics.completed_lessons }}</div><div class="label">Проведено</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('circle-check') }}</span><div><div class="value">{{ analytics.active_homework }}</div><div class="label">Активные ДЗ</div></div></div>
+  <div class="card stat"><span class="stat-icon accent">{{ ui.icon('star') }}</span><div><div class="value">{{ analytics.homework_completion_percent }}%</div><div class="label">Выполнение ДЗ</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('trending-up') }}</span><div><div class="value">{{ analytics.attendance_percent }}%</div><div class="label">Посещаемость</div></div></div>
 </section>
 
 <section class="grid two" style="margin-top: 18px;">
