@@ -19,6 +19,21 @@ router = Router()
 services = create_services()
 
 DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+_MONTHS = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+_STATUS_RU = {
+    "scheduled": "🔵 Запланировано",
+    "completed": "✅ Проведено",
+    "cancelled": "❌ Отменено",
+    "rescheduled": "🔄 Перенесено",
+}
+
+
+def _fmt_lesson_dt(starts_at: str) -> str:
+    try:
+        dt = datetime.fromisoformat(starts_at.replace("Z", "+00:00"))
+        return f"{dt.day} {_MONTHS[dt.month - 1]} · {dt.strftime('%H:%M')}"
+    except Exception:
+        return starts_at[:16].replace("T", " ")
 
 
 class AddStudent(StatesGroup):
@@ -346,10 +361,23 @@ async def add_student_username(message: Message, state: FSMContext) -> None:
 async def cmd_my_students(message: Message) -> None:
     students = await services.students.list_students(message.from_user.id)
     if not students:
-        await message.answer("У тебя пока нет учеников. Добавь первого: /add_student", reply_markup=tutor_menu_keyboard())
+        await message.answer(
+            "👥 Учеников пока нет\n\nДобавь первого через меню — я пришлю ссылку-приглашение.",
+            reply_markup=tutor_menu_keyboard(),
+        )
         return
-    lines = [f"• {s['name']} (@{s.get('tg_username') or 'без username'}) — {s.get('status', 'active')}" for s in students]
-    await message.answer("Твои ученики:\n\n" + "\n".join(lines))
+    lines = []
+    for i, s in enumerate(students, 1):
+        uname = f"@{s['tg_username']}" if s.get("tg_username") else "без username"
+        subject = s.get("subject_summary") or ""
+        grade = s.get("grade") or ""
+        meta = " · ".join(filter(None, [subject, grade, uname]))
+        lines.append(f"{i}. *{s['name']}*\n   {meta}")
+    await message.answer(
+        f"👥 *Твои ученики* ({len(students)})\n\n" + "\n\n".join(lines),
+        parse_mode="Markdown",
+        reply_markup=tutor_menu_keyboard(),
+    )
 
 
 def recurrence_keyboard() -> InlineKeyboardMarkup:
@@ -545,14 +573,25 @@ async def cmd_calendar(message: Message) -> None:
         else await services.lessons.list_student_calendar(user["id"])
     )
     if not lessons:
-        await message.answer("В календаре пока нет занятий.", reply_markup=tutor_menu_keyboard())
+        await message.answer("📅 Занятий пока нет.", reply_markup=tutor_menu_keyboard())
         return
+    now_iso = datetime.now(timezone.utc).isoformat()
+    upcoming = sorted(
+        [l for l in lessons if (l.get("starts_at") or "") >= now_iso],
+        key=lambda l: l.get("starts_at") or "",
+    )[:8]
     lines = []
-    for lesson in lessons[:10]:
-        starts = lesson["starts_at"][:16].replace("T", " ")
+    for lesson in upcoming:
         student = lesson.get("student_profiles") or {}
-        lines.append(f"• {starts} — {student.get('name', 'занятие')} · {lesson['status']}")
-    await message.answer("Ближайшие занятия:\n\n" + "\n".join(lines))
+        name = student.get("name") or "Занятие"
+        dt_str = _fmt_lesson_dt(lesson.get("starts_at", ""))
+        status = _STATUS_RU.get(lesson.get("status", ""), "")
+        lines.append(f"📍 *{name}*\n   🗓 {dt_str}  {status}")
+    await message.answer(
+        f"📅 *Ближайшие занятия* ({len(upcoming)})\n\n" + "\n\n".join(lines),
+        parse_mode="Markdown",
+        reply_markup=tutor_menu_keyboard(),
+    )
 
 
 @router.message(Command("add_homework"))
@@ -612,11 +651,12 @@ async def cmd_analytics(message: Message) -> None:
         return
     data = await services.analytics.tutor_dashboard(user["id"])
     await message.answer(
-        "Аналитика:\n\n"
-        f"Ученики: {data['students_count']}\n"
-        f"Проведено занятий: {data['completed_lessons']}\n"
-        f"Активные ДЗ: {data['active_homework']}\n"
-        f"Выполнение ДЗ: {data['homework_completion_percent']}%\n"
-        f"Посещаемость: {data['attendance_percent']}%",
+        "📊 *Статистика*\n\n"
+        f"👥 Учеников: *{data['students_count']}*\n"
+        f"✅ Проведено занятий: *{data['completed_lessons']}*\n"
+        f"📝 Активные ДЗ: *{data['active_homework']}*\n"
+        f"⭐ Выполнение ДЗ: *{data['homework_completion_percent']}%*\n"
+        f"📈 Посещаемость: *{data['attendance_percent']}%*",
+        parse_mode="Markdown",
         reply_markup=tutor_menu_keyboard(),
     )
