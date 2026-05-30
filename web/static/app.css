@@ -347,25 +347,30 @@ textarea { min-height: 86px; resize: vertical; }
 .bottom-nav a .ic { color: inherit; width: 22px; height: 22px; }
 .bottom-nav a.active { color: var(--orange-600); }
 
-/* ---------------- responsive ---------------- */
+/* ---------------- responsive tablet (641–980px) ---------------- */
 @media (max-width: 980px) {
   .app { grid-template-columns: 1fr; }
-  .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; }
-  .sidebar .nav { display: flex; flex-wrap: wrap; flex: 1 1 100%; }
-  .userbox { margin-top: 0; border-top: 0; padding-top: 0; }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .two { grid-template-columns: 1fr; }
   .main { padding: 20px; }
   .cal-cell { min-height: 72px; }
 }
 
+/* Сайдбар-полоса только для планшетов, не телефонов */
+@media (min-width: 641px) and (max-width: 980px) {
+  .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .sidebar .nav { display: flex; flex-wrap: wrap; flex: 1 1 100%; }
+  .userbox { margin-top: 0; border-top: 0; padding-top: 0; }
+}
+
+/* ---------------- responsive mobile (≤640px) ---------------- */
 @media (max-width: 640px) {
-  /* Скрыть сайдбар, показать мобильный хедер и нижнюю панель */
+  /* Прячем сайдбар, показываем мобильные элементы */
   .app { display: block; }
-  .sidebar { display: none; }
+  .sidebar { display: none !important; }
 
   .mobile-header {
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: space-between;
     background: #fff;
@@ -373,45 +378,45 @@ textarea { min-height: 86px; resize: vertical; }
     padding: 12px 16px;
     position: sticky;
     top: 0;
-    z-index: 50;
-    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    z-index: 100;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
   }
 
   .bottom-nav {
-    display: block;
+    display: block !important;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     background: #fff;
     border-top: 1px solid var(--gray-200);
-    z-index: 50;
+    z-index: 100;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Показываем мобильные блоки, скрываем десктопные */
+  /* Мобильные блоки */
   .desktop-only { display: none !important; }
   .mob-greeting { display: block; padding: 8px 0 18px; }
   .mob-week { display: block; margin-top: 20px; }
   .mob-hw { display: block; margin-top: 8px; }
 
-  /* Контент: меньше padding, место под нижнюю панель */
-  .main { padding: 16px; padding-bottom: 82px; }
+  /* Контент */
+  .main { padding: 16px; padding-bottom: 90px; }
   .card { padding: 16px; }
   .nl-hero-head { margin: -16px -16px 14px; padding: 14px 16px; }
 
-  /* Большие кнопки Буду/Отменяю на мобайле */
+  /* Большие кнопки занятия */
   .nl-actions { gap: 10px; }
   .nl-btn { height: 52px; font-size: 17px; border-radius: 12px; }
 
-  /* Топбар: кнопка под заголовком */
+  /* Топбар */
   .topbar { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
   .topbar .btn { width: 100%; justify-content: center; }
 
-  /* Статистика: 2 колонки */
+  /* Статы */
   .stats { grid-template-columns: 1fr 1fr; }
 
-  /* Список заданий: одна колонка */
+  /* Задания */
   .hw-list-wide { grid-template-columns: 1fr; }
 
   /* Таблица учеников */
@@ -419,12 +424,11 @@ textarea { min-height: 86px; resize: vertical; }
   .students-table-row { grid-template-columns: 1fr 24px; }
   .students-table-row > :nth-child(2) { display: none; }
 
-  /* Форма проверки ДЗ: вертикально */
+  /* Форма проверки ДЗ */
   .review-row { flex-direction: column; align-items: stretch; }
   .review-actions { flex-direction: row; }
   .review-row .input { max-width: 100%; }
 
-  /* Заголовки */
   h1 { font-size: 24px; }
   h2 { font-size: 17px; }
 }
