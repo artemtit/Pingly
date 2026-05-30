@@ -5,9 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pingly</title>
   <link rel="stylesheet" href="/design-tokens.css">
-  <link rel="stylesheet" href="/static/app.css?v=4">
+  <link rel="stylesheet" href="/static/app.css?v=5">
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    }());
+  </script>
 </head>
 <body>
 {% block body %}{% endblock %}
+<script>
+(function(){
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('theme', t);
+    document.querySelectorAll('.theme-toggle').forEach(function(b){
+      b.textContent = t === 'dark' ? '☀️' : '🌙';
+      b.title = t === 'dark' ? 'Светлая тема' : 'Тёмная тема';
+    });
+  }
+  window.toggleTheme = function() {
+    var cur = document.documentElement.getAttribute('data-theme');
+    setTheme(cur === 'dark' ? 'light' : 'dark');
+  };
+  var saved = localStorage.getItem('theme');
+  setTheme(saved || 'light');
+}());
+</script>
 </body>
 </html>

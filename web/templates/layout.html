@@ -17,7 +17,10 @@
 {% block body %}
 <header class="mobile-header">
   <a href="/"><img src="/static/logo.svg" height="26" alt="Pingly"></a>
-  <span class="avatar-circle">{{ user.full_name[0] | upper }}</span>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button class="theme-toggle" onclick="toggleTheme()" title="Тёмная тема" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">🌙</button>
+    <span class="avatar-circle">{{ user.full_name[0] | upper }}</span>
+  </div>
 </header>
 
 <div class="app">
@@ -58,6 +61,8 @@
         <button class="link-btn" aria-haspopup="dialog" onclick="document.getElementById('role-modal').classList.add('open')">Сменить роль</button>
         <span>·</span>
         <a href="/logout">Выйти</a>
+        <span>·</span>
+        <button class="link-btn theme-toggle" onclick="toggleTheme()" title="Тёмная тема">🌙</button>
       </div>
     </div>
   </aside>

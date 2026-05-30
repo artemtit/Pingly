@@ -216,6 +216,45 @@
 
 
 /* ============================================================
+   DARK THEME
+   ============================================================ */
+
+[data-theme="dark"] {
+  --color-bg:           #1E293B;
+  --color-bg-subtle:    #0F172A;
+  --color-bg-muted:     #334155;
+  --color-border:       #334155;
+  --color-border-focus: var(--color-primary-400);
+  --color-text:         #F1F5F9;
+  --color-text-muted:   #94A3B8;
+  --color-text-inverse: #0F172A;
+
+  --fg1: #F1F5F9;
+  --fg2: #CBD5E1;
+  --fg3: #64748B;
+
+  --gray-50:  #1E293B;
+  --gray-100: #334155;
+  --gray-200: #475569;
+  --gray-300: #64748B;
+  --gray-400: #94A3B8;
+
+  --color-success-light: #14532D;
+  --color-warning-light: #451A03;
+  --color-error-light:   #450A0A;
+  --color-info-light:    #1E3A5F;
+
+  --success-text: #4ADE80;
+  --warning-text: #FCD34D;
+  --error-text:   #FCA5A5;
+  --info-text:    #93C5FD;
+
+  --shadow-sm:  0 1px 3px 0 rgb(0 0 0 / 0.3);
+  --shadow-md:  0 4px 6px -1px rgb(0 0 0 / 0.4);
+  --shadow-primary: 0 4px 14px 0 rgb(249 115 22 / 0.25);
+}
+
+/* ============================================================
    BASE COMPONENT STYLES
    ============================================================ */
 

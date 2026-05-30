@@ -8,7 +8,29 @@ body {
     var(--color-bg-subtle);
   color: var(--color-text);
   font-family: var(--font-sans);
+  overflow-x: hidden;
 }
+[data-theme="dark"] body {
+  background: var(--color-bg-subtle);
+}
+[data-theme="dark"] .sidebar { background: #1E293B; border-right-color: #334155; }
+[data-theme="dark"] .card { background: #1E293B; }
+[data-theme="dark"] .mobile-header { background: #1E293B; border-bottom-color: #334155; }
+[data-theme="dark"] .bottom-nav { background: #1E293B; border-top-color: #334155; }
+[data-theme="dark"] .input, [data-theme="dark"] select, [data-theme="dark"] textarea { background: #0F172A; color: var(--fg1); border-color: #475569; }
+[data-theme="dark"] .students-table { background: #1E293B; }
+[data-theme="dark"] .students-table-row:hover { background: #334155; }
+[data-theme="dark"] .hero-game { background: linear-gradient(135deg, #1E293B, #0F172A); border-color: #334155; }
+[data-theme="dark"] .mob-week-row, [data-theme="dark"] .mob-hw-row { background: #1E293B; border-color: #334155; }
+[data-theme="dark"] .nl-hero-head { background: linear-gradient(135deg, #1E293B, #0F172A); }
+[data-theme="dark"] .onboarding-card { background: linear-gradient(135deg, #1E293B, #0F172A); border-color: #334155; }
+[data-theme="dark"] .hw-item { border-color: #334155; }
+[data-theme="dark"] .timeline-row { border-bottom-color: #334155; }
+[data-theme="dark"] .modal { background: #1E293B; }
+[data-theme="dark"] .btn-secondary { background: #334155; border-color: #475569; color: var(--fg1); }
+[data-theme="dark"] .btn-ghost { color: var(--fg2); }
+[data-theme="dark"] .btn-ghost:hover { background: #334155; color: var(--fg1); }
+[data-theme="dark"] .day-lesson { background: #1E293B; border-color: #334155; }
 a { color: inherit; text-decoration: none; }
 h1, h2, h3, p { margin: 0; }
 h1 { font-size: var(--fluid-h2); letter-spacing: -.03em; line-height: 1.1; }
