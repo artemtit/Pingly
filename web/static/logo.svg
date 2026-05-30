@@ -1,0 +1,6 @@
+<svg width="190" height="56" viewBox="0 0 190 56" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pingly">
+  <rect width="56" height="56" rx="14" fill="#F97316"></rect>
+  <path d="M28 15.5c-5 0-8.5 3.6-8.5 8.6 0 4.2-1 6.3-2.2 7.8-.6.7-.1 1.9.8 1.9h19.8c.9 0 1.4-1.2.8-1.9-1.2-1.5-2.2-3.6-2.2-7.8 0-5-3.5-8.6-8.5-8.6Z" fill="#FFFFFF"></path>
+  <path d="M24.7 38.2a3.4 3.4 0 0 0 6.6 0" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" fill="none"></path>
+  <text x="70" y="37" font-family="Inter, -apple-system, sans-serif" font-size="30" font-weight="700" letter-spacing="-0.02em" fill="#111827">Pingly</text>
+</svg>
