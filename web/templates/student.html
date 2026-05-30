@@ -1,7 +1,9 @@
 {% extends "layout.html" %}
 {% import "macros.html" as ui %}
 {% block content %}
-<div class="topbar">
+
+{# ── Desktop topbar ─────────────────────────────────────────── #}
+<div class="topbar desktop-only">
   <div>
     <div class="eyebrow">Кабинет ученика</div>
     <h1>Привет, {{ user.full_name.split(" ")[0] }}! 👋</h1>
@@ -9,9 +11,20 @@
   </div>
 </div>
 
-{{ ui.game_hero(game, "Выполняй задания и приходи на занятия — так растёт твой уровень!") }}
+{# ── Mobile greeting ────────────────────────────────────────── #}
+<div class="mob-greeting">
+  <h1 style="font-size:26px;font-weight:700;letter-spacing:-.02em;">Привет, {{ user.full_name.split(" ")[0] }}! 👋</h1>
+  <p class="muted" style="margin-top:6px;font-size:15px;">Напоминания придут в Telegram за 2 часа до занятия.</p>
+</div>
 
+{# ── Desktop: gamification hero ─────────────────────────────── #}
+<div class="desktop-only">
+  {{ ui.game_hero(game, "Выполняй задания и приходи на занятия — так растёт твой уровень!") }}
+</div>
+
+{# ── Next lesson + homework (two-col on desktop, single on mobile) #}
 <section class="grid two" style="margin-top: 18px; align-items: start;">
+
   <div class="card next-lesson-card">
     {% if next_lesson %}
     <div class="nl-hero-head">
@@ -25,11 +38,11 @@
     <p class="muted" style="margin-top: 8px; font-size: 13px;">Напоминание придёт в Telegram за 2 часа.</p>
     {% if next_lesson.status == 'scheduled' %}
     <div class="nl-actions">
-      <form method="post" action="/student/lessons/{{ next_lesson.id }}/confirm">
-        <button class="btn btn-primary btn-sm">✅ Буду</button>
+      <form method="post" action="/student/lessons/{{ next_lesson.id }}/confirm" style="flex:1">
+        <button class="btn btn-primary nl-btn">✅ Буду</button>
       </form>
-      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel">
-        <button class="btn btn-ghost btn-sm">❌ Отменяю</button>
+      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1">
+        <button class="btn btn-secondary nl-btn">❌ Отменяю</button>
       </form>
     </div>
     {% endif %}
@@ -39,7 +52,7 @@
     {% endif %}
   </div>
 
-  <div class="card">
+  <div class="card desktop-only">
     <div class="card-head"><h2>📝 Активные задания</h2><a class="link-btn" href="/student/homework">Все →</a></div>
     {% for hw in active_hw %}
     <div class="hw-item compact">
@@ -50,5 +63,43 @@
     <div class="empty"><div class="empty-emoji">📭</div><p>Заданий пока нет.</p></div>
     {% endfor %}
   </div>
+
 </section>
+
+{# ── Mobile: week lessons ────────────────────────────────────── #}
+{% set other_lessons = upcoming | selectattr("id", "ne", next_lesson.id if next_lesson else "") | list %}
+{% if other_lessons %}
+<div class="mob-week">
+  <div class="mob-week-label">На этой неделе</div>
+  {% for lesson in other_lessons %}
+  <div class="mob-week-row">
+    <div class="mob-week-daycol">
+      <div class="mob-week-day">{{ lesson.starts_at | ru_weekday }}</div>
+      <div class="mob-week-time">{{ lesson.starts_at[11:16] }}</div>
+    </div>
+    <div class="mob-week-subj">Занятие</div>
+    {{ ui.status_badge(lesson.status) }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Mobile: active homework ─────────────────────────────────── #}
+{% if active_hw %}
+<div class="mob-hw">
+  <div class="mob-week-label">Активные задания</div>
+  {% for hw in active_hw %}
+  <div class="mob-hw-row">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:14.5px;font-weight:600;color:var(--fg1)">{{ hw.title }}</div>
+    </div>
+    {{ ui.status_badge(hw.status) }}
+    <form method="post" action="/student/homework/{{ hw.id }}/submit">
+      <button class="btn btn-primary btn-sm">✅ Сдать</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% endblock %}

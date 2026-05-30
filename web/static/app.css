@@ -291,6 +291,39 @@ textarea { min-height: 86px; resize: vertical; }
   .xp-bar span { transition: none; }
 }
 
+/* ---------------- visibility utilities ---------------- */
+.desktop-only { }
+.mob-greeting { display: none; }
+.mob-week { display: none; }
+.mob-hw { display: none; }
+
+/* nl-btn: full-width inside nl-actions flex */
+.nl-btn { width: 100%; }
+
+/* ---------------- mobile: week & hw lists ---------------- */
+.mob-week-label {
+  font-size: 12px; font-weight: 700; color: var(--fg3);
+  text-transform: uppercase; letter-spacing: .06em;
+  margin-bottom: 10px; padding: 0 2px;
+}
+.mob-week-row {
+  display: flex; align-items: center; gap: 14px;
+  background: #fff; border: 1px solid var(--gray-200);
+  border-radius: 14px; padding: 13px 16px;
+  box-shadow: var(--shadow-sm); margin-bottom: 10px;
+}
+.mob-week-daycol { width: 44px; flex-shrink: 0; text-align: center; }
+.mob-week-day { font-size: 12px; font-weight: 700; color: var(--orange-600); text-transform: uppercase; }
+.mob-week-time { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--fg1); margin-top: 2px; }
+.mob-week-subj { flex: 1; font-size: 14.5px; font-weight: 600; color: var(--fg1); min-width: 0; }
+
+.mob-hw-row {
+  display: flex; align-items: center; gap: 10px;
+  background: #fff; border: 1px solid var(--gray-200);
+  border-radius: 14px; padding: 13px 16px;
+  box-shadow: var(--shadow-sm); margin-bottom: 10px;
+}
+
 /* ---------------- mobile header & bottom nav ---------------- */
 .mobile-header { display: none; }
 .bottom-nav { display: none; }
@@ -356,10 +389,20 @@ textarea { min-height: 86px; resize: vertical; }
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
+  /* Показываем мобильные блоки, скрываем десктопные */
+  .desktop-only { display: none !important; }
+  .mob-greeting { display: block; padding: 8px 0 18px; }
+  .mob-week { display: block; margin-top: 20px; }
+  .mob-hw { display: block; margin-top: 8px; }
+
   /* Контент: меньше padding, место под нижнюю панель */
   .main { padding: 16px; padding-bottom: 82px; }
   .card { padding: 16px; }
   .nl-hero-head { margin: -16px -16px 14px; padding: 14px 16px; }
+
+  /* Большие кнопки Буду/Отменяю на мобайле */
+  .nl-actions { gap: 10px; }
+  .nl-btn { height: 52px; font-size: 17px; border-radius: 12px; }
 
   /* Топбар: кнопка под заголовком */
   .topbar { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 16px; }

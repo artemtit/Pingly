@@ -18,6 +18,17 @@ BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 templates.env.globals["status_labels"] = STATUS_LABELS
 templates.env.globals["role_label"] = lambda r: "Репетитор" if r == "tutor" else "Ученик"
+
+_DAYS_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+
+def _ru_weekday(dt_str: str) -> str:
+    try:
+        dt = datetime.fromisoformat(str(dt_str).replace("Z", "+00:00"))
+        return _DAYS_RU[dt.weekday()]
+    except Exception:
+        return ""
+
+templates.env.filters["ru_weekday"] = _ru_weekday
 services = create_services()
 signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")
 
@@ -288,9 +299,14 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         homework = await services.homework.list_for_student(user["id"])
         game = services.gamification.compute(lessons, homework)
         active_hw = [h for h in homework if h.get("status") in ("new", "in_progress")]
+        now_iso = datetime.now(timezone.utc).isoformat()
+        upcoming = sorted(
+            [l for l in lessons if l.get("status") == "scheduled" and (l.get("starts_at") or "") >= now_iso],
+            key=lambda l: l.get("starts_at") or "",
+        )[:6]
         return templates.TemplateResponse("student.html", _ctx(
             request, user, "overview",
-            next_lesson=next_lesson, game=game, active_hw=active_hw,
+            next_lesson=next_lesson, game=game, active_hw=active_hw, upcoming=upcoming,
         ))
 
     @app.get("/student/calendar", response_class=HTMLResponse)
