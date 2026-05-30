@@ -121,12 +121,6 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     async def design_tokens() -> Response:
         return FileResponse(BASE_DIR.parent / "design-tokens.css", media_type="text/css")
 
-    @app.post("/role/switch")
-    async def role_switch(role: str = Form(...), user: dict = Depends(current_user)) -> Response:
-        if role in {"tutor", "student"} and user.get("tg_id"):
-            await services.accounts.change_role(user["tg_id"], role)
-        return RedirectResponse("/", status_code=303)
-
     # ---------------- TUTOR ----------------
     @app.get("/tutor", response_class=HTMLResponse)
     async def tutor_dashboard(request: Request, user: dict = Depends(current_user)) -> Response:

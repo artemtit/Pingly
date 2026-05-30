@@ -58,8 +58,6 @@
         </div>
       </div>
       <div class="userbox-actions">
-        <button class="link-btn" aria-haspopup="dialog" onclick="document.getElementById('role-modal').classList.add('open')">Сменить роль</button>
-        <span>·</span>
         <a href="/logout">Выйти</a>
         <span>·</span>
         <button class="link-btn theme-toggle" onclick="toggleTheme()" title="Тёмная тема">🌙</button>
@@ -90,29 +88,4 @@
   </div>
 </nav>
 
-<div class="modal-backdrop" id="role-modal" role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
-  <div class="modal">
-    <div class="modal-emoji">🔄</div>
-    <h2 id="role-modal-title">Сменить режим?</h2>
-    {% if user.role == "tutor" %}
-    <p class="muted">Сейчас ты в режиме <strong>репетитора</strong>. Перейти в режим <strong>ученика</strong>? Данные и роль синхронизируются с ботом.</p>
-    {% else %}
-    <p class="muted">Сейчас ты в режиме <strong>ученика</strong>. Перейти в режим <strong>репетитора</strong>? Данные и роль синхронизируются с ботом.</p>
-    {% endif %}
-    <form method="post" action="/role/switch" class="modal-actions">
-      <input type="hidden" name="role" value="{{ 'student' if user.role == 'tutor' else 'tutor' }}">
-      <button type="button" class="btn btn-ghost" onclick="document.getElementById('role-modal').classList.remove('open')">Отмена</button>
-      <button type="submit" class="btn btn-primary">Переключить</button>
-    </form>
-  </div>
-</div>
-<script>
-(function () {
-  var m = document.getElementById('role-modal');
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && m.classList.contains('open')) m.classList.remove('open');
-  });
-  m.addEventListener('click', function (e) { if (e.target === m) m.classList.remove('open'); });
-}());
-</script>
 {% endblock %}

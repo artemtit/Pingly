@@ -36,5 +36,5 @@ async def send_due_notifications(bot: Bot) -> None:
 
 def create_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="UTC")
-    scheduler.add_job(send_due_notifications, "interval", minutes=5, args=[bot])
+    scheduler.add_job(send_due_notifications, "interval", minutes=1, args=[bot])
     return scheduler

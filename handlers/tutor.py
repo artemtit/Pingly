@@ -71,13 +71,11 @@ def role_choice_keyboard() -> InlineKeyboardMarkup:
     ]])
 
 
-def settings_keyboard(role: str, can_be_student: bool = False) -> InlineKeyboardMarkup:
-    rows = [[InlineKeyboardButton(text="✏️ Изменить имя", callback_data="settings:name")]]
-    if role == "student":
-        rows.append([InlineKeyboardButton(text="👨‍🏫 Стать репетитором", callback_data="settings:role:tutor")])
-    elif can_be_student:
-        rows.append([InlineKeyboardButton(text="🎓 Стать учеником", callback_data="settings:role:student")])
-    rows.append([InlineKeyboardButton(text="🌐 Открыть веб-кабинет", callback_data="settings:web")])
+def settings_keyboard() -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton(text="✏️ Изменить имя", callback_data="settings:name")],
+        [InlineKeyboardButton(text="🌐 Открыть веб-кабинет", callback_data="settings:web")],
+    ]
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -243,13 +241,12 @@ async def cmd_settings(message: Message) -> None:
         await message.answer("Сначала выбери роль 👇", reply_markup=role_choice_keyboard())
         return
     role_text = "репетитор 👨‍🏫" if user["role"] == "tutor" else "ученик 🎓"
-    can_be_student = user["role"] == "student" or await services.students.has_student_profile(message.from_user.id)
     await message.answer(
         "⚙️ Настройки Pingly\n\n"
-        f"Имя: {user['full_name']}\n"
-        f"Роль: {role_text}\n\n"
-        "Здесь можно поменять роль или обновить информацию о себе.",
-        reply_markup=settings_keyboard(user["role"], can_be_student),
+        f"Имя: *{user['full_name']}*\n"
+        f"Роль: {role_text}",
+        reply_markup=settings_keyboard(),
+        parse_mode="Markdown",
     )
 
 
@@ -271,29 +268,6 @@ async def settings_save_name(message: Message, state: FSMContext) -> None:
     keyboard = student_menu_keyboard() if user and user["role"] == "student" else tutor_menu_keyboard()
     await message.answer(f"✅ Готово! Теперь в Pingly ты: {name}", reply_markup=keyboard)
 
-
-@router.callback_query(F.data.startswith("settings:role:"))
-async def settings_change_role(callback: CallbackQuery) -> None:
-    role = callback.data.split(":")[2]
-    if role == "student":
-        has_profile = await services.students.has_student_profile(callback.from_user.id)
-        if not has_profile:
-            await callback.message.answer(
-                "Стать учеником можно только по ссылке-приглашению от репетитора.\n\n"
-                "Попроси репетитора нажать «➕ Добавить ученика» — ты получишь ссылку в этот чат."
-            )
-            await callback.answer()
-            return
-    user = await services.accounts.change_role(callback.from_user.id, role)
-    if not user:
-        await callback.message.answer("Сначала нажми /start.")
-        await callback.answer()
-        return
-    if role == "student":
-        await callback.message.answer("✅ Роль изменена: теперь ты ученик 🎓", reply_markup=student_menu_keyboard())
-    else:
-        await callback.message.answer("✅ Роль изменена: теперь ты репетитор 👨‍🏫", reply_markup=tutor_menu_keyboard())
-    await callback.answer()
 
 
 @router.callback_query(F.data == "settings:web")
