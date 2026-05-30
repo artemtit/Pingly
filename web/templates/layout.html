@@ -15,6 +15,11 @@
 {%- endmacro -%}
 
 {% block body %}
+<header class="mobile-header">
+  <a href="/"><img src="/static/logo.svg" height="26" alt="Pingly"></a>
+  <span class="avatar-circle">{{ user.full_name[0] | upper }}</span>
+</header>
+
 <div class="app">
   <aside class="sidebar">
     <a class="brand" href="/"><img src="/static/logo.svg" height="30" alt="Pingly"></a>
@@ -61,6 +66,24 @@
     {% block content %}{% endblock %}
   </main>
 </div>
+
+<nav class="bottom-nav" aria-label="Навигация">
+  <div class="bottom-nav-inner">
+    {% if user.role == "tutor" %}
+    <a href="/tutor" class="{{ 'active' if active == 'overview' }}">{{ icon('zap') }}<span>Обзор</span></a>
+    <a href="/tutor/students" class="{{ 'active' if active == 'students' }}">{{ icon('users') }}<span>Ученики</span></a>
+    <a href="/tutor/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }}<span>Занятия</span></a>
+    <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }}<span>Задания</span></a>
+    <a href="/tutor/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }}<span>Ещё</span></a>
+    {% else %}
+    <a href="/student" class="{{ 'active' if active == 'overview' }}">{{ icon('graduation-cap') }}<span>Главная</span></a>
+    <a href="/student/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }}<span>Занятия</span></a>
+    <a href="/student/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }}<span>Задания</span></a>
+    <a href="/student/progress" class="{{ 'active' if active == 'progress' }}">{{ icon('star') }}<span>Прогресс</span></a>
+    <a href="/student/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }}<span>Ещё</span></a>
+    {% endif %}
+  </div>
+</nav>
 
 <div class="modal-backdrop" id="role-modal" role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
   <div class="modal">
