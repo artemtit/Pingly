@@ -53,18 +53,17 @@ def _username(message: Message) -> str | None:
 def role_choice_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="👨‍🏫 Я репетитор", callback_data="role:tutor"),
-        InlineKeyboardButton(text="🎓 Я ученик", callback_data="role:student"),
     ]])
 
 
-def settings_keyboard(role: str) -> InlineKeyboardMarkup:
-    next_role = "student" if role == "tutor" else "tutor"
-    next_label = "🎓 Стать учеником" if next_role == "student" else "👨‍🏫 Стать репетитором"
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✏️ Изменить имя", callback_data="settings:name")],
-        [InlineKeyboardButton(text=next_label, callback_data=f"settings:role:{next_role}")],
-        [InlineKeyboardButton(text="🌐 Открыть веб-кабинет", callback_data="settings:web")],
-    ])
+def settings_keyboard(role: str, can_be_student: bool = False) -> InlineKeyboardMarkup:
+    rows = [[InlineKeyboardButton(text="✏️ Изменить имя", callback_data="settings:name")]]
+    if role == "student":
+        rows.append([InlineKeyboardButton(text="👨‍🏫 Стать репетитором", callback_data="settings:role:tutor")])
+    elif can_be_student:
+        rows.append([InlineKeyboardButton(text="🎓 Стать учеником", callback_data="settings:role:student")])
+    rows.append([InlineKeyboardButton(text="🌐 Открыть веб-кабинет", callback_data="settings:web")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 @router.message(CommandStart())
@@ -108,8 +107,9 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
 
     await message.answer(
         f"Привет, {message.from_user.first_name}! 👋\n\n"
-        "Я Pingly. Помогаю репетиторам и ученикам держать занятия, домашки и уведомления в одном месте.\n\n"
-        "Сначала выбери роль. Потом её можно поменять в настройках ⚙️",
+        "Я Pingly — помогаю репетиторам вести учеников, занятия и задания в одном месте.\n\n"
+        "Ты репетитор? Нажми кнопку ниже.\n"
+        "Ты ученик? Попроси репетитора прислать ссылку-приглашение — она придёт прямо в этот чат.",
         reply_markup=role_choice_keyboard(),
     )
 
@@ -117,33 +117,29 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
 @router.callback_query(F.data.startswith("role:"))
 async def choose_role(callback: CallbackQuery) -> None:
     role = callback.data.split(":")[1]
+    if role == "student":
+        await callback.message.answer(
+            "Войти как ученик можно только по ссылке-приглашению от репетитора.\n\n"
+            "Попроси репетитора нажать «➕ Добавить ученика» — ты получишь ссылку в этот чат."
+        )
+        await callback.answer()
+        return
     user = await services.accounts.choose_role(
         role,
         callback.from_user.id,
         callback.from_user.full_name,
         callback.from_user.username,
     )
-    if user["role"] == "student":
-        await callback.message.answer(
-            "Готово, ты вошёл как ученик 🎓\n\n"
-            "Что можно делать:\n"
-            "📚 видеть следующее занятие\n"
-            "📝 смотреть и сдавать задания\n"
-            "📈 отслеживать прогресс\n"
-            "🌐 открывать веб-кабинет",
-            reply_markup=student_menu_keyboard(),
-        )
-    else:
-        await callback.message.answer(
-            "Готово, ты вошёл как репетитор 👨‍🏫\n\n"
-            "Что можно делать:\n"
-            "👥 вести CRM учеников\n"
-            "📅 добавлять занятия\n"
-            "📝 выдавать задания\n"
-            "📊 смотреть аналитику\n"
-            "🌐 открывать веб-кабинет",
-            reply_markup=tutor_menu_keyboard(),
-        )
+    await callback.message.answer(
+        "Готово, ты вошёл как репетитор 👨‍🏫\n\n"
+        "Что можно делать:\n"
+        "👥 вести CRM учеников\n"
+        "📅 добавлять занятия\n"
+        "📝 выдавать задания\n"
+        "📊 смотреть аналитику\n"
+        "🌐 открывать веб-кабинет",
+        reply_markup=tutor_menu_keyboard(),
+    )
     await callback.answer()
 
 
@@ -219,12 +215,13 @@ async def cmd_settings(message: Message) -> None:
         await message.answer("Сначала выбери роль 👇", reply_markup=role_choice_keyboard())
         return
     role_text = "репетитор 👨‍🏫" if user["role"] == "tutor" else "ученик 🎓"
+    can_be_student = user["role"] == "student" or await services.students.has_student_profile(message.from_user.id)
     await message.answer(
         "⚙️ Настройки Pingly\n\n"
         f"Имя: {user['full_name']}\n"
         f"Роль: {role_text}\n\n"
         "Здесь можно поменять роль или обновить информацию о себе.",
-        reply_markup=settings_keyboard(user["role"]),
+        reply_markup=settings_keyboard(user["role"], can_be_student),
     )
 
 
@@ -250,6 +247,15 @@ async def settings_save_name(message: Message, state: FSMContext) -> None:
 @router.callback_query(F.data.startswith("settings:role:"))
 async def settings_change_role(callback: CallbackQuery) -> None:
     role = callback.data.split(":")[2]
+    if role == "student":
+        has_profile = await services.students.has_student_profile(callback.from_user.id)
+        if not has_profile:
+            await callback.message.answer(
+                "Стать учеником можно только по ссылке-приглашению от репетитора.\n\n"
+                "Попроси репетитора нажать «➕ Добавить ученика» — ты получишь ссылку в этот чат."
+            )
+            await callback.answer()
+            return
     user = await services.accounts.change_role(callback.from_user.id, role)
     if not user:
         await callback.message.answer("Сначала нажми /start.")

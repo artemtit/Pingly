@@ -56,6 +56,13 @@ class StudentService:
             raise PermissionError("Student does not belong to tutor")
         await self.repo.set_tutor_student_note(tutor_user_id, student_id, note)
 
+    async def has_student_profile(self, tg_id: int) -> bool:
+        user = await self.repo.get_user_by_tg_id(tg_id)
+        if not user:
+            return False
+        student = await self.repo.get_student_for_user(user["id"])
+        return student is not None
+
     async def student_card(self, tutor_user_id: str, student_id: str) -> dict:
         student = await self.repo.get_student_for_tutor(tutor_user_id, student_id)
         if not student:
