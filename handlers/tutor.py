@@ -8,7 +8,9 @@ from aiogram.filters import Command, CommandStart
 from aiogram.filters.command import CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions, Message
+
+NO_PREVIEW = LinkPreviewOptions(is_disabled=True)
 
 from application.factory import create_services
 from handlers.keyboards import student_menu_keyboard, tutor_menu_keyboard
@@ -266,7 +268,10 @@ async def settings_web(callback: CallbackQuery) -> None:
     if not link:
         await callback.message.answer("Сначала нажми /start.")
     else:
-        await callback.message.answer(f"🌐 Веб-кабинет Pingly:\n{link}\n\nСсылка действует 10 минут.")
+        await callback.message.answer(
+            f"🌐 Веб-кабинет Pingly:\n{link}\n\nСсылка действует 10 минут.",
+            link_preview_options=NO_PREVIEW,
+        )
     await callback.answer()
 
 
@@ -276,7 +281,10 @@ async def cmd_web(message: Message) -> None:
     if not link:
         await message.answer("Сначала нажми /start, чтобы я создал аккаунт.")
         return
-    await message.answer(f"🌐 Веб-кабинет Pingly:\n{link}\n\nСсылка действует 10 минут.")
+    await message.answer(
+        f"🌐 Веб-кабинет Pingly:\n{link}\n\nСсылка действует 10 минут.",
+        link_preview_options=NO_PREVIEW,
+    )
 
 
 @router.message(Command("add_student"))

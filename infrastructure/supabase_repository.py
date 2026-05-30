@@ -426,11 +426,12 @@ class SupabasePinglyRepository:
         }).execute()
 
     async def consume_web_token(self, token_hash: str, now: datetime) -> dict[str, Any] | None:
+        # Valid for the whole TTL (not single-use): link previews / prefetchers
+        # may hit the URL before the user clicks, so the token must survive that.
         result = await (
             self._db().table("web_login_tokens")
             .select("*, users(*)")
             .eq("token_hash", token_hash)
-            .is_("used_at", "null")
             .gte("expires_at", now.isoformat())
             .limit(1)
             .execute()
@@ -438,5 +439,6 @@ class SupabasePinglyRepository:
         row = _one(result)
         if not row:
             return None
-        await self._db().table("web_login_tokens").update({"used_at": now.isoformat()}).eq("id", row["id"]).execute()
+        if row.get("used_at") is None:
+            await self._db().table("web_login_tokens").update({"used_at": now.isoformat()}).eq("id", row["id"]).execute()
         return row["users"]
