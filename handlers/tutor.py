@@ -327,7 +327,7 @@ async def add_student_username(message: Message, state: FSMContext) -> None:
 async def cmd_my_students(message: Message) -> None:
     students = await services.students.list_students(message.from_user.id)
     if not students:
-        await message.answer("У тебя пока нет учеников. Добавь первого: /add_student")
+        await message.answer("У тебя пока нет учеников. Добавь первого: /add_student", reply_markup=tutor_menu_keyboard())
         return
     lines = [f"• {s['name']} (@{s.get('tg_username') or 'без username'}) — {s.get('status', 'active')}" for s in students]
     await message.answer("Твои ученики:\n\n" + "\n".join(lines))
@@ -526,7 +526,7 @@ async def cmd_calendar(message: Message) -> None:
         else await services.lessons.list_student_calendar(user["id"])
     )
     if not lessons:
-        await message.answer("В календаре пока нет занятий.")
+        await message.answer("В календаре пока нет занятий.", reply_markup=tutor_menu_keyboard())
         return
     lines = []
     for lesson in lessons[:10]:
@@ -582,7 +582,7 @@ async def homework_description(message: Message, state: FSMContext) -> None:
         None,
     )
     await state.clear()
-    await message.answer("✅ Задание выдано. Ученик получит уведомление.")
+    await message.answer("✅ Задание выдано. Ученик получит уведомление.", reply_markup=tutor_menu_keyboard())
 
 
 @router.message(Command("analytics"))
@@ -598,5 +598,6 @@ async def cmd_analytics(message: Message) -> None:
         f"Проведено занятий: {data['completed_lessons']}\n"
         f"Активные ДЗ: {data['active_homework']}\n"
         f"Выполнение ДЗ: {data['homework_completion_percent']}%\n"
-        f"Посещаемость: {data['attendance_percent']}%"
+        f"Посещаемость: {data['attendance_percent']}%",
+        reply_markup=tutor_menu_keyboard(),
     )

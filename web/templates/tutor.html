@@ -10,6 +10,35 @@
   <a class="btn btn-primary" href="/tutor/schedule">➕ Добавить занятие</a>
 </div>
 
+{% if analytics.students_count == 0 %}
+<div class="card onboarding-card" style="margin-top: 18px;">
+  <div class="onboarding-title">Добро пожаловать в Pingly!</div>
+  <p class="muted" style="margin: 6px 0 18px;">Три шага — и кабинет заработает на полную.</p>
+  <div class="onboarding-steps">
+    <div class="onboarding-step">
+      <span class="onboarding-num">1</span>
+      <div>
+        <strong>Добавь ученика в боте</strong>
+        <div class="muted" style="font-size: 13px;">Нажми «➕ Добавить ученика» и отправь ему ссылку-приглашение</div>
+      </div>
+    </div>
+    <div class="onboarding-step">
+      <span class="onboarding-num">2</span>
+      <div>
+        <strong>Добавь занятие</strong>
+        <div class="muted" style="font-size: 13px;">Перейди в <a href="/tutor/schedule" class="link-btn">Расписание</a> или нажми в боте «➕ Добавить занятие»</div>
+      </div>
+    </div>
+    <div class="onboarding-step">
+      <span class="onboarding-num">3</span>
+      <div>
+        <strong>Готово — Pingly сделает остальное</strong>
+        <div class="muted" style="font-size: 13px;">Напоминания, статусы и статистика появятся здесь автоматически</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
 <section class="grid stats" style="margin-top: 18px;">
   <div class="card stat"><span class="stat-icon">{{ ui.icon('users') }}</span><div><div class="value">{{ analytics.students_count }}</div><div class="label">Учеников</div></div></div>
   <div class="card stat"><span class="stat-icon">{{ ui.icon('calendar-check') }}</span><div><div class="value">{{ analytics.completed_lessons }}</div><div class="label">Проведено</div></div></div>
@@ -17,6 +46,7 @@
   <div class="card stat"><span class="stat-icon accent">{{ ui.icon('star') }}</span><div><div class="value">{{ analytics.homework_completion_percent }}%</div><div class="label">Выполнение ДЗ</div></div></div>
   <div class="card stat"><span class="stat-icon">{{ ui.icon('trending-up') }}</span><div><div class="value">{{ analytics.attendance_percent }}%</div><div class="label">Посещаемость</div></div></div>
 </section>
+{% endif %}
 
 <section class="grid two" style="margin-top: 18px;">
   <div class="card">

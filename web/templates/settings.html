@@ -21,9 +21,12 @@
   </div>
 
   <div class="card">
-    <h2>🔔 Уведомления</h2>
-    <div class="settings-row"><span>Telegram-напоминания</span><span class="badge completed">включены</span></div>
-    <p class="muted" style="margin-top:10px;">Pingly напоминает о занятиях за день и за час, а также о новых и проверенных заданиях.</p>
+    <h2>🤖 Telegram-бот</h2>
+    <div class="settings-row"><span>Напоминания</span><span class="badge completed">включены</span></div>
+    <p class="muted" style="margin: 10px 0 14px;">Pingly напоминает о занятиях за день и за час. Чтобы поменять имя или роль — открой бота.</p>
+    {% if bot_username %}
+    <a class="btn btn-secondary" href="https://t.me/{{ bot_username }}" target="_blank" rel="noopener">Открыть бот →</a>
+    {% endif %}
   </div>
 </section>
 {% endblock %}

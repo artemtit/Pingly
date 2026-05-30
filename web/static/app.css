@@ -179,6 +179,14 @@ textarea { min-height: 86px; resize: vertical; }
 .nl-datetime { display: flex; align-items: baseline; gap: 10px; margin-top: 12px; }
 .nl-date { font-size: 28px; font-weight: 700; letter-spacing: -.02em; color: var(--fg1); }
 .nl-time { font-family: var(--font-mono); font-size: 20px; font-weight: 600; color: var(--orange-600); }
+.nl-actions { display: flex; gap: 8px; margin-top: 14px; }
+
+/* ---------------- onboarding card ---------------- */
+.onboarding-card { background: linear-gradient(135deg, #FFF7ED, #fff); border-color: var(--orange-200); }
+.onboarding-title { font-size: 18px; font-weight: 700; color: var(--fg1); margin-bottom: 4px; }
+.onboarding-steps { display: flex; flex-direction: column; gap: 12px; }
+.onboarding-step { display: flex; align-items: flex-start; gap: 14px; }
+.onboarding-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--orange-500); color: #fff; font-size: 14px; font-weight: 800; display: grid; place-items: center; }
 
 .big-date { font-size: 26px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 10px; }
 

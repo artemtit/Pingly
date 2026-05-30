@@ -23,9 +23,19 @@
     </div>
     {{ ui.status_badge(next_lesson.status) }}
     <p class="muted" style="margin-top: 8px; font-size: 13px;">Напоминание придёт в Telegram за 2 часа.</p>
+    {% if next_lesson.status == 'scheduled' %}
+    <div class="nl-actions">
+      <form method="post" action="/student/lessons/{{ next_lesson.id }}/confirm">
+        <button class="btn btn-primary btn-sm">✅ Буду</button>
+      </form>
+      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel">
+        <button class="btn btn-ghost btn-sm">❌ Отменяю</button>
+      </form>
+    </div>
+    {% endif %}
     {% else %}
-    <div class="card-head"><h2>📚 Ближайшее занятие</h2><a class="link-btn" href="/student/calendar">Календарь →</a></div>
-    <div class="empty"><div class="empty-emoji">🌤️</div><p>Ближайших занятий пока нет.</p></div>
+    <div class="card-head"><h2>📚 Ближайшее занятие</h2></div>
+    <div class="empty"><div class="empty-emoji">🌤️</div><p>Занятий пока нет — репетитор добавит их в боте.</p></div>
     {% endif %}
   </div>
 
@@ -37,7 +47,7 @@
       <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">✅ Сдать</button></form>
     </div>
     {% else %}
-    <div class="empty"><div class="empty-emoji">🎉</div><p>Все задания выполнены — отлично!</p></div>
+    <div class="empty"><div class="empty-emoji">📭</div><p>Заданий пока нет.</p></div>
     {% endfor %}
   </div>
 </section>

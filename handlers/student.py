@@ -113,12 +113,14 @@ async def cmd_progress(message: Message) -> None:
 @router.callback_query(F.data.startswith("lesson_confirm:"))
 async def confirm_lesson(callback: CallbackQuery) -> None:
     await callback.message.edit_text("✅ Отлично, ждём тебя на занятии!")
+    await callback.message.answer("Главное меню:", reply_markup=student_menu_keyboard())
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith("lesson_cancel:"))
 async def cancel_lesson(callback: CallbackQuery) -> None:
     await callback.message.edit_text("Понял, занятие отменено. Репетитор увидит ответ.")
+    await callback.message.answer("Главное меню:", reply_markup=student_menu_keyboard())
     await callback.answer()
 
 
@@ -136,6 +138,7 @@ async def homework_in_progress(callback: CallbackQuery) -> None:
     await callback.message.edit_text(
         f"🚧 Задание в работе\n\n📌 {homework['title']}\n\nКогда закончишь, открой «Мои задания» и нажми «Сдать задание»."
     )
+    await callback.message.answer("Главное меню:", reply_markup=student_menu_keyboard())
     await callback.answer("Статус обновлён")
 
 
@@ -156,4 +159,5 @@ async def homework_submit(callback: CallbackQuery) -> None:
         "Я отправил репетитору уведомление. Когда он проверит ДЗ, ты получишь сообщение. "
         "Загляни в 📈 Мой прогресс — возможно, ты приблизился к новому уровню! 🚀"
     )
+    await callback.message.answer("Главное меню:", reply_markup=student_menu_keyboard())
     await callback.answer("Сдано 🎉")

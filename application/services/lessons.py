@@ -251,5 +251,13 @@ class LessonService:
             )
         return count
 
+    async def student_cancel_lesson(self, student_user_id: str, lesson_id: str) -> bool:
+        lessons = await self.repo.list_lessons_for_student_user(student_user_id)
+        lesson = next((l for l in lessons if l["id"] == lesson_id), None)
+        if not lesson or lesson.get("status") != "scheduled":
+            return False
+        await self.repo.update_lesson_fields(lesson_id, {"status": LessonStatus.CANCELLED.value})
+        return True
+
     async def change_lesson_status(self, tutor_user_id: str, lesson_id: str, status: LessonStatus, starts_at: datetime | None = None) -> dict | None:
         return await self.repo.update_lesson_status(tutor_user_id, lesson_id, status.value, starts_at)

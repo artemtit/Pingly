@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, URLSafeSerializer
 
+import config as _config
 from application.factory import create_services
 from config import WEB_SECRET
 from web.calendar_view import STATUS_LABELS, build_calendar, parse_anchor
@@ -275,7 +276,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/tutor/settings", response_class=HTMLResponse)
     async def tutor_settings(request: Request, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
-        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings"))
+        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings", bot_username=_config.BOT_USERNAME))
 
     # ---------------- STUDENT ----------------
     @app.get("/student", response_class=HTMLResponse)
@@ -335,7 +336,18 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             request, user, "progress", game=game, progress=progress, history=completed[:15],
         ))
 
+    @app.post("/student/lessons/{lesson_id}/confirm")
+    async def student_confirm_lesson(lesson_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "student")
+        return RedirectResponse("/student", status_code=303)
+
+    @app.post("/student/lessons/{lesson_id}/cancel")
+    async def student_cancel_lesson(lesson_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "student")
+        await services.lessons.student_cancel_lesson(user["id"], lesson_id)
+        return RedirectResponse("/student", status_code=303)
+
     @app.get("/student/settings", response_class=HTMLResponse)
     async def student_settings(request: Request, user: dict = Depends(current_user)) -> Response:
         _require(user, "student")
-        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings"))
+        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings", bot_username=_config.BOT_USERNAME))
