@@ -56,6 +56,12 @@ class StudentService:
             raise PermissionError("Student does not belong to tutor")
         await self.repo.set_tutor_student_note(tutor_user_id, student_id, note)
 
+    async def delete_student(self, tutor_user_id: str, student_id: str) -> None:
+        relation = await self.repo.get_tutor_student_relation(tutor_user_id, student_id)
+        if not relation:
+            raise PermissionError("Student does not belong to tutor")
+        await self.repo.delete_tutor_student(tutor_user_id, student_id)
+
     async def has_student_profile(self, tg_id: int) -> bool:
         user = await self.repo.get_user_by_tg_id(tg_id)
         if not user:

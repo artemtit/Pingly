@@ -13,8 +13,32 @@
       </p>
     </div>
   </div>
-  <a class="btn btn-ghost" href="/tutor/students">← К списку</a>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button class="btn btn-ghost" onclick="document.getElementById('delete-modal').classList.add('open')" style="color:var(--color-error);">🗑 Удалить</button>
+    <a class="btn btn-ghost" href="/tutor/students">← К списку</a>
+  </div>
 </div>
+
+<div class="modal-backdrop" id="delete-modal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-emoji">🗑️</div>
+    <h2>Удалить ученика?</h2>
+    <p class="muted" style="margin-top:8px;">Ученик <strong>{{ student.name }}</strong> будет удалён из твоего кабинета. Все его занятия и задания останутся в истории, но он больше не будет привязан к тебе.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="document.getElementById('delete-modal').classList.remove('open')">Отмена</button>
+      <form method="post" action="/tutor/students/{{ student.id }}/delete" style="display:inline;">
+        <button type="submit" class="btn btn-primary" style="background:var(--color-error);box-shadow:none;">Да, удалить</button>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var m = document.getElementById('delete-modal');
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') m.classList.remove('open'); });
+  m.addEventListener('click', function(e){ if(e.target===m) m.classList.remove('open'); });
+}());
+</script>
 
 <section class="grid stats">
   <div class="card stat"><div class="stat-ico">📚</div><div class="value">{{ lessons|length }}</div><div class="label">Всего занятий</div></div>

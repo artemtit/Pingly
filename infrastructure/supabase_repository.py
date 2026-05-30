@@ -176,6 +176,15 @@ class SupabasePinglyRepository:
         )
         return _one(result)
 
+    async def delete_tutor_student(self, tutor_user_id: str, student_id: str) -> None:
+        await (
+            self._db().table("tutor_students")
+            .delete()
+            .eq("tutor_user_id", tutor_user_id)
+            .eq("student_id", student_id)
+            .execute()
+        )
+
     async def set_tutor_student_note(self, tutor_user_id: str, student_id: str, note: str | None) -> None:
         await (
             self._db().table("tutor_students")

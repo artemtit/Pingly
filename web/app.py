@@ -180,6 +180,12 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         })
         return RedirectResponse(f"/tutor/students/{student_id}", status_code=303)
 
+    @app.post("/tutor/students/{student_id}/delete")
+    async def delete_student(student_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.students.delete_student(user["id"], student_id)
+        return RedirectResponse("/tutor/students", status_code=303)
+
     @app.post("/tutor/students/{student_id}/note")
     async def update_student_note(student_id: str, note: str = Form(""), user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
