@@ -7,7 +7,7 @@
     <h1>Ученики</h1>
     <p class="muted">{{ students|length }} {% if students|length == 1 %}ученик{% else %}учеников{% endif %} в твоём кабинете</p>
   </div>
-  <button class="btn btn-primary" onclick="document.getElementById('add-student-modal').classList.add('open')">➕ Добавить ученика</button>
+  <button class="btn btn-primary" onclick="document.getElementById('add-student-modal').classList.add('open')">{{ ui.icon('plus', 16) }} Добавить ученика</button>
 </div>
 
 {% include "partials/add_student_modal.html" %}
@@ -33,19 +33,19 @@
     <div class="strow-meta">
       {% if not student.user_id %}
       <span class="badge badge-muted" title="Ученик ещё не открыл бота">не подключён</span>
-      <button type="button" class="icon-btn" title="Скопировать ссылку-приглашение"
+      <button type="button" class="icon-btn" title="Скопировать ссылку-приглашение" aria-label="Скопировать ссылку-приглашение"
         data-invite="https://t.me/{{ bot_username }}?start=inv_{{ student.invite_token }}"
-        onclick="copyInvite(this)">🔗</button>
+        onclick="copyInvite(this)">{{ ui.icon('link', 16) }}</button>
       {% else %}
       <span class="badge badge-ok" title="Telegram подключён">✓ в Telegram</span>
       {% endif %}
       <div class="strow-actions">
-        <button type="button" class="icon-btn" title="Редактировать"
+        <button type="button" class="icon-btn" title="Редактировать" aria-label="Редактировать"
           data-id="{{ student.id }}" data-name="{{ student.name }}" data-subject="{{ student.subject_summary or '' }}"
-          onclick="openEdit(this)">✏️</button>
-        <button type="button" class="icon-btn" title="Удалить"
+          onclick="openEdit(this)">{{ ui.icon('pencil', 16) }}</button>
+        <button type="button" class="icon-btn" title="Удалить" aria-label="Удалить"
           data-id="{{ student.id }}" data-name="{{ student.name }}"
-          onclick="openDelete(this)">🗑</button>
+          onclick="openDelete(this)">{{ ui.icon('trash', 16) }}</button>
       </div>
     </div>
   </div>
@@ -87,7 +87,7 @@
 <script>
 function copyInvite(btn){
   navigator.clipboard.writeText(btn.getAttribute('data-invite')).then(function(){
-    var t = btn.textContent; btn.textContent = '✓'; setTimeout(function(){ btn.textContent = t; }, 1500);
+    var html = btn.innerHTML; btn.textContent = '✓'; setTimeout(function(){ btn.innerHTML = html; }, 1500);
   });
 }
 function openEdit(btn){
@@ -112,7 +112,7 @@ function openDelete(btn){
   <div class="empty-emoji">👥</div>
   <h2>Учеников пока нет</h2>
   <p class="muted">Нажми «➕ Добавить ученика» вверху — создашь ученика прямо здесь, без бота.</p>
-  <button class="btn btn-primary" style="margin-top:14px;" onclick="document.getElementById('add-student-modal').classList.add('open')">➕ Добавить ученика</button>
+  <button class="btn btn-primary" style="margin-top:14px;" onclick="document.getElementById('add-student-modal').classList.add('open')">{{ ui.icon('plus', 16) }} Добавить ученика</button>
 </div>
 {% endif %}
 {% endblock %}

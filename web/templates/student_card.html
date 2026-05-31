@@ -69,11 +69,11 @@ function copyInvite(){
 {% endif %}
 
 <section class="grid stats">
-  <div class="card stat"><div class="stat-ico">📚</div><div class="value">{{ lessons|length }}</div><div class="label">Всего занятий</div></div>
-  <div class="card stat"><div class="stat-ico">🔵</div><div class="value">{{ progress.completed_lessons }}</div><div class="label">Проведено</div></div>
-  <div class="card stat"><div class="stat-ico">📝</div><div class="value">{{ homework|length }}</div><div class="label">Заданий</div></div>
-  <div class="card stat"><div class="stat-ico">⭐</div><div class="value">{{ progress.homework_completion_percent }}%</div><div class="label">Выполнение ДЗ</div></div>
-  <div class="card stat"><div class="stat-ico">📈</div><div class="value">{{ progress.attendance_percent }}%</div><div class="label">Посещаемость</div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('book-open') }}</span><div><div class="value">{{ lessons|length }}</div><div class="label">Всего занятий</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('circle-check') }}</span><div><div class="value">{{ progress.completed_lessons }}</div><div class="label">Проведено</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('file-text') }}</span><div><div class="value">{{ homework|length }}</div><div class="label">Заданий</div></div></div>
+  <div class="card stat"><span class="stat-icon accent">{{ ui.icon('star') }}</span><div><div class="value">{{ progress.homework_completion_percent }}%</div><div class="label">Выполнение ДЗ</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('trending-up') }}</span><div><div class="value">{{ progress.attendance_percent }}%</div><div class="label">Посещаемость</div></div></div>
 </section>
 
 <section class="grid two" style="margin-top: 18px; align-items: start;">
