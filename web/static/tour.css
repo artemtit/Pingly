@@ -1,0 +1,62 @@
+/* ============================================================
+   Pingly — guided product tour (spotlight + tooltips)
+   ============================================================ */
+
+.tour-mask {
+  position: fixed; inset: 0; z-index: 9990;
+  background: transparent; cursor: default;
+}
+.tour-spot {
+  position: fixed; z-index: 9991; border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, .62);
+  transition: top .28s ease, left .28s ease, width .28s ease, height .28s ease;
+  pointer-events: none;
+}
+.tour-spot.hidden { display: none; }
+
+.tour-pop {
+  position: fixed; z-index: 9992; width: 320px; max-width: calc(100vw - 28px);
+  background: var(--color-bg); color: var(--fg1);
+  border: 1px solid var(--color-border); border-radius: 16px;
+  box-shadow: 0 24px 60px -16px rgba(15, 23, 42, .5);
+  padding: 20px; opacity: 0; transform: translateY(6px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.tour-pop.show { opacity: 1; transform: translateY(0); }
+.tour-pop.centered { left: 50% !important; top: 50% !important; transform: translate(-50%, -50%); }
+.tour-pop.centered.show { transform: translate(-50%, -50%); }
+
+.tour-emoji { font-size: 26px; line-height: 1; margin-bottom: 8px; }
+.tour-pop h4 { font-size: 17px; font-weight: 700; margin: 0 0 6px; color: var(--fg1); }
+.tour-pop p { font-size: 14px; line-height: 1.55; color: var(--fg2); margin: 0; }
+
+.tour-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; gap: 12px; }
+.tour-dots { display: flex; gap: 6px; flex-shrink: 0; }
+.tour-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-neutral-200); transition: background .2s; }
+.tour-dot.on { background: var(--orange-500); }
+
+.tour-btns { display: flex; gap: 8px; align-items: center; }
+.tour-btn {
+  height: 38px; padding: 0 16px; border-radius: 9px; font-family: var(--font-sans);
+  font-size: 14px; font-weight: 600; cursor: pointer; border: none; white-space: nowrap;
+  transition: filter .15s, background .15s;
+}
+.tour-btn:hover { filter: brightness(.97); }
+.tour-btn-primary { background: var(--orange-500); color: #fff; box-shadow: var(--shadow-primary); }
+.tour-btn-ghost { background: transparent; color: var(--fg2); padding: 0 8px; }
+.tour-btn-ghost:hover { color: var(--fg1); }
+
+.tour-skip {
+  position: fixed; top: 16px; right: 18px; z-index: 9992;
+  background: rgba(255, 255, 255, .9); color: var(--fg2);
+  border: 1px solid var(--color-border); border-radius: 9px;
+  height: 34px; padding: 0 14px; font-size: 13px; font-weight: 600;
+  cursor: pointer; backdrop-filter: blur(6px);
+}
+[data-theme="dark"] .tour-skip { background: rgba(30, 41, 59, .9); }
+.tour-skip:hover { color: var(--fg1); }
+
+@media (max-width: 640px) {
+  .tour-pop { width: calc(100vw - 28px); padding: 18px; }
+  .tour-foot { flex-wrap: wrap; }
+}

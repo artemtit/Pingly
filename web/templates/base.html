@@ -8,6 +8,7 @@
   <link rel="apple-touch-icon" href="/static/logo-mark.svg">
   <link rel="stylesheet" href="/design-tokens.css">
   <link rel="stylesheet" href="/static/app.css?v=9">
+  <link rel="stylesheet" href="/static/tour.css?v=1">
   <script>
     (function(){
       var t = localStorage.getItem('theme');
@@ -35,5 +36,7 @@
   setTheme(saved || 'light');
 }());
 </script>
+<script>window.PINGLY_ROLE = "{{ user.role if user is defined and user else '' }}";</script>
+<script src="/static/tour.js?v=1"></script>
 </body>
 </html>
