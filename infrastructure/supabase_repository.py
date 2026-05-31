@@ -203,6 +203,22 @@ class SupabasePinglyRepository:
             .execute()
         )
 
+    async def list_tutor_ids_for_student(self, student_id: str) -> list[str]:
+        result = await (
+            self._db().table("tutor_students")
+            .select("tutor_user_id")
+            .eq("student_id", student_id)
+            .execute()
+        )
+        return [row["tutor_user_id"] for row in result.data]
+
+    async def delete_student_profile(self, student_id: str) -> None:
+        # Cascades: lessons, homework, schedule_rules, tutor_students (frees invite_token)
+        await self._db().table("student_profiles").delete().eq("id", student_id).execute()
+
+    async def delete_user(self, user_id: str) -> None:
+        await self._db().table("users").delete().eq("id", user_id).execute()
+
     async def set_tutor_student_note(self, tutor_user_id: str, student_id: str, note: str | None) -> None:
         await (
             self._db().table("tutor_students")
