@@ -24,6 +24,20 @@ def _parse_time(lesson_time: str) -> tuple[int, int]:
     return hour, minute
 
 
+_MONTHS_RU = [
+    "января", "февраля", "марта", "апреля", "мая", "июня",
+    "июля", "августа", "сентября", "октября", "ноября", "декабря",
+]
+
+
+def _fmt_when_ru(starts_at: str) -> str:
+    try:
+        dt = datetime.fromisoformat(str(starts_at).replace("Z", "+00:00"))
+        return f"{dt.day} {_MONTHS_RU[dt.month - 1]} в {dt:%H:%M}"
+    except Exception:
+        return str(starts_at)[:16].replace("T", " ")
+
+
 class LessonService:
     def __init__(self, repo: PinglyRepository) -> None:
         self.repo = repo
@@ -251,13 +265,34 @@ class LessonService:
             )
         return count
 
-    async def student_cancel_lesson(self, student_user_id: str, lesson_id: str) -> bool:
+    async def student_cancel_lesson(self, student_user_id: str, lesson_id: str) -> dict | None:
+        """Cancel a scheduled lesson on the student's behalf. Returns the lesson
+        (with tutor_user_id, starts_at, student_profiles) so the caller can push
+        the tutor, or None if it wasn't a cancellable scheduled lesson."""
         lessons = await self.repo.list_lessons_for_student_user(student_user_id)
         lesson = next((l for l in lessons if l["id"] == lesson_id), None)
         if not lesson or lesson.get("status") != "scheduled":
-            return False
+            return None
         await self.repo.update_lesson_fields(lesson_id, {"status": LessonStatus.CANCELLED.value})
-        return True
+        return lesson
+
+    async def cancel_push_target(self, lesson: dict) -> tuple[int, str] | None:
+        """Given a just-cancelled lesson, return (tutor_tg_id, message) to notify
+        the tutor, or None if the tutor has no Telegram linked."""
+        tutor_id = lesson.get("tutor_user_id")
+        if not tutor_id:
+            return None
+        tutor = await self.repo.get_user_by_id(tutor_id)
+        tg_id = (tutor or {}).get("tg_id")
+        if not tg_id:
+            return None
+        name = (lesson.get("student_profiles") or {}).get("name") or "Ученик"
+        when = _fmt_when_ru(lesson.get("starts_at", ""))
+        message = (
+            f"🔔 {name} отменил(а) занятие {when}.\n\n"
+            "Напиши ученику, чтобы договориться о переносе."
+        )
+        return tg_id, message
 
     async def change_lesson_status(self, tutor_user_id: str, lesson_id: str, status: LessonStatus, starts_at: datetime | None = None) -> dict | None:
         return await self.repo.update_lesson_status(tutor_user_id, lesson_id, status.value, starts_at)
