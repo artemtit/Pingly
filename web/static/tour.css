@@ -42,6 +42,7 @@
   transition: filter .15s, background .15s;
 }
 .tour-btn:hover { filter: brightness(.97); }
+.tour-btn:focus-visible, .tour-skip:focus-visible { outline: 2px solid var(--orange-700); outline-offset: 2px; }
 .tour-btn-primary { background: var(--orange-500); color: #fff; box-shadow: var(--shadow-primary); }
 .tour-btn-ghost { background: transparent; color: var(--fg2); padding: 0 8px; }
 .tour-btn-ghost:hover { color: var(--fg1); }

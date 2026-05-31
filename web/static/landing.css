@@ -27,7 +27,8 @@ img { display: block; }
 .lbtn:hover { filter: brightness(.98); transform: translateY(-1px); }
 .lbtn-lg { height: 52px; padding: 0 26px; font-size: 17px; }
 .lbtn-sm { height: 38px; padding: 0 16px; font-size: 14.5px; }
-.lbtn-primary { background: var(--orange-500); color: #fff; box-shadow: var(--shadow-primary); }
+.lbtn-primary { background: var(--orange-600); color: #fff; box-shadow: var(--shadow-primary); }
+.lbtn:focus-visible, .navlink:focus-visible, .foot-links a:focus-visible { outline: 2px solid var(--orange-700); outline-offset: 2px; border-radius: 8px; }
 .lbtn-ghost { background: transparent; color: var(--fg1); }
 .lbtn-light { background: #fff; color: var(--orange-700); box-shadow: 0 10px 30px rgba(0,0,0,.18); }
 .lbtn-tg { background: var(--tg-blue); color: #fff; }
@@ -91,7 +92,7 @@ img { display: block; }
 .section { padding: 84px 0; }
 .section-alt { background: var(--gray-50); border-top: 1px solid var(--gray-100); border-bottom: 1px solid var(--gray-100); }
 .sechead { text-align: center; }
-.sechead .over { color: var(--orange-600); font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+.sechead .over { color: var(--orange-700); font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
 .sechead h2 { font-size: clamp(1.5rem, 1rem + 2.3vw, 2.25rem); font-weight: 700; letter-spacing: -.015em; margin-top: 10px; text-wrap: balance; }
 
 .lcard { background: #fff; border: 1px solid var(--gray-200); border-radius: 16px; padding: 24px; box-shadow: var(--shadow-sm); }
@@ -131,7 +132,7 @@ img { display: block; }
 .price-list .ic { color: var(--success); }
 
 /* CTA band */
-.cta-band { background: linear-gradient(135deg,#F97316,#EA580C); color: #fff; }
+.cta-band { background: linear-gradient(135deg,#EA580C,#C2410C); color: #fff; }
 .cta-band .wrap { padding: 64px 24px; text-align: center; }
 .cta-band h2 { font-size: clamp(1.6rem, 1rem + 2.3vw, 2.4rem); font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
 .cta-band p { font-size: 18px; opacity: .92; margin-top: 12px; }
