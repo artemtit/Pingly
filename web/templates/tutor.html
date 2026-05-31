@@ -7,8 +7,13 @@
     <h1>Привет, {{ user.full_name.split(" ")[0] }}! 👋</h1>
     <p class="muted">Ученики, занятия и задания — в одном месте.</p>
   </div>
-  <a class="btn btn-primary" href="/tutor/schedule">➕ Добавить занятие</a>
+  <div class="topbar-actions">
+    <button class="btn btn-primary" onclick="document.getElementById('add-student-modal').classList.add('open')">➕ Добавить ученика</button>
+    <a class="btn btn-secondary" href="/tutor/schedule">📅 Добавить занятие</a>
+  </div>
 </div>
+
+{% include "partials/add_student_modal.html" %}
 
 {% if analytics.students_count == 0 %}
 <div class="card onboarding-card" style="margin-top: 18px;">

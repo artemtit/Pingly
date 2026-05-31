@@ -477,6 +477,12 @@ textarea { min-height: 86px; resize: vertical; }
   h2 { font-size: 17px; }
 }
 
+/* ---------------- topbar action group ---------------- */
+.topbar-actions { display: flex; gap: 10px; flex-shrink: 0; }
+@media (max-width: 640px) {
+  .topbar-actions { width: 100%; flex-direction: column; }
+}
+
 /* ---------------- students list (rows + actions) ---------------- */
 .stlist { background: #fff; border: 1px solid var(--color-border); border-radius: 14px; box-shadow: var(--shadow-sm); overflow: hidden; }
 [data-theme="dark"] .stlist { background: #1E293B; border-color: #334155; }
