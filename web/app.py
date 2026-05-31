@@ -82,6 +82,17 @@ def _ctx(request: Request, user: dict, active: str, **extra) -> dict:
     return base
 
 
+def _cabinet_url(user: dict) -> str:
+    return "/tutor" if user["role"] == "tutor" else "/student"
+
+
+def _set_session(response: Response, user: dict) -> None:
+    response.set_cookie(
+        "pingly_session", signer.dumps(user["id"]),
+        httponly=True, samesite="lax", secure=True, max_age=60 * 60 * 24 * 30,
+    )
+
+
 def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -92,28 +103,64 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         try:
             user = await current_user(request)
         except HTTPException:
-            return _login_redirect()
-        return RedirectResponse("/tutor" if user["role"] == "tutor" else "/student", status_code=303)
+            return templates.TemplateResponse("landing.html", {"request": request, "bot_username": _config.BOT_USERNAME})
+        return RedirectResponse(_cabinet_url(user), status_code=303)
 
     @app.get("/login", response_class=HTMLResponse)
-    async def login(request: Request) -> Response:
-        return templates.TemplateResponse("login.html", {"request": request})
+    async def login(request: Request, error: str | None = None) -> Response:
+        return templates.TemplateResponse("login.html", {
+            "request": request, "bot_username": _config.BOT_USERNAME, "error": error,
+        })
+
+    @app.post("/login")
+    async def login_submit(email: str = Form(...), password: str = Form(...)) -> Response:
+        user = await services.web_auth.login_email(email, password)
+        if not user:
+            return RedirectResponse("/login?error=bad_credentials", status_code=303)
+        response = RedirectResponse(_cabinet_url(user), status_code=303)
+        _set_session(response, user)
+        return response
+
+    @app.get("/register", response_class=HTMLResponse)
+    async def register(request: Request, error: str | None = None) -> Response:
+        return templates.TemplateResponse("register.html", {
+            "request": request, "bot_username": _config.BOT_USERNAME, "error": error,
+        })
+
+    @app.post("/register")
+    async def register_submit(
+        full_name: str = Form(...), email: str = Form(...), password: str = Form(...),
+    ) -> Response:
+        user, err = await services.web_auth.register_tutor_email(full_name, email, password)
+        if err or not user:
+            from urllib.parse import quote
+            return RedirectResponse(f"/register?error={quote(err or 'Не удалось зарегистрироваться')}", status_code=303)
+        response = RedirectResponse(_cabinet_url(user), status_code=303)
+        _set_session(response, user)
+        return response
 
     @app.get("/auth/telegram")
     async def auth_telegram(token: str) -> Response:
         user = await services.web_auth.consume_login_token(token)
         if not user:
             return RedirectResponse("/login?error=expired", status_code=303)
-        response = RedirectResponse("/tutor" if user["role"] == "tutor" else "/student", status_code=303)
-        response.set_cookie(
-            "pingly_session", signer.dumps(user["id"]),
-            httponly=True, samesite="lax", secure=True, max_age=60 * 60 * 24 * 30,
-        )
+        response = RedirectResponse(_cabinet_url(user), status_code=303)
+        _set_session(response, user)
+        return response
+
+    @app.get("/auth/telegram/callback")
+    async def auth_telegram_widget(request: Request) -> Response:
+        data = dict(request.query_params)
+        user = await services.web_auth.login_telegram_widget(data)
+        if not user:
+            return RedirectResponse("/login?error=tg_failed", status_code=303)
+        response = RedirectResponse(_cabinet_url(user), status_code=303)
+        _set_session(response, user)
         return response
 
     @app.get("/logout")
     async def logout() -> Response:
-        response = RedirectResponse("/login", status_code=303)
+        response = RedirectResponse("/", status_code=303)
         response.delete_cookie("pingly_session")
         return response
 

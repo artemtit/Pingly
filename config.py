@@ -12,4 +12,4 @@ WEB_PORT: int = int(os.getenv("WEB_PORT", "8000"))
 WEB_SECRET: str = os.getenv("WEB_SECRET", "dev-change-me")
 WEB_ENABLED: bool = os.getenv("WEB_ENABLED", "1") == "1"
 
-BOT_USERNAME: str = ""  # set at startup in bot.py
+BOT_USERNAME: str = os.getenv("BOT_USERNAME", "")  # also set at startup in bot.py from get_me()

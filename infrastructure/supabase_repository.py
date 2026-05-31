@@ -52,6 +52,24 @@ class SupabasePinglyRepository:
             }).execute()
         return user
 
+    async def get_user_by_email(self, email: str) -> dict[str, Any] | None:
+        result = await self._db().table("users").select("*").ilike("email", email).execute()
+        return _one(result)
+
+    async def create_email_tutor(self, email: str, password_hash: str, full_name: str) -> dict[str, Any]:
+        result = await self._db().table("users").insert({
+            "role": "tutor",
+            "email": email,
+            "password_hash": password_hash,
+            "full_name": full_name,
+        }).execute()
+        user = result.data[0]
+        await self._db().table("tutor_profiles").insert({
+            "user_id": user["id"],
+            "display_name": full_name,
+        }).execute()
+        return user
+
     async def update_user_profile(self, user_id: str, full_name: str | None = None, role: str | None = None) -> dict[str, Any] | None:
         patch: dict[str, Any] = {}
         if full_name:

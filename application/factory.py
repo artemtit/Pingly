@@ -10,7 +10,7 @@ from application.services import (
     StudentService,
     WebAuthService,
 )
-from config import WEB_BASE_URL
+from config import BOT_TOKEN, WEB_BASE_URL
 from infrastructure.supabase_repository import SupabasePinglyRepository
 
 
@@ -24,7 +24,7 @@ class Services:
         self.notifications = NotificationService(self.repo)
         self.analytics = AnalyticsService(self.repo)
         self.gamification = GamificationService()
-        self.web_auth = WebAuthService(self.repo, WEB_BASE_URL)
+        self.web_auth = WebAuthService(self.repo, WEB_BASE_URL, BOT_TOKEN)
 
 
 def create_services() -> Services:
