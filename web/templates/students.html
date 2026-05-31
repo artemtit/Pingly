@@ -7,8 +7,35 @@
     <h1>Ученики</h1>
     <p class="muted">{{ students|length }} {% if students|length == 1 %}ученик{% else %}учеников{% endif %} в твоём кабинете</p>
   </div>
-  <a class="btn btn-secondary" href="/tutor/schedule">➕ Добавить занятие</a>
+  <button class="btn btn-primary" onclick="document.getElementById('add-student-modal').classList.add('open')">➕ Добавить ученика</button>
 </div>
+
+<div class="modal-backdrop" id="add-student-modal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-emoji">👤</div>
+    <h2>Новый ученик</h2>
+    <p class="muted" style="margin-top:6px;">Добавь ученика прямо здесь. Telegram можно указать позже — после создания дадим ссылку-приглашение для напоминаний.</p>
+    <form method="post" action="/tutor/students/create" class="form" style="margin-top:16px;text-align:left;">
+      <label class="field"><span>Имя ученика</span>
+        <input class="input" name="name" required placeholder="Например: Анна Олеговна" autocomplete="off"></label>
+      <label class="field"><span>Предмет <span class="muted">(необязательно)</span></span>
+        <input class="input" name="subject_summary" placeholder="Математика" autocomplete="off"></label>
+      <label class="field"><span>Telegram <span class="muted">(необязательно)</span></span>
+        <input class="input" name="tg_username" placeholder="@username" autocomplete="off"></label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('add-student-modal').classList.remove('open')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Создать ученика</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+(function(){
+  var m = document.getElementById('add-student-modal');
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') m.classList.remove('open'); });
+  m.addEventListener('click', function(e){ if(e.target===m) m.classList.remove('open'); });
+}());
+</script>
 
 <form class="search" method="get">
   <input class="input" name="q" value="{{ q }}" placeholder="Поиск по имени или Telegram">
@@ -40,7 +67,8 @@
 <div class="card empty-wide">
   <div class="empty-emoji">👥</div>
   <h2>Учеников пока нет</h2>
-  <p class="muted">Добавь ученика в Telegram-боте командой «➕ Добавить ученика» — он появится здесь автоматически.</p>
+  <p class="muted">Нажми «➕ Добавить ученика» вверху — создашь ученика прямо здесь, без бота.</p>
+  <button class="btn btn-primary" style="margin-top:14px;" onclick="document.getElementById('add-student-modal').classList.add('open')">➕ Добавить ученика</button>
 </div>
 {% endif %}
 {% endblock %}

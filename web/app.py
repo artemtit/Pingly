@@ -192,14 +192,33 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         students = await services.students.list_students_by_user(user["id"], q)
         return templates.TemplateResponse("students.html", _ctx(request, user, "students", students=students, q=q or ""))
 
+    @app.post("/tutor/students/create")
+    async def create_student(
+        name: str = Form(...),
+        tg_username: str = Form(""),
+        subject_summary: str = Form(""),
+        user: dict = Depends(current_user),
+    ) -> Response:
+        _require(user, "tutor")
+        if not name.strip():
+            return RedirectResponse("/tutor/students", status_code=303)
+        student = await services.students.create_student_for_user(
+            user["id"], name, tg_username, subject_summary,
+        )
+        return RedirectResponse(f"/tutor/students/{student['id']}?created=1", status_code=303)
+
     @app.get("/tutor/students/{student_id}", response_class=HTMLResponse)
-    async def tutor_student_card(request: Request, student_id: str, user: dict = Depends(current_user)) -> Response:
+    async def tutor_student_card(
+        request: Request, student_id: str, created: str | None = None, user: dict = Depends(current_user),
+    ) -> Response:
         _require(user, "tutor")
         try:
             card = await services.students.student_card(user["id"], student_id)
         except PermissionError as exc:
             raise HTTPException(status_code=404) from exc
-        return templates.TemplateResponse("student_card.html", _ctx(request, user, "students", **card))
+        return templates.TemplateResponse("student_card.html", _ctx(
+            request, user, "students", **card, bot_username=_config.BOT_USERNAME, created=created,
+        ))
 
     @app.post("/tutor/students/{student_id}/profile")
     async def update_student_profile(

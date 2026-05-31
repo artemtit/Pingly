@@ -40,6 +40,34 @@
 }());
 </script>
 
+{% if created %}
+<div class="card" style="border-color: var(--color-success); background: var(--color-success-light); margin-bottom: 16px;">
+  <strong style="color: var(--success-text);">✅ Ученик {{ student.name }} создан</strong>
+</div>
+{% endif %}
+
+{% if not student.user_id %}
+<div class="card" style="border-color: var(--orange-200); background: var(--orange-50); margin-bottom: 16px;">
+  <strong>📲 Ученик ещё не подключил Telegram</strong>
+  <p class="muted" style="margin: 6px 0 12px;">Отправь ему эту ссылку — после входа в бота он начнёт получать напоминания о занятиях, а ты увидишь его ответы «Буду / Отменяю».</p>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <input class="input" id="invite-url" readonly style="flex:1; min-width:220px; font-size:14px;"
+      value="https://t.me/{{ bot_username }}?start=inv_{{ student.invite_token }}">
+    <button type="button" class="btn btn-primary" id="invite-copy" onclick="copyInvite()">Копировать</button>
+  </div>
+</div>
+<script>
+function copyInvite(){
+  var i = document.getElementById('invite-url');
+  i.select(); i.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(i.value).then(function(){
+    var b = document.getElementById('invite-copy'); b.textContent = 'Скопировано ✓';
+    setTimeout(function(){ b.textContent = 'Копировать'; }, 1800);
+  });
+}
+</script>
+{% endif %}
+
 <section class="grid stats">
   <div class="card stat"><div class="stat-ico">📚</div><div class="value">{{ lessons|length }}</div><div class="label">Всего занятий</div></div>
   <div class="card stat"><div class="stat-ico">🔵</div><div class="value">{{ progress.completed_lessons }}</div><div class="label">Проведено</div></div>

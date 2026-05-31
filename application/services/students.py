@@ -31,6 +31,18 @@ class StudentService:
         token = secrets.token_urlsafe(12)
         return await self.repo.create_invited_student(tutor["id"], name.strip(), tg_username.strip().lstrip("@"), token)
 
+    async def create_student_for_user(
+        self, tutor_user_id: str, name: str, tg_username: str = "", subject_summary: str | None = None,
+    ) -> dict:
+        token = secrets.token_urlsafe(12)
+        username = (tg_username or "").strip().lstrip("@")
+        student = await self.repo.create_invited_student(tutor_user_id, name.strip(), username, token)
+        subject = (subject_summary or "").strip()
+        if subject:
+            await self.repo.update_student_profile(student["id"], {"subject_summary": subject})
+            student["subject_summary"] = subject
+        return student
+
     async def link_student_from_invite(self, token: str, tg_id: int, full_name: str, tg_username: str | None) -> dict | None:
         return await self.repo.link_student_to_tg(token, tg_id, full_name, tg_username)
 
