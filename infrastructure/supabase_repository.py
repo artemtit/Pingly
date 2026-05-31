@@ -321,7 +321,7 @@ class SupabasePinglyRepository:
     async def list_lessons_for_student_user(self, student_user_id: str, limit: int = 100) -> list[dict[str, Any]]:
         result = await (
             self._db().table("lessons_v2")
-            .select("*")
+            .select("*, student_profiles(name)")
             .eq("student_user_id", student_user_id)
             .order("starts_at")
             .limit(limit)
