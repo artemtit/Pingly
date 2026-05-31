@@ -43,26 +43,95 @@
 </form>
 
 {% if students %}
-<div class="students-table">
-  <div class="students-table-head">
-    <span>Ученик</span>
-    <span>Предмет</span>
-    <span></span>
-  </div>
+<div class="stlist">
   {% for student in students %}
-  <a class="students-table-row" href="/tutor/students/{{ student.id }}">
-    <span class="student-id">
+  <div class="strow">
+    <a class="strow-main" href="/tutor/students/{{ student.id }}">
       <span class="avatar">{{ student.name[:1]|upper }}</span>
-      <span>
-        <span class="student-id-name">{{ student.name }}</span>
-        {% if student.tg_username %}<span class="student-id-sub">@{{ student.tg_username }}</span>{% endif %}
+      <span class="strow-info">
+        <span class="strow-name">{{ student.name }}</span>
+        <span class="strow-sub">
+          {{ student.subject_summary or "Предмет не указан" }}{% if student.grade %} · {{ student.grade }}{% endif %}{% if student.tg_username %} · @{{ student.tg_username }}{% endif %}
+        </span>
       </span>
-    </span>
-    <span style="font-size: 14px; color: var(--fg2);">{{ student.subject_summary or "Предмет не указан" }}{% if student.grade %} · {{ student.grade }}{% endif %}</span>
-    <span style="color: var(--fg3); font-size: 18px;">→</span>
-  </a>
+    </a>
+    <div class="strow-meta">
+      {% if not student.user_id %}
+      <span class="badge badge-muted" title="Ученик ещё не открыл бота">не подключён</span>
+      <button type="button" class="icon-btn" title="Скопировать ссылку-приглашение"
+        data-invite="https://t.me/{{ bot_username }}?start=inv_{{ student.invite_token }}"
+        onclick="copyInvite(this)">🔗</button>
+      {% else %}
+      <span class="badge badge-ok" title="Telegram подключён">✓ в Telegram</span>
+      {% endif %}
+      <div class="strow-actions">
+        <button type="button" class="icon-btn" title="Редактировать"
+          data-id="{{ student.id }}" data-name="{{ student.name }}" data-subject="{{ student.subject_summary or '' }}"
+          onclick="openEdit(this)">✏️</button>
+        <button type="button" class="icon-btn" title="Удалить"
+          data-id="{{ student.id }}" data-name="{{ student.name }}"
+          onclick="openDelete(this)">🗑</button>
+      </div>
+    </div>
+  </div>
   {% endfor %}
 </div>
+
+<div class="modal-backdrop" id="edit-student-modal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-emoji">✏️</div>
+    <h2>Изменить ученика</h2>
+    <form method="post" id="edit-student-form" class="form" style="margin-top:16px;text-align:left;">
+      <label class="field"><span>Имя ученика</span>
+        <input class="input" id="edit-name" name="name" required autocomplete="off"></label>
+      <label class="field"><span>Предмет</span>
+        <input class="input" id="edit-subject" name="subject_summary" placeholder="Математика" autocomplete="off"></label>
+      <p class="muted" style="font-size:13px;">Класс, цель и заметки можно отредактировать в карточке ученика.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('edit-student-modal').classList.remove('open')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="delete-student-modal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-emoji">🗑️</div>
+    <h2>Удалить ученика?</h2>
+    <p class="muted" style="margin-top:8px;"><strong id="delete-name"></strong> будет удалён из твоего кабинета. История занятий и заданий сохранится.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" onclick="document.getElementById('delete-student-modal').classList.remove('open')">Отмена</button>
+      <form method="post" id="delete-student-form" style="display:inline;">
+        <button type="submit" class="btn btn-primary" style="background:var(--color-error);box-shadow:none;">Да, удалить</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function copyInvite(btn){
+  navigator.clipboard.writeText(btn.getAttribute('data-invite')).then(function(){
+    var t = btn.textContent; btn.textContent = '✓'; setTimeout(function(){ btn.textContent = t; }, 1500);
+  });
+}
+function openEdit(btn){
+  document.getElementById('edit-name').value = btn.getAttribute('data-name');
+  document.getElementById('edit-subject').value = btn.getAttribute('data-subject');
+  document.getElementById('edit-student-form').action = '/tutor/students/' + btn.getAttribute('data-id') + '/profile';
+  document.getElementById('edit-student-modal').classList.add('open');
+}
+function openDelete(btn){
+  document.getElementById('delete-name').textContent = btn.getAttribute('data-name');
+  document.getElementById('delete-student-form').action = '/tutor/students/' + btn.getAttribute('data-id') + '/delete';
+  document.getElementById('delete-student-modal').classList.add('open');
+}
+['edit-student-modal','delete-student-modal'].forEach(function(id){
+  var m = document.getElementById(id);
+  m.addEventListener('click', function(e){ if(e.target===m) m.classList.remove('open'); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') m.classList.remove('open'); });
+});
+</script>
 {% else %}
 <div class="card empty-wide">
   <div class="empty-emoji">👥</div>
