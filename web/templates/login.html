@@ -43,8 +43,13 @@
           data-telegram-login="{{ bot_username }}"
           data-size="large"
           data-userpic="false"
-          data-auth-url="/auth/telegram/callback"
+          data-onauth="onTelegramAuth(user)"
           data-request-access="write"></script>
+        <script>
+          function onTelegramAuth(user) {
+            window.location.href = "/auth/telegram/callback?" + new URLSearchParams(user).toString();
+          }
+        </script>
         {% else %}
         <div class="auth-tg-fallback">Вход через Telegram появится после настройки бота.</div>
         {% endif %}
