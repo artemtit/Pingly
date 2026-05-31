@@ -15,11 +15,6 @@ services = create_services()
 PRAISE = ["🎉 Отлично!", "🔥 Супер!", "⭐ Молодец!", "🚀 Так держать!", "💪 Красавчик!"]
 
 
-def _xp_bar(percent: int) -> str:
-    filled = max(0, min(10, round(percent / 10)))
-    return "▰" * filled + "▱" * (10 - filled)
-
-
 def homework_keyboard(homework_id: str, status: str) -> InlineKeyboardMarkup | None:
     if status == "reviewed":
         return None
@@ -39,11 +34,6 @@ async def btn_next_lesson(message: Message) -> None:
 @router.message(F.text == "📝 Мои задания")
 async def btn_my_homework(message: Message) -> None:
     await cmd_my_homework(message)
-
-
-@router.message(F.text == "📈 Мой прогресс")
-async def btn_progress(message: Message) -> None:
-    await cmd_progress(message)
 
 
 @router.message(Command("next_lesson"))
@@ -80,34 +70,6 @@ async def cmd_my_homework(message: Message) -> None:
         )
         await message.answer(text, reply_markup=homework_keyboard(h["id"], h["status"]))
     await message.answer("Главное меню ниже 👇", reply_markup=student_menu_keyboard())
-
-
-@router.message(Command("progress"))
-async def cmd_progress(message: Message) -> None:
-    user = await services.accounts.get_by_tg_id(message.from_user.id)
-    if not user or user["role"] != "student":
-        await message.answer("Эта команда доступна ученику 🎓\nРоль можно поменять в ⚙️ Настройках.")
-        return
-    lessons = await services.lessons.list_student_calendar(user["id"])
-    homework = await services.homework.list_for_student(user["id"])
-    completed = len([l for l in lessons if l.get("status") == "completed"])
-    reviewed = len([h for h in homework if h.get("status") == "reviewed"])
-    game = services.gamification.compute(lessons, homework)
-
-    ach = [a for a in game["achievements"] if a["unlocked"]]
-    ach_text = " ".join(a["emoji"] for a in ach) if ach else "пока нет — всё впереди!"
-
-    await message.answer(
-        "🚀 Твой прогресс\n\n"
-        f"⭐ Уровень {game['level']} · {game['rank']}\n"
-        f"{_xp_bar(game['level_progress_percent'])} {game['level_progress_percent']}%\n"
-        f"💎 {game['xp']} XP · до следующего уровня {game['xp_to_next']} XP\n"
-        f"🔥 Серия активности: {game['streak']} дн.\n\n"
-        f"🔵 Занятий пройдено: {completed}\n"
-        f"📝 ДЗ выполнено: {reviewed}\n\n"
-        f"🏆 Достижения ({game['unlocked_count']}/{game['total_achievements']}): {ach_text}",
-        reply_markup=student_menu_keyboard(),
-    )
 
 
 @router.callback_query(F.data.startswith("lesson_confirm:"))
@@ -156,8 +118,7 @@ async def homework_submit(callback: CallbackQuery) -> None:
     await callback.message.edit_text(
         f"{random.choice(PRAISE)}\n\n"
         f"✅ Задание сдано\n📌 {homework['title']}\n\n"
-        "Я отправил репетитору уведомление. Когда он проверит ДЗ, ты получишь сообщение. "
-        "Загляни в 📈 Мой прогресс — возможно, ты приблизился к новому уровню! 🚀"
+        "Я отправил репетитору уведомление. Когда он проверит ДЗ, ты получишь сообщение."
     )
     await callback.message.answer("Главное меню:", reply_markup=student_menu_keyboard())
     await callback.answer("Сдано 🎉")

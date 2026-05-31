@@ -7,7 +7,7 @@
   <div>
     <div class="eyebrow">Кабинет ученика</div>
     <h1>Привет, {{ user.full_name.split(" ")[0] }}! 👋</h1>
-    <p class="muted">Занятия, задания и твой прогресс.</p>
+    <p class="muted">Ближайшее занятие и задания — в одном месте.</p>
   </div>
 </div>
 
@@ -15,11 +15,6 @@
 <div class="mob-greeting">
   <h1 style="font-size:26px;font-weight:700;letter-spacing:-.02em;">Привет, {{ user.full_name.split(" ")[0] }}! 👋</h1>
   <p class="muted" style="margin-top:6px;font-size:15px;">Напоминания придут в Telegram за 2 часа до занятия.</p>
-</div>
-
-{# ── Desktop: gamification hero ─────────────────────────────── #}
-<div class="desktop-only">
-  {{ ui.game_hero(game, "Выполняй задания и приходи на занятия — так растёт твой уровень!") }}
 </div>
 
 {# ── Next lesson + homework (two-col on desktop, single on mobile) #}

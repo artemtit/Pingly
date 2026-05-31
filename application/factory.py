@@ -3,7 +3,6 @@ from __future__ import annotations
 from application.services import (
     AccountService,
     AnalyticsService,
-    GamificationService,
     HomeworkService,
     LessonService,
     NotificationService,
@@ -23,7 +22,6 @@ class Services:
         self.homework = HomeworkService(self.repo)
         self.notifications = NotificationService(self.repo)
         self.analytics = AnalyticsService(self.repo)
-        self.gamification = GamificationService()
         self.web_auth = WebAuthService(self.repo, WEB_BASE_URL, BOT_TOKEN)
 
 

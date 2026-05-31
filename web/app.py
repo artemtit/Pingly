@@ -367,7 +367,6 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         lessons = await services.lessons.list_student_calendar(user["id"])
         next_lesson = await services.lessons.next_lesson_for_student(user["id"])
         homework = await services.homework.list_for_student(user["id"])
-        game = services.gamification.compute(lessons, homework)
         active_hw = [h for h in homework if h.get("status") in ("new", "in_progress")]
         now_iso = datetime.now(timezone.utc).isoformat()
         upcoming = sorted(
@@ -376,7 +375,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         )[:6]
         return templates.TemplateResponse("student.html", _ctx(
             request, user, "overview",
-            next_lesson=next_lesson, game=game, active_hw=active_hw, upcoming=upcoming,
+            next_lesson=next_lesson, active_hw=active_hw, upcoming=upcoming,
         ))
 
     @app.get("/student/calendar", response_class=HTMLResponse)
@@ -403,24 +402,6 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         _require(user, "student")
         await services.homework.mark_submitted(user["id"], homework_id)
         return RedirectResponse("/student/homework", status_code=303)
-
-    @app.get("/student/progress", response_class=HTMLResponse)
-    async def student_progress(request: Request, user: dict = Depends(current_user)) -> Response:
-        _require(user, "student")
-        lessons = await services.lessons.list_student_calendar(user["id"])
-        homework = await services.homework.list_for_student(user["id"])
-        game = services.gamification.compute(lessons, homework)
-        completed = sorted([l for l in lessons if l.get("status") == "completed"], key=lambda l: l.get("starts_at") or "", reverse=True)
-        reviewed = [h for h in homework if h.get("status") == "reviewed"]
-        progress = {
-            "completed_lessons": len(completed),
-            "homework_completion_percent": round(len(reviewed) / len(homework) * 100) if homework else 0,
-            "reviewed": len(reviewed),
-            "total_homework": len(homework),
-        }
-        return templates.TemplateResponse("student_progress.html", _ctx(
-            request, user, "progress", game=game, progress=progress, history=completed[:15],
-        ))
 
     @app.post("/student/lessons/{lesson_id}/confirm")
     async def student_confirm_lesson(lesson_id: str, user: dict = Depends(current_user)) -> Response:
