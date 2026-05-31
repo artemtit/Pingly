@@ -68,11 +68,38 @@ class StudentService:
             raise PermissionError("Student does not belong to tutor")
         await self.repo.set_tutor_student_note(tutor_user_id, student_id, note)
 
-    async def delete_student(self, tutor_user_id: str, student_id: str) -> None:
+    async def delete_student(self, tutor_user_id: str, student_id: str) -> dict:
+        """Remove a student. If this was their only tutor, the profile and the
+        connected Telegram account are deleted (which invalidates the invite link
+        and removes all their lessons/homework). Returns info so the caller can
+        send a goodbye message to the student.
+        """
         relation = await self.repo.get_tutor_student_relation(tutor_user_id, student_id)
         if not relation:
             raise PermissionError("Student does not belong to tutor")
-        await self.repo.delete_tutor_student(tutor_user_id, student_id)
+
+        profile = await self.repo.get_student_for_tutor(tutor_user_id, student_id)
+        student_name = (profile or {}).get("name") or "Ученик"
+        linked_user_id = (profile or {}).get("user_id")
+
+        other_tutors = [t for t in await self.repo.list_tutor_ids_for_student(student_id) if t != tutor_user_id]
+        if other_tutors:
+            # Student is shared with another tutor — only detach this tutor.
+            await self.repo.delete_tutor_student(tutor_user_id, student_id)
+            return {"removed_account": False, "notify_tg_id": None, "student_name": student_name}
+
+        notify_tg_id = None
+        if linked_user_id:
+            linked_user = await self.repo.get_user_by_id(linked_user_id)
+            notify_tg_id = (linked_user or {}).get("tg_id")
+
+        # Deleting the profile cascades lessons/homework/schedule_rules/relation
+        # and frees the invite_token, so the invite link stops working.
+        await self.repo.delete_student_profile(student_id)
+        if linked_user_id:
+            await self.repo.delete_user(linked_user_id)
+
+        return {"removed_account": bool(linked_user_id), "notify_tg_id": notify_tg_id, "student_name": student_name}
 
     async def has_student_profile(self, tg_id: int) -> bool:
         user = await self.repo.get_user_by_tg_id(tg_id)

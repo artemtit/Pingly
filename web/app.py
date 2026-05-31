@@ -76,6 +76,25 @@ def _parse_local(raw: str) -> datetime | None:
         return None
 
 
+async def _notify_removed_student(tg_id: int, tutor_name: str) -> None:
+    """Send a one-off goodbye message to a student whose account was just deleted.
+    Uses a short-lived Bot instance; deletions are rare so the overhead is fine."""
+    from aiogram import Bot
+
+    bot = Bot(_config.BOT_TOKEN)
+    try:
+        await bot.send_message(
+            tg_id,
+            f"❌ Репетитор {tutor_name} удалил тебя из Pingly.\n\n"
+            "Напоминания о занятиях больше приходить не будут. "
+            "Если это ошибка — попроси у репетитора новую ссылку-приглашение.",
+        )
+    except Exception:
+        pass
+    finally:
+        await bot.session.close()
+
+
 def _ctx(request: Request, user: dict, active: str, **extra) -> dict:
     base = {"request": request, "user": user, "active": active}
     base.update(extra)
@@ -247,7 +266,9 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.post("/tutor/students/{student_id}/delete")
     async def delete_student(student_id: str, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
-        await services.students.delete_student(user["id"], student_id)
+        result = await services.students.delete_student(user["id"], student_id)
+        if result.get("notify_tg_id"):
+            await _notify_removed_student(result["notify_tg_id"], user.get("full_name") or "Репетитор")
         return RedirectResponse("/tutor/students", status_code=303)
 
     @app.post("/tutor/students/{student_id}/note")
