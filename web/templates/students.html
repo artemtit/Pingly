@@ -26,11 +26,15 @@
       <span class="strow-info">
         <span class="strow-name">{{ student.name }}</span>
         <span class="strow-sub">
-          {{ student.subject_summary or "Предмет не указан" }}{% if student.grade %} · {{ student.grade }}{% endif %}{% if student.tg_username %} · @{{ student.tg_username }}{% endif %}
+          {{ student.subject_summary or "Предмет не указан" }}{% if student.grade %} · {{ student.grade }}{% endif %}
         </span>
       </span>
     </a>
     <div class="strow-meta">
+      {% if student.tg_username %}
+      <a class="tg-chip" href="https://t.me/{{ student.tg_username }}" target="_blank" rel="noopener"
+        title="Написать @{{ student.tg_username }} в Telegram">{{ ui.icon('send', 15) }}<span class="tg-handle">@{{ student.tg_username }}</span></a>
+      {% endif %}
       {% if not student.user_id %}
       <span class="badge badge-muted" title="Ученик ещё не открыл бота">не подключён</span>
       <button type="button" class="icon-btn" title="Скопировать ссылку-приглашение" aria-label="Скопировать ссылку-приглашение"
