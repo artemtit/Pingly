@@ -29,11 +29,24 @@ _MONTHS_RU = [
     "июля", "августа", "сентября", "октября", "ноября", "декабря",
 ]
 
+# Moscow time — UTC+3, no DST. All user-facing time formatting goes through here.
+_MSK = timezone(timedelta(hours=3))
+
+
+def _to_msk(dt: datetime) -> datetime:
+    return dt.astimezone(_MSK)
+
+
+def _fmt_dt_msk(dt: datetime) -> str:
+    """Format a UTC datetime as Moscow time for user-facing messages."""
+    msk = _to_msk(dt)
+    return f"{msk.day} {_MONTHS_RU[msk.month - 1]} в {msk:%H:%M}"
+
 
 def _fmt_when_ru(starts_at: str) -> str:
     try:
         dt = datetime.fromisoformat(str(starts_at).replace("Z", "+00:00"))
-        return f"{dt.day} {_MONTHS_RU[dt.month - 1]} в {dt:%H:%M}"
+        return _fmt_dt_msk(dt)
     except Exception:
         return str(starts_at)[:16].replace("T", " ")
 
@@ -167,7 +180,7 @@ class LessonService:
                 student_user_id,
                 ntype.value,
                 title,
-                f"Занятие начнётся {starts_at.strftime('%d.%m в %H:%M')}",
+                f"Занятие начнётся {_fmt_dt_msk(starts_at)}",
                 {"lesson_id": lesson["id"]},
                 starts_at - delta,
             )
@@ -213,7 +226,7 @@ class LessonService:
                 lesson["student_user_id"],
                 NotificationType.LESSON_RESCHEDULED.value,
                 "🔄 Занятие перенесено",
-                f"Новое время: {new_starts_at.strftime('%d.%m в %H:%M')}",
+                f"Новое время: {_fmt_dt_msk(new_starts_at)}",
                 {"lesson_id": lesson_id},
             )
             await self._schedule_lesson_notifications(lesson, new_starts_at)

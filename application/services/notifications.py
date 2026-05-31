@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 from application.repositories import PinglyRepository
 from domain import NotificationType
 
+_MSK = timezone(timedelta(hours=3))
+
 
 class NotificationService:
     def __init__(self, repo: PinglyRepository) -> None:
@@ -27,7 +29,7 @@ class NotificationService:
                 student_user_id,
                 ntype.value,
                 title,
-                f"Занятие начнётся {starts_at.strftime('%d.%m в %H:%M')}",
+                f"Занятие начнётся {starts_at.astimezone(_MSK).strftime('%d.%m в %H:%M')}",
                 {"lesson_id": lesson["id"]},
                 starts_at - delta,
             )
