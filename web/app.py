@@ -168,6 +168,10 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     async def design_tokens() -> Response:
         return FileResponse(BASE_DIR.parent / "design-tokens.css", media_type="text/css")
 
+    @app.get("/favicon.ico")
+    async def favicon() -> Response:
+        return FileResponse(BASE_DIR / "static" / "logo-mark.svg", media_type="image/svg+xml")
+
     # ---------------- TUTOR ----------------
     @app.get("/tutor", response_class=HTMLResponse)
     async def tutor_dashboard(request: Request, user: dict = Depends(current_user)) -> Response:
