@@ -120,7 +120,8 @@ class LessonService:
         interval_n = max(interval_n, 1)
 
         def at(d: datetime) -> datetime:
-            return d.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            # hour/minute are Moscow time — subtract 3h to store as UTC
+            return d.replace(hour=hour, minute=minute, second=0, microsecond=0) - timedelta(hours=3)
 
         if recurrence == "daily":
             cursor = at(start)
@@ -264,7 +265,7 @@ class LessonService:
         student_user_id = None
         for lesson in future:
             old = datetime.fromisoformat(lesson["starts_at"].replace("Z", "+00:00"))
-            new_dt = old.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            new_dt = old.replace(hour=hour, minute=minute, second=0, microsecond=0) - timedelta(hours=3)
             await self.repo.update_lesson_fields(lesson["id"], {"starts_at": new_dt.isoformat(), "rescheduled_from": lesson["starts_at"]})
             student_user_id = lesson.get("student_user_id") or student_user_id
             count += 1

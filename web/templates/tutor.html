@@ -61,7 +61,7 @@
       <div class="timeline-row">
         <div class="timeline-dot {{ lesson.status }}"></div>
         <div class="timeline-body">
-          <div class="timeline-when">{{ lesson.starts_at[:16].replace("T", " ") }}</div>
+          <div class="timeline-when">{{ lesson.starts_at | msk }}</div>
           <div class="timeline-who">{{ lesson.student_profiles.name if lesson.student_profiles else "Ученик" }}</div>
         </div>
         {{ ui.status_badge(lesson.status) }}

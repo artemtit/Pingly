@@ -25,8 +25,8 @@
     <div class="nl-hero-head">
       <div class="nl-overline">Ближайшее занятие</div>
       <div class="nl-datetime">
-        <span class="nl-date">{{ next_lesson.starts_at[:10] }}</span>
-        <span class="nl-time">{{ next_lesson.starts_at[11:16] }}</span>
+        <span class="nl-date">{{ next_lesson.starts_at | ru_weekday }}, {{ next_lesson.starts_at | msk('%d.%m') }}</span>
+        <span class="nl-time">{{ next_lesson.starts_at | msk('%H:%M') }}</span>
       </div>
     </div>
     {{ ui.status_badge(next_lesson.status) }}
@@ -70,7 +70,7 @@
   <div class="mob-week-row">
     <div class="mob-week-daycol">
       <div class="mob-week-day">{{ lesson.starts_at | ru_weekday }}</div>
-      <div class="mob-week-time">{{ lesson.starts_at[11:16] }}</div>
+      <div class="mob-week-time">{{ lesson.starts_at | msk('%H:%M') }}</div>
     </div>
     <div class="mob-week-subj">Занятие</div>
     {{ ui.status_badge(lesson.status) }}

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
@@ -20,15 +20,27 @@ templates.env.globals["status_labels"] = STATUS_LABELS
 templates.env.globals["role_label"] = lambda r: "Репетитор" if r == "tutor" else "Ученик"
 
 _DAYS_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+_MSK = timezone(timedelta(hours=3))
+
 
 def _ru_weekday(dt_str: str) -> str:
     try:
         dt = datetime.fromisoformat(str(dt_str).replace("Z", "+00:00"))
-        return _DAYS_RU[dt.weekday()]
+        return _DAYS_RU[dt.astimezone(_MSK).weekday()]
     except Exception:
         return ""
 
+
+def _fmt_msk(dt_str: str, fmt: str = "%d.%m %H:%M") -> str:
+    try:
+        dt = datetime.fromisoformat(str(dt_str).replace("Z", "+00:00"))
+        return dt.astimezone(_MSK).strftime(fmt)
+    except Exception:
+        return str(dt_str)[:16].replace("T", " ")
+
+
 templates.env.filters["ru_weekday"] = _ru_weekday
+templates.env.filters["msk"] = _fmt_msk
 services = create_services()
 signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")
 
@@ -64,14 +76,14 @@ def _require(user: dict, role: str) -> None:
 
 
 def _parse_local(raw: str) -> datetime | None:
-    """Parse an <input type=datetime-local> value (seconds optional) as UTC."""
+    """Parse an <input type=datetime-local> value as Moscow time, return UTC."""
     raw = (raw or "").strip()
     if not raw:
         return None
     if len(raw) == 16:  # YYYY-MM-DDTHH:MM
         raw += ":00"
     try:
-        return datetime.fromisoformat(raw).replace(tzinfo=timezone.utc)
+        return datetime.fromisoformat(raw).replace(tzinfo=_MSK).astimezone(timezone.utc)
     except ValueError:
         return None
 
@@ -217,7 +229,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     async def tutor_students(request: Request, q: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
         students = await services.students.list_students_by_user(user["id"], q)
-        return templates.TemplateResponse("students.html", _ctx(request, user, "students", students=students, q=q or ""))
+        return templates.TemplateResponse("students.html", _ctx(request, user, "students", students=students, q=q or "", bot_username=_config.BOT_USERNAME))
 
     @app.post("/tutor/students/create")
     async def create_student(
@@ -311,7 +323,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         time_norm = lesson_time.strip()[:5] or "15:00"
         if recurrence == "once":
             day = lesson_date.strip() or datetime.now(timezone.utc).date().isoformat()
-            starts_at = datetime.fromisoformat(f"{day}T{time_norm}:00").replace(tzinfo=timezone.utc)
+            starts_at = datetime.fromisoformat(f"{day}T{time_norm}:00").replace(tzinfo=_MSK).astimezone(timezone.utc)
             await services.lessons.create_one_time_lesson(user["id"], student_id, starts_at)
         else:
             wd = weekdays or None

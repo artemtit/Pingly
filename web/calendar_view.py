@@ -1,7 +1,9 @@
 """Builds day / week / month calendar structures from a flat list of lessons."""
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+
+_MSK = timezone(timedelta(hours=3))
 
 WEEKDAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 MONTH_NAMES = [
@@ -20,7 +22,7 @@ def _parse(raw: object) -> datetime | None:
     if not raw:
         return None
     try:
-        return datetime.fromisoformat(str(raw).replace("Z", "+00:00")).replace(tzinfo=None)
+        return datetime.fromisoformat(str(raw).replace("Z", "+00:00")).astimezone(_MSK)
     except ValueError:
         return None
 

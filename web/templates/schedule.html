@@ -13,7 +13,7 @@
   <div class="card">
     <h2>Новое занятие</h2>
     {% if not students %}
-    <div class="empty"><div class="empty-emoji">👥</div><p>Сначала добавь ученика в боте.</p></div>
+    <div class="empty"><div class="empty-emoji">👥</div><p>Сначала <a href="/tutor/students" class="link-btn">добавь ученика</a> на странице «Ученики».</p></div>
     {% else %}
     <form method="post" action="/tutor/schedule" class="form" id="schedule-form">
       <label class="field"><span>Ученик</span>
@@ -63,7 +63,7 @@
       <div class="timeline-row">
         <div class="timeline-dot {{ lesson.status }}"></div>
         <div class="timeline-body">
-          <div class="timeline-when">{{ lesson.starts_at[:16].replace("T", " ") }}</div>
+          <div class="timeline-when">{{ lesson.starts_at | msk }}</div>
           <div class="timeline-who">{{ lesson.student_profiles.name if lesson.student_profiles else "Ученик" }}</div>
         </div>
         <div class="series-actions">
