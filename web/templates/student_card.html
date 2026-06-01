@@ -89,9 +89,11 @@ function copyInvite(){
       {% if last_activity %}<p class="muted" style="margin-top:14px;">Последняя активность: {{ last_activity[:16].replace("T", " ") }}</p>{% endif %}
     </div>
 
-    <div class="card">
-      <h2>🎓 Профиль обучения</h2>
-      <form method="post" action="/tutor/students/{{ student.id }}/profile" class="form">
+    <div class="card" id="profile">
+      <div class="card-head"><h2>🎓 Профиль обучения</h2>
+        {% if saved == 'profile' %}<span class="save-ok" data-autohide>✅ Сохранено</span>{% endif %}
+      </div>
+      <form method="post" action="/tutor/students/{{ student.id }}/profile" class="form" onsubmit="saving(this)">
         <label class="field"><span>Имя</span>
           <input class="input" name="name" value="{{ student.name }}" required></label>
         <label class="field"><span>Предмет</span>
@@ -110,9 +112,11 @@ function copyInvite(){
       </form>
     </div>
 
-    <div class="card">
-      <h2>🗒️ Заметки репетитора</h2>
-      <form method="post" action="/tutor/students/{{ student.id }}/note" class="form">
+    <div class="card" id="notes">
+      <div class="card-head"><h2>🗒️ Заметки репетитора</h2>
+        {% if saved == 'note' %}<span class="save-ok" data-autohide>✅ Сохранено</span>{% endif %}
+      </div>
+      <form method="post" action="/tutor/students/{{ student.id }}/note" class="form" onsubmit="saving(this)">
         <textarea name="note" placeholder="Личные заметки: сильные стороны, что повторить, договорённости...">{{ note }}</textarea>
         <button class="btn btn-secondary">Сохранить заметку</button>
       </form>
@@ -157,4 +161,16 @@ function copyInvite(){
     </div>
   </div>
 </section>
+
+<script>
+// Instant feedback: button shows "Сохраняю…" while the form posts.
+function saving(form){
+  var b = form.querySelector('button[type="submit"], button:not([type])');
+  if (b){ b.dataset.label = b.textContent; b.textContent = 'Сохраняю…'; b.disabled = true; }
+}
+// Fade the "✅ Сохранено" chip out after a few seconds.
+document.querySelectorAll('.save-ok[data-autohide]').forEach(function(el){
+  setTimeout(function(){ el.style.opacity = '0'; }, 2600);
+});
+</script>
 {% endblock %}

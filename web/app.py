@@ -281,7 +281,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
 
     @app.get("/tutor/students/{student_id}", response_class=HTMLResponse)
     async def tutor_student_card(
-        request: Request, student_id: str, created: str | None = None, user: dict = Depends(current_user),
+        request: Request, student_id: str, created: str | None = None, saved: str | None = None, user: dict = Depends(current_user),
     ) -> Response:
         _require(user, "tutor")
         try:
@@ -289,7 +289,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         except PermissionError as exc:
             raise HTTPException(status_code=404) from exc
         return templates.TemplateResponse("student_card.html", _ctx(
-            request, user, "students", **card, bot_username=_config.BOT_USERNAME, created=created,
+            request, user, "students", **card, bot_username=_config.BOT_USERNAME, created=created, saved=saved,
         ))
 
     @app.post("/tutor/students/{student_id}/profile")
@@ -312,7 +312,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             "started_at": started_at.strip() or None,
             "default_price": int(default_price) if default_price.strip().isdigit() else None,
         })
-        return RedirectResponse(f"/tutor/students/{student_id}", status_code=303)
+        return RedirectResponse(f"/tutor/students/{student_id}?saved=profile#profile", status_code=303)
 
     @app.post("/tutor/students/{student_id}/delete")
     async def delete_student(student_id: str, user: dict = Depends(current_user)) -> Response:
@@ -326,7 +326,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     async def update_student_note(student_id: str, note: str = Form(""), user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
         await services.students.set_note(user["id"], student_id, note.strip() or None)
-        return RedirectResponse(f"/tutor/students/{student_id}", status_code=303)
+        return RedirectResponse(f"/tutor/students/{student_id}?saved=note#notes", status_code=303)
 
     @app.get("/tutor/calendar", response_class=HTMLResponse)
     async def tutor_calendar(request: Request, view: str = "month", date: str | None = None, user: dict = Depends(current_user)) -> Response:
