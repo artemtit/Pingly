@@ -73,6 +73,12 @@
       <button class="btn btn-primary">Сохранить</button>
     </form>
     {% if profile and profile.slug and profile.public_enabled %}
+    <h3 style="font-size:15px;margin:16px 0 6px;">🔗 Твоя ссылка</h3>
+    <p class="muted" style="margin-bottom:8px;font-size:13px;">Делись ей в соцсетях, на Авито, в Telegram — по ней оставляют заявки.</p>
+    <div class="copy-row">
+      <input class="input" id="pub-link" readonly value="{{ web_base }}/u/{{ profile.slug }}">
+      <button class="btn btn-secondary btn-sm" type="button" onclick="copyField('pub-link', this)">Копировать</button>
+    </div>
     <a class="btn btn-ghost btn-sm" style="margin-top:10px" href="/u/{{ profile.slug }}" target="_blank" rel="noopener">Открыть мою страницу →</a>
     {% endif %}
   </div>
@@ -82,11 +88,19 @@
 <script>
 function copyField(id, btn) {
   var el = document.getElementById(id);
-  el.select(); el.setSelectionRange(0, 99999);
-  navigator.clipboard.writeText(el.value).then(function(){
+  el.removeAttribute('readonly');
+  el.focus(); el.select(); el.setSelectionRange(0, 99999);
+  function done(){
     var old = btn.textContent; btn.textContent = '✓ Скопировано';
     setTimeout(function(){ btn.textContent = old; }, 1500);
-  });
+  }
+  function fallback(){ try { document.execCommand('copy'); done(); } catch (e) {} }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(el.value).then(done, fallback);
+  } else {
+    fallback();
+  }
+  el.setAttribute('readonly', '');
 }
 </script>
 {% endblock %}
