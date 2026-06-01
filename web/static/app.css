@@ -55,9 +55,6 @@ h2 { font-size: 20px; letter-spacing: -.02em; margin-bottom: 14px; }
 .sidebar { background: #fff; border-right: 1px solid var(--gray-200); padding: 20px 14px 16px; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 0; height: 100vh; }
 .brand { display: flex; align-items: center; gap: 8px; padding: 0 6px; }
 .brand-logo { display: block; height: 30px; width: auto; }
-.brand-logo-dark { display: none; }
-[data-theme="dark"] .brand-logo-light { display: none; }
-[data-theme="dark"] .brand-logo-dark { display: block; }
 .mobile-header .brand-logo { height: 26px; }
 .brand .mark { width: 36px; height: 36px; border-radius: 11px; background: linear-gradient(135deg, var(--color-primary-500), #fb923c); box-shadow: var(--shadow-primary); color: #fff; display: grid; place-items: center; font-weight: 900; }
 .brand-lg { font-size: 28px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 8px; }

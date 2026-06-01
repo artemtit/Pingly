@@ -19,8 +19,7 @@
 {% block body %}
 <header class="mobile-header">
   <a class="brand" href="/" aria-label="Pingly">
-    <img class="brand-logo brand-logo-light" src="/static/logo.svg" height="26" alt="Pingly">
-    <img class="brand-logo brand-logo-dark" src="/static/logo-dark.svg" height="26" alt="Pingly">
+    <img class="brand-logo" src="/static/logo.svg" data-light-src="/static/logo.svg" data-dark-src="/static/logo-dark.svg" height="26" alt="Pingly">
   </a>
   <div style="display:flex;align-items:center;gap:10px;">
     <button class="theme-toggle" onclick="toggleTheme()" title="Тёмная тема" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">🌙</button>
@@ -31,8 +30,7 @@
 <div class="app">
   <aside class="sidebar">
     <a class="brand" href="/" aria-label="Pingly">
-      <img class="brand-logo brand-logo-light" src="/static/logo.svg" height="30" alt="Pingly">
-      <img class="brand-logo brand-logo-dark" src="/static/logo-dark.svg" height="30" alt="Pingly">
+      <img class="brand-logo" src="/static/logo.svg" data-light-src="/static/logo.svg" data-dark-src="/static/logo-dark.svg" height="30" alt="Pingly">
     </a>
 
     <div class="role-pill {{ 'is-tutor' if user.role == 'tutor' else 'is-student' }}">

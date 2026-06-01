@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
   <link rel="apple-touch-icon" href="/static/logo-mark.svg">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/app.css?v=18">
+  <link rel="stylesheet" href="/static/app.css?v=19">
   <link rel="stylesheet" href="/static/tour.css?v=2">
   <script>
     (function(){
@@ -23,6 +23,9 @@
   function setTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
     localStorage.setItem('theme', t);
+    document.querySelectorAll('.brand-logo').forEach(function(img){
+      img.src = t === 'dark' ? img.dataset.darkSrc : img.dataset.lightSrc;
+    });
     document.querySelectorAll('.theme-toggle').forEach(function(b){
       b.textContent = t === 'dark' ? '☀️' : '🌙';
       b.title = t === 'dark' ? 'Светлая тема' : 'Тёмная тема';
