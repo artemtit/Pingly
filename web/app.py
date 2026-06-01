@@ -63,8 +63,22 @@ def _fmt_msk(dt_str: str, fmt: str = "%d.%m %H:%M") -> str:
         return str(dt_str)[:16].replace("T", " ")
 
 
+def _ru_days(n: object) -> str:
+    """Russian plural for 'день': 1 день, 2-4 дня, 5-20 дней, 21 день, 44 дня…"""
+    try:
+        n = abs(int(n))
+    except (TypeError, ValueError):
+        return "дней"
+    if n % 10 == 1 and n % 100 != 11:
+        return "день"
+    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        return "дня"
+    return "дней"
+
+
 templates.env.filters["ru_weekday"] = _ru_weekday
 templates.env.filters["msk"] = _fmt_msk
+templates.env.filters["ru_days"] = _ru_days
 templates.env.globals["subscription_info"] = _subscription_info
 services = create_services()
 signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")

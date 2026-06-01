@@ -65,7 +65,7 @@
   <div class="card">
     <h2>💎 Подписка</h2>
     {% set n = sub.days_left or 0 %}
-    {% set days_word = 'день' if (n % 10 == 1 and n % 100 != 11) else ('дня' if (n % 10 in [2,3,4] and n % 100 not in [12,13,14]) else 'дней') %}
+    {% set days_word = n | ru_days %}
     {% if sub.status == 'active' %}
     <div class="sub-hero"><div class="sub-big">Активна ✅</div><div class="muted">Спасибо, что пользуешься Pingly 💙</div></div>
     {% elif n > 0 %}
