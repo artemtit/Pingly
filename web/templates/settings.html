@@ -7,7 +7,8 @@
   </div>
 </div>
 
-{% if saved %}<div class="trial-banner">✅ Сохранено</div>{% endif %}
+{% if saved == 'support' %}<div class="trial-banner">✅ Сообщение отправлено — ответим в Telegram</div>
+{% elif saved %}<div class="trial-banner">✅ Сохранено</div>{% endif %}
 {% if error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
 
 <section class="grid two" style="align-items: start;">
@@ -95,6 +96,18 @@
     {% endif %}
   </div>
   {% endif %}
+
+  <div class="card">
+    <h2>🆘 Поддержка</h2>
+    <p class="muted" style="margin-bottom:12px;">Нашёл баг или есть вопрос? Напиши — сообщение придёт основателю Pingly в Telegram, ответим лично.</p>
+    <form method="post" action="/support" class="form">
+      <textarea name="message" required maxlength="3000" placeholder="Опиши проблему или вопрос…"></textarea>
+      <button class="btn btn-primary btn-sm">Отправить</button>
+    </form>
+    {% if bot_username %}
+    <p class="muted" style="margin-top:12px;font-size:13px;">Или напрямую: <a href="https://t.me/{{ bot_username }}" target="_blank" rel="noopener">@{{ bot_username }}</a></p>
+    {% endif %}
+  </div>
 </section>
 
 <script>

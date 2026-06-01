@@ -597,6 +597,20 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         history = await services.lessons.list_student_history(user["id"])
         return templates.TemplateResponse("history.html", _ctx(request, user, "history", history=history))
 
+    @app.post("/support")
+    async def support(message: str = Form(...), user: dict = Depends(current_user)) -> Response:
+        text = (message or "").strip()
+        base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
+        if text and _config.SUPPORT_TG_ID:
+            who = user.get("full_name") or "Пользователь"
+            role = "репетитор" if user["role"] == "tutor" else "ученик"
+            contact = ("@" + user["tg_username"]) if user.get("tg_username") else (user.get("email") or "—")
+            await _send_telegram(
+                _config.SUPPORT_TG_ID,
+                f"🆘 Поддержка Pingly\n\nОт: {who} ({role}, {contact})\n\n{text[:3000]}",
+            )
+        return RedirectResponse(f"{base}?saved=support", status_code=303)
+
     @app.post("/settings/name")
     async def update_name(full_name: str = Form(...), user: dict = Depends(current_user)) -> Response:
         await services.accounts.update_name_by_user_id(user["id"], full_name)
