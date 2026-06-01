@@ -28,11 +28,32 @@
   </div>
 
   <div class="card">
-    <h2>🤖 Telegram-бот</h2>
-    <div class="settings-row"><span>Напоминания</span><span class="badge completed">включены</span></div>
-    <p class="muted" style="margin: 10px 0 14px;">Pingly напоминает о занятиях за день и за час. Чтобы поменять имя или роль — открой бота.</p>
+    <h2>🤖 Telegram</h2>
+    {% if user.tg_id %}
+    <div class="settings-row"><span class="muted">Подключён</span><strong>@{{ user.tg_username or "—" }}</strong></div>
+    <div class="settings-row"><span>Уведомления</span><span class="badge completed">приходят в Telegram</span></div>
+    <p class="muted" style="margin: 10px 0 14px;">Заявки, отмены и переносы прилетают тебе в Telegram. Pingly напоминает ученикам о занятиях за день и за час.</p>
     {% if bot_username %}
     <a class="btn btn-secondary" href="https://t.me/{{ bot_username }}" target="_blank" rel="noopener">Открыть бот →</a>
+    {% endif %}
+    {% else %}
+    <div class="settings-row"><span class="muted">Статус</span><span class="badge cancelled">не подключён</span></div>
+    <p class="muted" style="margin: 10px 0 14px;">Подключи Telegram — и заявки с публичной страницы, отмены и переносы будут приходить тебе в личку мгновенно.</p>
+    {% if bot_username %}
+    <div class="tg-connect">
+      <script async src="https://telegram.org/js/telegram-widget.js?22"
+        data-telegram-login="{{ bot_username }}"
+        data-size="large"
+        data-userpic="false"
+        data-onauth="onTgLink(user)"
+        data-request-access="write"></script>
+    </div>
+    <script>
+      function onTgLink(u){ window.location.href = "/auth/telegram/link?" + new URLSearchParams(u).toString(); }
+    </script>
+    {% else %}
+    <p class="muted">Подключение появится после настройки бота.</p>
+    {% endif %}
     {% endif %}
   </div>
 

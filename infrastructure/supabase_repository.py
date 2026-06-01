@@ -127,6 +127,15 @@ class SupabasePinglyRepository:
     async def upsert_tutor_user(self, tg_id: int, full_name: str, tg_username: str | None) -> dict[str, Any]:
         return await self.upsert_user("tutor", tg_id, full_name, tg_username)
 
+    async def set_user_telegram(self, user_id: str, tg_id: int, tg_username: str | None) -> dict[str, Any] | None:
+        result = await (
+            self._db().table("users")
+            .update({"tg_id": tg_id, "tg_username": tg_username})
+            .eq("id", user_id)
+            .execute()
+        )
+        return _one(result)
+
     async def create_invited_student(self, tutor_user_id: str, name: str, tg_username: str, invite_token: str) -> dict[str, Any]:
         result = await self._db().table("student_profiles").insert({
             "name": name,

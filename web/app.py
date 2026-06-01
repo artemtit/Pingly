@@ -204,6 +204,16 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         _set_session(response, user)
         return response
 
+    @app.get("/auth/telegram/link")
+    async def auth_telegram_link(request: Request, user: dict = Depends(current_user)) -> Response:
+        data = dict(request.query_params)
+        ok, err = await services.web_auth.link_telegram(user["id"], data)
+        base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
+        if not ok:
+            from urllib.parse import quote
+            return RedirectResponse(f"{base}?error={quote(err or 'Не удалось подключить Telegram')}", status_code=303)
+        return RedirectResponse(f"{base}?saved=tg", status_code=303)
+
     @app.get("/logout")
     async def logout() -> Response:
         response = RedirectResponse("/", status_code=303)
@@ -590,6 +600,6 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         return RedirectResponse(f"{base}?saved=name", status_code=303)
 
     @app.get("/student/settings", response_class=HTMLResponse)
-    async def student_settings(request: Request, saved: str | None = None, user: dict = Depends(current_user)) -> Response:
+    async def student_settings(request: Request, saved: str | None = None, error: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "student")
-        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings", bot_username=_config.BOT_USERNAME, saved=saved))
+        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings", bot_username=_config.BOT_USERNAME, saved=saved, error=error))

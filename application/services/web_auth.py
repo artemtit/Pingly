@@ -92,6 +92,20 @@ class WebAuthService:
         expected = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
         return hmac.compare_digest(expected, received_hash)
 
+    async def link_telegram(self, user_id: str, data: dict[str, str]) -> tuple[bool, str | None]:
+        """Attach a Telegram identity to an existing (e.g. email) account."""
+        if not self.verify_telegram_widget(data):
+            return False, "Не удалось проверить вход через Telegram"
+        tg_id = data.get("id")
+        if not tg_id or not str(tg_id).isdigit():
+            return False, "Некорректные данные Telegram"
+        tg_id = int(tg_id)
+        existing = await self.repo.get_user_by_tg_id(tg_id)
+        if existing and existing["id"] != user_id:
+            return False, "Этот Telegram уже привязан к другому аккаунту Pingly"
+        await self.repo.set_user_telegram(user_id, tg_id, data.get("username"))
+        return True, None
+
     async def login_telegram_widget(self, data: dict[str, str]) -> dict | None:
         if not self.verify_telegram_widget(data):
             return None
