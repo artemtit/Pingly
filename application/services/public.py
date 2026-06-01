@@ -53,15 +53,17 @@ class PublicService:
         profile = await self.get_public_profile(slug)
         if not profile:
             return None
-        name = (name or "").strip()
-        contact = (contact or "").strip()
+        # Cap every field before insert — this endpoint is unauthenticated, so we
+        # don't let a request bloat the DB or a Telegram push with arbitrary length.
+        name = (name or "").strip()[:100]
+        contact = (contact or "").strip()[:100]
         if not name or not contact:
             return None
+        preferred_time = (preferred_time or "").strip()[:100] or None
+        comment = (comment or "").strip()[:1000] or None
         tutor_user_id = profile["user_id"]
         request = await self.repo.create_booking_request(
-            tutor_user_id, name, contact,
-            (preferred_time or "").strip() or None,
-            (comment or "").strip() or None,
+            tutor_user_id, name, contact, preferred_time, comment,
         )
         # The tutor is pushed immediately by the route via _send_telegram, so we
         # don't also enqueue a notification row here (would double-send).

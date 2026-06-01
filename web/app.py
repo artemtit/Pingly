@@ -23,6 +23,29 @@ templates.env.globals["role_label"] = lambda r: "Репетитор" if r == "tu
 _DAYS_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 _MSK = timezone(timedelta(hours=3))
 
+# Simple in-memory rate limiter for the unauthenticated booking endpoint. The app
+# runs as a single uvicorn process, so a process-local window is enough to stop a
+# client from flooding the requests table / a tutor's Telegram.
+_RATE_BUCKETS: dict[str, list[float]] = {}
+_BOOK_RATE_MAX = 5            # max accepted submissions
+_BOOK_RATE_WINDOW = 60.0     # per this many seconds, per (ip, slug)
+
+
+def _rate_ok(key: str, max_hits: int, window: float) -> bool:
+    import time
+    now = time.monotonic()
+    hits = [t for t in _RATE_BUCKETS.get(key, []) if now - t < window]
+    if len(hits) >= max_hits:
+        _RATE_BUCKETS[key] = hits
+        return False
+    hits.append(now)
+    _RATE_BUCKETS[key] = hits
+    # Opportunistic cleanup so the dict doesn't grow unbounded.
+    if len(_RATE_BUCKETS) > 5000:
+        for k in [k for k, v in _RATE_BUCKETS.items() if all(now - t >= window for t in v)]:
+            _RATE_BUCKETS.pop(k, None)
+    return True
+
 
 def _ru_weekday(dt_str: str) -> str:
     try:
@@ -247,12 +270,16 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
 
     @app.post("/u/{slug}/book")
     async def public_book(
+        request: Request,
         slug: str,
         name: str = Form(...),
         contact: str = Form(...),
         preferred_time: str = Form(""),
         comment: str = Form(""),
     ) -> Response:
+        client_ip = request.client.host if request.client else "?"
+        if not _rate_ok(f"book:{client_ip}:{slug}", _BOOK_RATE_MAX, _BOOK_RATE_WINDOW):
+            return RedirectResponse(f"/u/{slug}?sent=1", status_code=303)
         request_row = await services.public.create_booking(slug, name, contact, preferred_time, comment)
         if request_row:
             target = await services.public.booking_push_target(request_row["tutor_user_id"], name.strip(), contact.strip())

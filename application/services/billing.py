@@ -55,18 +55,49 @@ class BillingService:
             payment = None
         user_id = (payment or {}).get("user_id") or body.get("payload")
         if status == "CONFIRMED":
-            # Idempotent via the ledger: only activate once per transaction.
-            if payment and payment.get("status") == "confirmed":
+            # Defense-in-depth: if the callback reports an amount, it must match the
+            # price we charge. The amount is server-set at creation, so a mismatch
+            # means a tampered/foreign callback — refuse to grant entitlement.
+            if not self._amount_ok(body):
+                return False
+            if not user_id:
+                # Nothing to activate; acknowledge so Platega stops retrying.
                 return True
+            # Authoritative idempotency: ensure a ledger row exists, then perform an
+            # atomic "pending -> confirmed" transition. activate_subscription runs
+            # ONLY when this call actually made the transition, so retried/duplicate
+            # CONFIRMED callbacks can never stack extra 30-day extensions.
             try:
-                await self.repo.mark_subscription_payment(transaction_id, "confirmed", confirmed=True)
+                await self.repo.upsert_subscription_payment_pending(
+                    user_id, transaction_id, config.SUBSCRIPTION_PRICE_RUB
+                )
+                transitioned = await self.repo.confirm_subscription_payment_once(transaction_id)
             except Exception:
-                pass
-            if user_id:
-                await self.repo.activate_subscription(user_id, SUBSCRIPTION_DAYS)
+                # If the ledger is unreachable we cannot guarantee single activation,
+                # so we must not activate. Returning False makes Platega retry later.
+                return False
+            if transitioned:
+                activate_uid = transitioned.get("user_id") or user_id
+                await self.repo.activate_subscription(activate_uid, SUBSCRIPTION_DAYS)
         elif status in ("CANCELED", "CHARGEBACKED"):
             try:
                 await self.repo.mark_subscription_payment(transaction_id, "canceled")
             except Exception:
                 pass
         return True
+
+    @staticmethod
+    def _amount_ok(body: dict) -> bool:
+        """True if the callback's amount equals the expected price, or if no amount
+        is present (older callbacks omit it; the amount is server-set at creation)."""
+        raw = body.get("amount")
+        if raw is None:
+            details = body.get("paymentDetails")
+            if isinstance(details, dict):
+                raw = details.get("amount")
+        if raw is None:
+            return True
+        try:
+            return abs(float(raw) - float(config.SUBSCRIPTION_PRICE_RUB)) < 0.01
+        except (TypeError, ValueError):
+            return False

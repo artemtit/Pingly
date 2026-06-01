@@ -676,6 +676,47 @@ class SupabasePinglyRepository:
         }).execute()
         return result.data[0]
 
+    async def upsert_subscription_payment_pending(
+        self, user_id: str, transaction_id: str, amount_rub: int
+    ) -> dict[str, Any] | None:
+        """Ensure a ledger row exists for this transaction without clobbering an
+        already-confirmed status. transaction_id is unique; on conflict we keep
+        the existing row (ignore_duplicates) so a confirmed payment stays confirmed."""
+        result = await (
+            self._db().table("subscription_payments")
+            .upsert(
+                {
+                    "user_id": user_id,
+                    "provider": "platega",
+                    "transaction_id": transaction_id,
+                    "amount_rub": amount_rub,
+                    "status": "pending",
+                },
+                on_conflict="transaction_id",
+                ignore_duplicates=True,
+            )
+            .execute()
+        )
+        return _one(result)
+
+    async def confirm_subscription_payment_once(self, transaction_id: str) -> dict[str, Any] | None:
+        """Atomically transition a payment to 'confirmed' only if it isn't already.
+        Returns the row when THIS call performed the transition, else None — the
+        authoritative idempotency gate so retried webhooks activate exactly once."""
+        result = await (
+            self._db().table("subscription_payments")
+            .update(
+                {
+                    "status": "confirmed",
+                    "confirmed_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+            .eq("transaction_id", transaction_id)
+            .neq("status", "confirmed")
+            .execute()
+        )
+        return _one(result)
+
     async def get_subscription_payment_by_transaction(self, transaction_id: str) -> dict[str, Any] | None:
         result = await (
             self._db().table("subscription_payments")

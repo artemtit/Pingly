@@ -1,6 +1,8 @@
 """Thin async client for the Platega payment API (https://docs.platega.io)."""
 from __future__ import annotations
 
+import hmac
+
 import httpx
 
 import config
@@ -50,9 +52,12 @@ async def create_payment(
 
 
 def verify_webhook_headers(merchant_id: str | None, secret: str | None) -> bool:
-    """Platega authenticates the callback with the same X-MerchantId/X-Secret."""
-    return bool(
-        merchant_id and secret
-        and merchant_id == config.PLATEGA_MERCHANT_ID
-        and secret == config.PLATEGA_SECRET
+    """Platega authenticates the callback with the same X-MerchantId/X-Secret.
+    Compared in constant time so the endpoint isn't a timing oracle for the secret.
+    The secret travels in a cleartext header, so the endpoint must be HTTPS-only."""
+    if not merchant_id or not secret or not config.PLATEGA_MERCHANT_ID or not config.PLATEGA_SECRET:
+        return False
+    return (
+        hmac.compare_digest(merchant_id, config.PLATEGA_MERCHANT_ID)
+        and hmac.compare_digest(secret, config.PLATEGA_SECRET)
     )
