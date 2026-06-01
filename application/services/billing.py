@@ -31,7 +31,13 @@ class BillingService:
         redirect = result.get("redirect") or result.get("return")
         if not transaction_id or not redirect:
             return None, "Platega не вернула ссылку на оплату"
-        await self.repo.create_subscription_payment(user["id"], transaction_id, config.SUBSCRIPTION_PRICE_RUB)
+        # Ledger write is best-effort: the payment already exists at Platega and
+        # the webhook can still activate via payload=user_id, so a ledger hiccup
+        # must not block the user from reaching the payment page.
+        try:
+            await self.repo.create_subscription_payment(user["id"], transaction_id, config.SUBSCRIPTION_PRICE_RUB)
+        except Exception:
+            pass
         return redirect, None
 
     async def handle_webhook(self, merchant_id: str | None, secret: str | None, body: dict) -> bool:
@@ -43,15 +49,24 @@ class BillingService:
         status = str(body.get("status") or "")
         if not transaction_id:
             return False
-        payment = await self.repo.get_subscription_payment_by_transaction(transaction_id)
+        try:
+            payment = await self.repo.get_subscription_payment_by_transaction(transaction_id)
+        except Exception:
+            payment = None
         user_id = (payment or {}).get("user_id") or body.get("payload")
         if status == "CONFIRMED":
-            # Idempotent: only activate once per transaction.
+            # Idempotent via the ledger: only activate once per transaction.
             if payment and payment.get("status") == "confirmed":
                 return True
-            await self.repo.mark_subscription_payment(transaction_id, "confirmed", confirmed=True)
+            try:
+                await self.repo.mark_subscription_payment(transaction_id, "confirmed", confirmed=True)
+            except Exception:
+                pass
             if user_id:
                 await self.repo.activate_subscription(user_id, SUBSCRIPTION_DAYS)
         elif status in ("CANCELED", "CHARGEBACKED"):
-            await self.repo.mark_subscription_payment(transaction_id, "canceled")
+            try:
+                await self.repo.mark_subscription_payment(transaction_id, "canceled")
+            except Exception:
+                pass
         return True
