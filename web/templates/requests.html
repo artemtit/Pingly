@@ -12,7 +12,10 @@
 {% if error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
 
 <div class="card">
-  <h2>🌐 Публичная страница</h2>
+  <div class="card-head">
+    <h2>🌐 Публичная страница</h2>
+    {% if profile and profile.public_enabled %}<span class="badge completed">включена</span>{% else %}<span class="badge cancelled">выключена</span>{% endif %}
+  </div>
   <p class="muted" style="margin-bottom:12px;">Включи — и получишь ссылку, где новые ученики сами оставляют заявки. Делись ей в соцсетях, на Авито, в Telegram.</p>
   <form method="post" action="/tutor/settings/public" class="form">
     <label class="field"><span>Адрес страницы</span>
@@ -26,10 +29,10 @@
     <label class="field"><span>О себе</span>
       <textarea name="bio" placeholder="Короткий рассказ: опыт, формат, результаты">{{ profile.bio if profile and profile.bio else '' }}</textarea></label>
     <label class="check-row">
-      <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if profile and profile.public_enabled }}>
-      <span>Страница включена и принимает заявки</span>
+      <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if profile and profile.public_enabled }} onchange="this.form.submit()">
+      <span>Принимать заявки (включить страницу) — сохраняется сразу</span>
     </label>
-    <button class="btn btn-primary">Сохранить</button>
+    <button class="btn btn-primary">Сохранить изменения</button>
   </form>
   {% if profile and profile.slug and profile.public_enabled %}
   <h3 style="font-size:15px;margin:16px 0 6px;">🔗 Твоя ссылка</h3>
