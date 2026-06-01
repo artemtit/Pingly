@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 
 from application.repositories import PinglyRepository
-from domain import NotificationType
 
 _SLUG_RE = re.compile(r"[^a-z0-9-]+")
 
@@ -64,13 +63,8 @@ class PublicService:
             (preferred_time or "").strip() or None,
             (comment or "").strip() or None,
         )
-        await self.repo.create_notification(
-            tutor_user_id,
-            NotificationType.BOOKING_REQUEST.value,
-            "🎓 Новая заявка на занятие",
-            f"{name} ({contact}) хочет записаться. Открой кабинет → Заявки.",
-            {"request_id": request["id"]},
-        )
+        # The tutor is pushed immediately by the route via _send_telegram, so we
+        # don't also enqueue a notification row here (would double-send).
         return request
 
     async def list_requests(self, tutor_user_id: str) -> list[dict]:
