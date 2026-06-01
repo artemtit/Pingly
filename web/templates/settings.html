@@ -13,14 +13,18 @@
 <section class="grid two" style="align-items: start;">
   <div class="card">
     <h2>Профиль</h2>
-    <div class="settings-row"><span class="muted">Имя</span><strong>{{ user.full_name }}</strong></div>
+    <form method="post" action="/settings/name" class="form" style="margin-bottom:6px;">
+      <label class="field"><span>Имя</span>
+        <input class="input" name="full_name" value="{{ user.full_name }}" required maxlength="80"></label>
+      <button class="btn btn-primary btn-sm">Сохранить имя</button>
+    </form>
     <div class="settings-row"><span class="muted">Telegram</span><strong>@{{ user.tg_username or "—" }}</strong></div>
     <div class="settings-row"><span class="muted">Текущая роль</span>
       <span class="role-pill {{ 'is-tutor' if user.role == 'tutor' else 'is-student' }}">
         <span class="dot"></span>{{ "👨‍🏫 Репетитор" if user.role == "tutor" else "🎓 Ученик" }}
       </span>
     </div>
-    <p class="muted" style="margin-top:14px;">Имя меняется в Telegram-боте: ⚙️ Настройки → ✏️ Изменить имя. Сайт и бот используют один аккаунт.</p>
+    <p class="muted" style="margin-top:14px;">Имя видят твои ученики в напоминаниях. Сайт и бот используют один аккаунт.</p>
   </div>
 
   <div class="card">

@@ -63,3 +63,9 @@ class AccountService:
         if not user:
             return None
         return await self.repo.update_user_profile(user["id"], full_name=full_name)
+
+    async def update_name_by_user_id(self, user_id: str, full_name: str) -> dict | None:
+        full_name = (full_name or "").strip()
+        if not full_name:
+            return None
+        return await self.repo.update_user_profile(user_id, full_name=full_name)

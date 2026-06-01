@@ -577,7 +577,13 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         history = await services.lessons.list_student_history(user["id"])
         return templates.TemplateResponse("history.html", _ctx(request, user, "history", history=history))
 
+    @app.post("/settings/name")
+    async def update_name(full_name: str = Form(...), user: dict = Depends(current_user)) -> Response:
+        await services.accounts.update_name_by_user_id(user["id"], full_name)
+        base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
+        return RedirectResponse(f"{base}?saved=name", status_code=303)
+
     @app.get("/student/settings", response_class=HTMLResponse)
-    async def student_settings(request: Request, user: dict = Depends(current_user)) -> Response:
+    async def student_settings(request: Request, saved: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "student")
-        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings", bot_username=_config.BOT_USERNAME))
+        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings", bot_username=_config.BOT_USERNAME, saved=saved))
