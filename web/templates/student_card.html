@@ -171,10 +171,22 @@ function copyInvite(){
 </section>
 
 <script>
+// Lock all fields in a read-only form (can't edit until "Изменить").
+function lockFields(form){
+  form.querySelectorAll('input, textarea').forEach(function(el){ el.readOnly = true; });
+  form.querySelectorAll('select').forEach(function(el){ el.disabled = true; });
+}
+function unlockFields(form){
+  form.querySelectorAll('input, textarea').forEach(function(el){ el.readOnly = false; });
+  form.querySelectorAll('select').forEach(function(el){ el.disabled = false; });
+}
+document.querySelectorAll('form.locked').forEach(lockFields);
+
 // Switch a card form from read-only to edit mode.
 function enableEdit(btn){
   var form = btn.closest('form');
   form.classList.remove('locked');
+  unlockFields(form);
   var first = form.querySelector('.input, select, textarea');
   if (first){ first.focus(); }
 }
