@@ -47,10 +47,15 @@ services = create_services()
 signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")
 
 
+async def _not_found(request: Request, exc: Exception) -> Response:
+    return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Pingly")
     app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
     register_routes(app)
+    app.add_exception_handler(404, _not_found)
     return app
 
 
