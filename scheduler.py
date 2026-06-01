@@ -8,12 +8,16 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from application.factory import create_services
 from application.services.accounts import subscription_info
+from application.services.lessons import package_status
 from config import WEB_BASE_URL
 
 services = create_services()
 
 # Days-before-expiry milestones at which we remind a tutor once.
 _SUB_MILESTONES = (3, 1, 0)
+
+# Lessons-remaining milestones at which we alert about an ending package once.
+_PACKAGE_MILESTONES = (1, 0)
 
 
 def _sub_link_keyboard() -> InlineKeyboardMarkup:
@@ -92,11 +96,82 @@ async def enqueue_subscription_reminders() -> None:
         )
 
 
+async def enqueue_package_reminders() -> None:
+    """Alert the tutor (and student) once when a lesson package runs low (1 left)
+    or out (0 left). Remaining is computed; dedup per package cycle + milestone via
+    the notifications table, so renewing a package re-enables future alerts."""
+    rows = await services.repo.list_active_package_students()
+    if not rows:
+        return
+    # Fetch each tutor's lessons once, then split per student.
+    by_tutor: dict[str, list[dict]] = {}
+    for row in rows:
+        by_tutor.setdefault(row["tutor_user_id"], []).append(row)
+    for tutor_user_id, students in by_tutor.items():
+        lessons = await services.repo.list_lessons_for_tutor(tutor_user_id, 1000)
+        for student in students:
+            student_lessons = [l for l in lessons if l.get("student_id") == student["student_id"]]
+            status = package_status(
+                {"package_size": student["package_size"], "package_started_at": student["package_started_at"]},
+                student_lessons,
+            )
+            if not status or status["remaining"] not in _PACKAGE_MILESTONES:
+                continue
+            await _alert_package(tutor_user_id, student, status)
+
+
+async def _already_notified(user_id: str, student_id: str, started_at, milestone: int) -> bool:
+    recent = await services.repo.list_notifications_for_user(user_id, 50)
+    for n in recent:
+        if n.get("type") != "package_ending":
+            continue
+        p = n.get("payload") or {}
+        if (p.get("student_id") == student_id and p.get("started_at") == started_at
+                and p.get("milestone") == milestone):
+            return True
+    return False
+
+
+async def _alert_package(tutor_user_id: str, student: dict, status: dict) -> None:
+    remaining = status["remaining"]
+    started_at = status["started_at"]
+    student_id = student["student_id"]
+    name = student["name"]
+    size = status["size"]
+
+    # Tutor alert (both milestones).
+    if not await _already_notified(tutor_user_id, student_id, started_at, remaining):
+        if remaining == 1:
+            title = "📦 Абонемент заканчивается"
+            body = f"У {name} остался 1 урок по абонементу. Пора предложить продление."
+        else:
+            title = "📦 Абонемент закончился"
+            body = f"У {name} закончился абонемент ({size} занятий пройдены). Время продлевать."
+        await services.repo.create_notification(
+            tutor_user_id, "package_ending", title, body,
+            {"student_id": student_id, "started_at": started_at, "milestone": remaining},
+        )
+
+    # Student nudge — one soft message at the "1 left" milestone only.
+    student_user_id = student.get("student_user_id")
+    if remaining == 1 and student_user_id:
+        if not await _already_notified(student_user_id, student_id, started_at, remaining):
+            await services.repo.create_notification(
+                student_user_id, "package_ending", "📦 Абонемент заканчивается",
+                "Это одно из последних занятий по абонементу — напиши репетитору, чтобы продлить 💙",
+                {"student_id": student_id, "started_at": started_at, "milestone": remaining},
+            )
+
+
 def create_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="UTC")
     scheduler.add_job(send_due_notifications, "interval", minutes=1, args=[bot])
     scheduler.add_job(
         enqueue_subscription_reminders, "interval", hours=12,
         next_run_time=datetime.now() + timedelta(seconds=30),
+    )
+    scheduler.add_job(
+        enqueue_package_reminders, "interval", hours=12,
+        next_run_time=datetime.now() + timedelta(seconds=45),
     )
     return scheduler

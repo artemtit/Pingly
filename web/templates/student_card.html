@@ -89,6 +89,30 @@ function copyInvite(){
       {% if last_activity %}<p class="muted" style="margin-top:14px;">Последняя активность: {{ last_activity[:16].replace("T", " ") }}</p>{% endif %}
     </div>
 
+    <div class="card" id="package">
+      <div class="card-head"><h2>📦 Абонемент</h2>
+        {% if saved == 'package' %}<span class="save-ok" data-autohide>✅ Сохранено</span>{% endif %}
+      </div>
+      {% if package %}
+      <p class="big-date" style="{% if package.remaining <= 1 %}color:var(--color-error);{% endif %}">Осталось {{ package.remaining }} из {{ package.size }}</p>
+      <p class="muted" style="margin-top:6px;">Пройдено занятий: {{ package.consumed }}. Когда останется 1 урок — оповещение придёт тебе и ученику в Telegram.</p>
+      {% else %}
+      <div class="empty"><div class="empty-emoji">📦</div><p>Абонемент не подключён — занятия идут поурочно.</p></div>
+      {% endif %}
+      <form method="post" action="/tutor/students/{{ student.id }}/package" style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <input type="hidden" name="action" value="set">
+        <label class="field" style="flex:1;min-width:150px;margin:0;"><span>{% if package %}Новый абонемент, занятий{% else %}Размер абонемента, занятий{% endif %}</span>
+          <input class="input" type="number" min="1" step="1" name="package_size" value="{{ package.size if package else '' }}" placeholder="8" required></label>
+        <button type="submit" class="btn btn-primary">{% if package %}Продлить{% else %}Подключить{% endif %}</button>
+      </form>
+      {% if package %}
+      <form method="post" action="/tutor/students/{{ student.id }}/package" style="margin-top:8px;">
+        <input type="hidden" name="action" value="clear">
+        <button type="submit" class="btn btn-ghost" style="color:var(--color-error);padding-left:0;">Снять абонемент</button>
+      </form>
+      {% endif %}
+    </div>
+
     <div class="card" id="profile">
       <div class="card-head"><h2>🎓 Профиль обучения</h2>
         {% if saved == 'profile' %}<span class="save-ok" data-autohide>✅ Сохранено</span>{% endif %}

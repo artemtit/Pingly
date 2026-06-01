@@ -390,6 +390,20 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         await services.students.set_note(user["id"], student_id, note.strip() or None)
         return RedirectResponse(f"/tutor/students/{student_id}?saved=note#notes", status_code=303)
 
+    @app.post("/tutor/students/{student_id}/package")
+    async def update_student_package(
+        student_id: str,
+        action: str = Form("set"),
+        package_size: str = Form(""),
+        user: dict = Depends(current_user),
+    ) -> Response:
+        _require(user, "tutor")
+        size = None
+        if action == "set" and package_size.strip().isdigit() and int(package_size) > 0:
+            size = int(package_size)
+        await services.students.set_package(user["id"], student_id, size)
+        return RedirectResponse(f"/tutor/students/{student_id}?saved=package#package", status_code=303)
+
     @app.get("/tutor/calendar", response_class=HTMLResponse)
     async def tutor_calendar(request: Request, view: str = "month", date: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")

@@ -4,6 +4,7 @@ import secrets
 from datetime import datetime, timezone
 
 from application.repositories import PinglyRepository
+from application.services.lessons import package_status
 
 PROFILE_FIELDS = ("name", "subject_summary", "grade", "level", "goal", "started_at", "progress_note", "status", "default_price")
 
@@ -67,6 +68,16 @@ class StudentService:
         if not relation:
             raise PermissionError("Student does not belong to tutor")
         await self.repo.set_tutor_student_note(tutor_user_id, student_id, note)
+
+    async def set_package(self, tutor_user_id: str, student_id: str, size: int | None) -> dict | None:
+        """Connect/renew (size>=1) or clear (size=None) a lesson package. Connecting
+        or renewing always resets the cycle start to now so the counter restarts."""
+        relation = await self.repo.get_tutor_student_relation(tutor_user_id, student_id)
+        if not relation:
+            raise PermissionError("Student does not belong to tutor")
+        if size and size > 0:
+            return await self.repo.set_student_package(student_id, int(size), datetime.now(timezone.utc).isoformat())
+        return await self.repo.set_student_package(student_id, None, None)
 
     async def delete_student(self, tutor_user_id: str, student_id: str) -> dict:
         """Remove a student. If this was their only tutor, the profile and the
@@ -140,6 +151,7 @@ class StudentService:
             "lessons": sorted(lessons, key=lambda l: l.get("starts_at") or "", reverse=True),
             "homework": homework,
             "next_lesson": next_lesson,
+            "package": package_status(student, lessons),
             "last_activity": last_activity.isoformat() if last_activity else None,
             "progress": {
                 "completed_lessons": completed,

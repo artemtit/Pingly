@@ -51,6 +51,53 @@ def _fmt_when_ru(starts_at: str) -> str:
         return str(starts_at)[:16].replace("T", " ")
 
 
+# Statuses that never consume a package slot.
+_PACKAGE_SKIP_STATUSES = {"cancelled", "reschedule_requested"}
+
+
+def package_status(student: dict, lessons: list[dict]) -> dict | None:
+    """Compute the abonement (lesson package) state for a student from their
+    already-loaded lessons. Returns None if no package is set.
+
+    A lesson consumes one slot when it actually happened — i.e. the student
+    pressed «Буду» (confirmed) and it's in the past, OR the tutor marked it
+    «проведено» (completed) — and it started on/after the current cycle start.
+    Remaining is computed (never stored) so it can't drift or double-count.
+    """
+    size = student.get("package_size")
+    if not size:
+        return None
+    started_at = _parse_package_dt(student.get("package_started_at"))
+    now = datetime.now(timezone.utc)
+    consumed = 0
+    for l in lessons:
+        status = l.get("status")
+        if status in _PACKAGE_SKIP_STATUSES:
+            continue
+        started = _parse_package_dt(l.get("starts_at"))
+        if started_at and (started is None or started < started_at):
+            continue
+        if status == LessonStatus.COMPLETED.value:
+            consumed += 1
+        elif status == LessonStatus.CONFIRMED.value and started is not None and started < now:
+            consumed += 1
+    return {
+        "size": int(size),
+        "started_at": student.get("package_started_at"),
+        "consumed": consumed,
+        "remaining": max(int(size) - consumed, 0),
+    }
+
+
+def _parse_package_dt(raw: object) -> datetime | None:
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+
+
 class LessonService:
     def __init__(self, repo: PinglyRepository) -> None:
         self.repo = repo

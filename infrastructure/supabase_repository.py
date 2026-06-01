@@ -214,6 +214,40 @@ class SupabasePinglyRepository:
         result = await self._db().table("student_profiles").update(clean).eq("id", student_id).execute()
         return _one(result)
 
+    async def set_student_package(self, student_id: str, size: int | None, started_at: str | None) -> dict[str, Any] | None:
+        """Write the package fields unconditionally (unlike update_student_profile,
+        which drops None) so a package can be cleared back to null."""
+        result = await (
+            self._db().table("student_profiles")
+            .update({"package_size": size, "package_started_at": started_at})
+            .eq("id", student_id)
+            .execute()
+        )
+        return _one(result)
+
+    async def list_active_package_students(self) -> list[dict[str, Any]]:
+        """All students that currently have a lesson package, joined to the tutor
+        relation. The scheduler resolves Telegram ids and counts lessons itself."""
+        result = await (
+            self._db().table("tutor_students")
+            .select("tutor_user_id, student_id, student_profiles(*)")
+            .execute()
+        )
+        out: list[dict[str, Any]] = []
+        for row in result.data:
+            profile = row.get("student_profiles") or {}
+            if not profile.get("package_size"):
+                continue
+            out.append({
+                "student_id": row["student_id"],
+                "tutor_user_id": row["tutor_user_id"],
+                "name": profile.get("name") or "Ученик",
+                "student_user_id": profile.get("user_id"),
+                "package_size": profile.get("package_size"),
+                "package_started_at": profile.get("package_started_at"),
+            })
+        return out
+
     async def get_tutor_student_relation(self, tutor_user_id: str, student_id: str) -> dict[str, Any] | None:
         result = await (
             self._db().table("tutor_students")
