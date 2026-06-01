@@ -1,53 +1,269 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ tutor_name }} — запись на занятие · Pingly</title>
-  <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
-  <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/landing.css?v=4">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ tutor_name }} — запись на занятие · Pingly</title>
+<link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --orange-500: #F97316;
+    --orange-600: #EA580C;
+    --orange-700: #C2410C;
+    --orange-50:  #FFF7ED;
+    --orange-100: #FFEDD5;
+
+    --fg1:    #0F172A;
+    --fg2:    #64748B;
+    --surface:#FFFFFF;
+    --surface-2:#FFFFFF;
+    --page-bg:#F8FAFC;
+    --border: #E2E8F0;
+    --chip-bg:#FFFFFF;
+
+    --success:      #16A34A;
+    --success-bg:   #F0FDF4;
+    --success-text: #15803D;
+    --success-border:#BBF7D0;
+
+    --ring: rgb(249 115 22 / 0.30);
+    --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.12);
+    --shadow-primary: 0 4px 14px 0 rgb(249 115 22 / 0.35);
+
+    --radius-card: 18px;
+    --radius-field: 12px;
+    --radius-chip: 9999px;
+
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --ease: cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg1:    #F8FAFC;
+      --fg2:    #94A3B8;
+      --surface:#1E293B;
+      --surface-2:#1E293B;
+      --page-bg:#0F172A;
+      --border: #334155;
+      --chip-bg:#1E293B;
+
+      --success:      #4ADE80;
+      --success-bg:   #0F2A1A;
+      --success-text: #86EFAC;
+      --success-border:#1F4D33;
+
+      --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    color: var(--fg1);
+    background: var(--page-bg);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    top: -160px; left: 50%;
+    width: 680px; height: 480px;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at center, var(--orange-50), transparent 68%);
+    opacity: 0.9;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @media (prefers-color-scheme: dark) {
+    body::before { background: radial-gradient(ellipse at center, rgb(249 115 22 / 0.10), transparent 70%); }
+  }
+
+  .wrap { position: relative; z-index: 1; width: 100%; max-width: 480px; margin: 0 auto; padding: 0 20px 40px; }
+
+  .topbar { display: flex; align-items: center; height: 60px; }
+  .brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: var(--fg1); }
+
+  .hero { text-align: center; padding: 12px 0 4px; }
+  .avatar {
+    width: 84px; height: 84px; margin: 0 auto 18px; border-radius: 50%;
+    background: linear-gradient(150deg, var(--orange-500), var(--orange-600));
+    color: #fff; display: grid; place-items: center;
+    font-size: 36px; font-weight: 700; letter-spacing: -0.02em;
+    box-shadow: var(--shadow-primary); border: 3px solid var(--surface);
+  }
+  .hero h1 { margin: 0; font-size: clamp(1.75rem, 1.2rem + 2.6vw, 2.25rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+  .hero .subjects { margin: 10px 0 0; font-size: 16px; font-weight: 600; color: var(--orange-600); }
+  @media (prefers-color-scheme: dark) { .hero .subjects { color: var(--orange-500); } }
+  .hero .bio { margin: 14px auto 0; max-width: 38ch; font-size: 16px; color: var(--fg2); }
+
+  .chips { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; background: var(--chip-bg); border: 1px solid var(--border); border-radius: var(--radius-chip); font-size: 13.5px; font-weight: 500; color: var(--fg2); white-space: nowrap; }
+  .chip svg { width: 16px; height: 16px; color: var(--orange-500); flex: 0 0 auto; }
+
+  .card { margin-top: 26px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 24px 20px 22px; }
+  .card-head { display: flex; align-items: center; gap: 11px; margin-bottom: 20px; }
+  .card-head .ico { width: 38px; height: 38px; flex: 0 0 auto; border-radius: 11px; background: var(--orange-50); color: var(--orange-600); display: grid; place-items: center; }
+  @media (prefers-color-scheme: dark) { .card-head .ico { background: rgb(249 115 22 / 0.14); color: var(--orange-500); } }
+  .card-head .ico svg { width: 20px; height: 20px; }
+  .card-head h2 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+  .card-head p { margin: 2px 0 0; font-size: 13.5px; color: var(--fg2); }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; margin-bottom: 7px; font-size: 14px; font-weight: 600; color: var(--fg1); }
+  .field .opt { font-weight: 500; color: var(--fg2); }
+  .input-shell { position: relative; display: flex; align-items: center; }
+  .input-shell > svg { position: absolute; left: 14px; width: 18px; height: 18px; color: var(--fg2); pointer-events: none; }
+  .input, .textarea { width: 100%; font-family: var(--font); font-size: 16px; color: var(--fg1); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-field); transition: border-color 150ms var(--ease), box-shadow 150ms var(--ease); outline: none; }
+  .input { height: 50px; padding: 0 14px 0 42px; }
+  .textarea { min-height: 88px; padding: 13px 14px; resize: vertical; line-height: 1.5; }
+  .input::placeholder, .textarea::placeholder { color: var(--fg2); opacity: 0.8; }
+  .input:focus, .textarea:focus { border-color: var(--orange-500); box-shadow: 0 0 0 3px var(--ring); }
+  .input-shell:focus-within > svg { color: var(--orange-500); }
+
+  .btn { width: 100%; min-height: 52px; margin-top: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; padding: 0 20px; border: none; border-radius: var(--radius-field); background: var(--orange-500); color: #fff; font-family: var(--font); font-size: 17px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer; box-shadow: var(--shadow-primary); transition: background 200ms var(--ease), transform 120ms var(--ease), box-shadow 200ms var(--ease); }
+  .btn svg { width: 19px; height: 19px; }
+  .btn:hover { background: var(--orange-600); }
+  .btn:active { background: var(--orange-700); transform: translateY(1px); }
+  .btn:focus-visible { outline: none; box-shadow: var(--shadow-primary), 0 0 0 4px var(--ring); }
+
+  .privacy { margin: 14px 0 0; text-align: center; font-size: 12.5px; color: var(--fg2); line-height: 1.45; }
+
+  .success { margin-top: 26px; background: var(--success-bg); border: 1px solid var(--success-border); border-radius: var(--radius-card); padding: 32px 24px; text-align: center; box-shadow: var(--shadow-card); }
+  .success .badge { width: 60px; height: 60px; margin: 0 auto 18px; border-radius: 50%; background: var(--success); color: #fff; display: grid; place-items: center; animation: pop 350ms var(--ease) both; }
+  .success .badge svg { width: 30px; height: 30px; }
+  .success h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: var(--fg1); }
+  .success p { margin: 10px auto 0; max-width: 34ch; font-size: 15px; color: var(--success-text); }
+  .success .meta { margin: 18px auto 0; display: inline-flex; align-items: center; gap: 8px; padding: 9px 15px; border-radius: var(--radius-chip); background: var(--surface); border: 1px solid var(--success-border); font-size: 13.5px; font-weight: 500; color: var(--fg2); }
+  .success .meta svg { width: 16px; height: 16px; color: var(--success); flex: 0 0 auto; }
+  @keyframes pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+
+  .reveal { animation: rise 450ms var(--ease) both; }
+  .reveal.d1 { animation-delay: 60ms; }
+  .reveal.d2 { animation-delay: 120ms; }
+  .reveal.d3 { animation-delay: 180ms; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .footer { margin-top: 28px; text-align: center; font-size: 13px; color: var(--fg2); }
+  .footer .ping { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--fg1); text-decoration: none; }
+  .footer .ping svg { width: 15px; height: 15px; color: var(--orange-500); }
+  .footer .ping:hover { color: var(--orange-600); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+</style>
 </head>
 <body>
-<div class="auth-page">
-  <div class="auth-top"><a href="/"><img src="/static/logo.svg" height="30" alt="Pingly"></a></div>
-  <main class="auth-main">
-    <div class="auth-card">
-      <div class="pub-avatar">{{ tutor_name[0] | upper }}</div>
-      <h1 style="margin-bottom:4px;">{{ tutor_name }}</h1>
-      {% if profile.subjects %}<p class="auth-sub">{{ profile.subjects }}</p>{% endif %}
-      {% if profile.bio %}<p class="pub-bio">{{ profile.bio }}</p>{% endif %}
+  <div class="wrap">
 
-      {% if sent %}
-      <div class="pub-success">
-        ✅ Заявка отправлена! {{ tutor_name }} свяжется с тобой.
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Pingly"><img src="/static/logo.svg" height="28" alt="Pingly"></a>
+    </header>
+
+    <section class="hero reveal">
+      <div class="avatar" aria-hidden="true">{{ tutor_name[0] | upper }}</div>
+      <h1>{{ tutor_name }}</h1>
+      {% if profile.subjects %}<p class="subjects">{{ profile.subjects }}</p>{% endif %}
+      {% if profile.bio %}<p class="bio">{{ profile.bio }}</p>{% endif %}
+    </section>
+
+    <ul class="chips reveal d1">
+      <li class="chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        Ответ в течение дня
+      </li>
+      <li class="chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
+        Удобное время
+      </li>
+      <li class="chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+        Напоминания в Telegram
+      </li>
+    </ul>
+
+    <main>
+    {% if sent %}
+    <section class="success reveal" aria-live="polite">
+      <div class="badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
       </div>
-      {% else %}
-      <h2 class="pub-h2">Записаться на занятие</h2>
-      <form class="auth-form" method="post" action="/u/{{ slug }}/book">
-        <div class="auth-field">
-          <label for="name">Как тебя зовут</label>
-          <input class="auth-input" type="text" id="name" name="name" required placeholder="Имя">
+      <h2>Заявка отправлена</h2>
+      <p>{{ tutor_name }} свяжется с тобой в ближайшее время и подтвердит время занятия.</p>
+      <div class="meta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        Напоминания придут в Telegram
+      </div>
+    </section>
+    {% else %}
+    <section class="card reveal d2" aria-labelledby="bookingTitle">
+      <div class="card-head">
+        <span class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path><path d="m9 16 2 2 4-4"></path></svg>
+        </span>
+        <div>
+          <h2 id="bookingTitle">Записаться на занятие</h2>
+          <p>Отвечу в течение дня и подтвержу время</p>
         </div>
-        <div class="auth-field">
-          <label for="contact">Telegram или телефон</label>
-          <input class="auth-input" type="text" id="contact" name="contact" required placeholder="@username или +7…">
-        </div>
-        <div class="auth-field">
-          <label for="preferred_time">Удобное время (необязательно)</label>
-          <input class="auth-input" type="text" id="preferred_time" name="preferred_time" placeholder="например, будни после 18:00">
-        </div>
-        <div class="auth-field">
-          <label for="comment">Комментарий (необязательно)</label>
-          <input class="auth-input" type="text" id="comment" name="comment" placeholder="Предмет, цель, класс">
-        </div>
-        <button class="lbtn lbtn-primary lbtn-lg" type="submit">Отправить заявку</button>
-      </form>
-      {% endif %}
+      </div>
 
-      <div class="auth-foot">Работает на <a href="/">Pingly</a> — напоминания о занятиях для репетиторов</div>
-    </div>
-  </main>
-</div>
+      <form method="post" action="/u/{{ slug }}/book">
+        <div class="field">
+          <label for="name">Имя</label>
+          <div class="input-shell">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <input class="input" id="name" name="name" type="text" autocomplete="name" placeholder="Как тебя зовут?" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="contact">Telegram или телефон</label>
+          <div class="input-shell">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            <input class="input" id="contact" name="contact" type="text" autocomplete="tel" placeholder="@username или +7…" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="time">Удобное время <span class="opt">— необязательно</span></label>
+          <div class="input-shell">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <input class="input" id="time" name="preferred_time" type="text" placeholder="Напр. будни после 18:00">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="comment">Комментарий <span class="opt">— необязательно</span></label>
+          <textarea class="textarea" id="comment" name="comment" placeholder="Цель занятий, класс, что хочется подтянуть"></textarea>
+        </div>
+
+        <button class="btn" type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path><path d="m21.854 2.147-10.94 10.939"></path></svg>
+          Отправить заявку
+        </button>
+
+        <p class="privacy">Нажимая «Отправить», ты соглашаешься, что репетитор свяжется с тобой по указанному контакту.</p>
+      </form>
+    </section>
+    {% endif %}
+    </main>
+
+    <footer class="footer reveal d3">
+      <a class="ping" href="/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+        Работает на Pingly
+      </a>
+      <div style="margin-top:4px;">напоминания о занятиях для репетиторов</div>
+    </footer>
+
+  </div>
 </body>
 </html>
