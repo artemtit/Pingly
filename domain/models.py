@@ -14,6 +14,7 @@ class UserRole(str, Enum):
 class LessonStatus(str, Enum):
     SCHEDULED = "scheduled"
     CONFIRMED = "confirmed"
+    RESCHEDULE_REQUESTED = "reschedule_requested"
     COMPLETED = "completed"
     RESCHEDULED = "rescheduled"
     CANCELLED = "cancelled"
@@ -33,6 +34,9 @@ class NotificationType(str, Enum):
     HOMEWORK_SUBMITTED = "homework_submitted"
     HOMEWORK_REVIEWED = "homework_reviewed"
     LESSON_RESCHEDULED = "lesson_rescheduled"
+    LESSON_RESCHEDULE_REQUEST = "lesson_reschedule_request"
+    TUTOR_UNCONFIRMED = "tutor_unconfirmed"
+    BOOKING_REQUEST = "booking_request"
 
 
 class NotificationStatus(str, Enum):

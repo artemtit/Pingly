@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Заявки</div>
+    <h1>🎓 Заявки на занятия</h1>
+    <p class="muted">Новые ученики оставляют их на твоей публичной странице.</p>
+  </div>
+</div>
+
+<div class="card">
+  {% set new_requests = requests | selectattr("status", "equalto", "new") | list %}
+  <h2>Новые {% if new_requests %}<span class="badge submitted">{{ new_requests | length }}</span>{% endif %}</h2>
+  <div class="req-list">
+    {% for r in requests %}
+    <div class="req-row {{ 'req-done' if r.status != 'new' }}">
+      <div class="req-main">
+        <div class="req-head">
+          <strong>{{ r.name }}</strong>
+          <span class="muted">{{ r.created_at | msk('%d.%m %H:%M') }}</span>
+        </div>
+        <div class="muted">📞 {{ r.contact }}{% if r.preferred_time %} · 🕒 {{ r.preferred_time }}{% endif %}</div>
+        {% if r.comment %}<div class="req-comment">💬 {{ r.comment }}</div>{% endif %}
+      </div>
+      {% if r.status == 'new' %}
+      <form method="post" action="/tutor/requests/{{ r.id }}/done">
+        <button class="btn btn-secondary btn-sm">✓ Обработано</button>
+      </form>
+      {% else %}
+      <span class="badge completed">готово</span>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="empty"><div class="empty-emoji">📭</div><p>Заявок пока нет. Включи публичную страницу в настройках и поделись ссылкой.</p></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

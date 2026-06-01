@@ -39,10 +39,13 @@
       <a href="/tutor/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }} Календарь</a>
       <a href="/tutor/schedule" class="{{ 'active' if active == 'schedule' }}">{{ icon('calendar-clock') }} Расписание</a>
       <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }} Задания</a>
+      <a href="/tutor/finance" class="{{ 'active' if active == 'finance' }}">{{ icon('zap') }} Финансы</a>
+      <a href="/tutor/requests" class="{{ 'active' if active == 'requests' }}">{{ icon('users') }} Заявки</a>
       <a href="/tutor/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} Настройки</a>
       {% else %}
       <a href="/student" class="{{ 'active' if active == 'overview' }}">{{ icon('graduation-cap') }} Главная</a>
       <a href="/student/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }} Календарь</a>
+      <a href="/student/history" class="{{ 'active' if active == 'history' }}">{{ icon('calendar-clock') }} История</a>
       <a href="/student/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }} Задания</a>
       <a href="/student/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} Настройки</a>
       {% endif %}
@@ -67,6 +70,21 @@
   </aside>
 
   <main class="main">
+    {% if user.role == "tutor" %}
+    {% set sub = subscription_info(user) %}
+    {% if sub.status == 'trial' and sub.days_left is not none %}
+    <div class="trial-banner {{ 'trial-ending' if sub.days_left <= 3 }}">
+      {% if sub.days_left > 0 %}
+      🎁 Пробный период: осталось <strong>{{ sub.days_left }}</strong>
+      {{ 'день' if sub.days_left == 1 else ('дня' if sub.days_left < 5 else 'дней') }}.
+      Дальше — 500 ₽/мес.
+      {% else %}
+      ⏳ Пробный период закончился. Всё ещё работает — оформи подписку, чтобы поддержать Pingly.
+      {% endif %}
+      <a href="/tutor/settings">Подробнее →</a>
+    </div>
+    {% endif %}
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
 </div>

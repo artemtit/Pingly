@@ -11,7 +11,8 @@ from itsdangerous import BadSignature, URLSafeSerializer
 
 import config as _config
 from application.factory import create_services
-from config import WEB_SECRET
+from application.services.accounts import subscription_info as _subscription_info
+from config import WEB_BASE_URL, WEB_SECRET
 from web.calendar_view import STATUS_LABELS, build_calendar, parse_anchor
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -41,6 +42,7 @@ def _fmt_msk(dt_str: str, fmt: str = "%d.%m %H:%M") -> str:
 
 templates.env.filters["ru_weekday"] = _ru_weekday
 templates.env.filters["msk"] = _fmt_msk
+templates.env.globals["subscription_info"] = _subscription_info
 services = create_services()
 signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")
 
@@ -157,19 +159,22 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         return response
 
     @app.get("/register", response_class=HTMLResponse)
-    async def register(request: Request, error: str | None = None) -> Response:
+    async def register(request: Request, error: str | None = None, ref: str | None = None) -> Response:
         return templates.TemplateResponse("register.html", {
-            "request": request, "bot_username": _config.BOT_USERNAME, "error": error,
+            "request": request, "bot_username": _config.BOT_USERNAME, "error": error, "ref": ref or "",
         })
 
     @app.post("/register")
     async def register_submit(
         full_name: str = Form(...), email: str = Form(...), password: str = Form(...),
+        ref: str = Form(""),
     ) -> Response:
         user, err = await services.web_auth.register_tutor_email(full_name, email, password)
         if err or not user:
             from urllib.parse import quote
             return RedirectResponse(f"/register?error={quote(err or 'Не удалось зарегистрироваться')}", status_code=303)
+        if ref.strip():
+            await services.accounts.apply_referral(user["id"], ref.strip())
         response = RedirectResponse(_cabinet_url(user), status_code=303)
         _set_session(response, user)
         return response
@@ -207,6 +212,34 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     async def favicon() -> Response:
         return FileResponse(BASE_DIR / "static" / "logo-mark.svg", media_type="image/svg+xml")
 
+    # ---------------- PUBLIC BOOKING (/u/<slug>) ----------------
+    @app.get("/u/{slug}", response_class=HTMLResponse)
+    async def public_profile(request: Request, slug: str, sent: str | None = None) -> Response:
+        profile = await services.public.get_public_profile(slug)
+        if not profile:
+            raise HTTPException(status_code=404)
+        tutor_name = (profile.get("users") or {}).get("full_name") or profile.get("display_name") or "Репетитор"
+        return templates.TemplateResponse("public_profile.html", {
+            "request": request, "profile": profile, "tutor_name": tutor_name,
+            "slug": profile.get("slug"), "sent": sent, "bot_username": _config.BOT_USERNAME,
+        })
+
+    @app.post("/u/{slug}/book")
+    async def public_book(
+        slug: str,
+        name: str = Form(...),
+        contact: str = Form(...),
+        preferred_time: str = Form(""),
+        comment: str = Form(""),
+    ) -> Response:
+        request_row = await services.public.create_booking(slug, name, contact, preferred_time, comment)
+        if request_row:
+            target = await services.public.booking_push_target(request_row["tutor_user_id"], name.strip(), contact.strip())
+            if target:
+                await _send_telegram(target[0], target[1])
+            return RedirectResponse(f"/u/{slug}?sent=1", status_code=303)
+        return RedirectResponse(f"/u/{slug}", status_code=303)
+
     # ---------------- TUTOR ----------------
     @app.get("/tutor", response_class=HTMLResponse)
     async def tutor_dashboard(request: Request, user: dict = Depends(current_user)) -> Response:
@@ -217,7 +250,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         homework = await services.homework.list_for_tutor(user["id"])
         analytics = await services.analytics.tutor_dashboard(user["id"])
         now = datetime.now(timezone.utc).isoformat()
-        upcoming = [l for l in lessons if l.get("status") in ("scheduled", "confirmed") and (l.get("starts_at") or "") >= now][:6]
+        upcoming = [l for l in lessons if l.get("status") in ("scheduled", "confirmed", "reschedule_requested") and (l.get("starts_at") or "") >= now][:6]
         pending_hw = [h for h in homework if h.get("status") == "submitted"]
         return templates.TemplateResponse("tutor.html", _ctx(
             request, user, "overview",
@@ -267,6 +300,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         grade: str = Form(""),
         goal: str = Form(""),
         started_at: str = Form(""),
+        default_price: str = Form(""),
         user: dict = Depends(current_user),
     ) -> Response:
         _require(user, "tutor")
@@ -276,6 +310,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             "grade": grade.strip() or None,
             "goal": goal.strip() or None,
             "started_at": started_at.strip() or None,
+            "default_price": int(default_price) if default_price.strip().isdigit() else None,
         })
         return RedirectResponse(f"/tutor/students/{student_id}", status_code=303)
 
@@ -338,7 +373,8 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         _require(user, "tutor")
         students = await services.students.list_students_by_user(user["id"])
         homework = await services.homework.list_for_tutor(user["id"])
-        return templates.TemplateResponse("homework_tutor.html", _ctx(request, user, "homework", students=students, homework=homework))
+        hw_templates = await services.homework.list_templates(user["id"])
+        return templates.TemplateResponse("homework_tutor.html", _ctx(request, user, "homework", students=students, homework=homework, hw_templates=hw_templates))
 
     @app.post("/tutor/homework")
     async def create_homework(
@@ -377,6 +413,64 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         await services.lessons.delete_lesson(user["id"], lesson_id)
         return RedirectResponse("/tutor/calendar", status_code=303)
 
+    @app.post("/tutor/lessons/{lesson_id}/paid")
+    async def toggle_lesson_paid(lesson_id: str, paid: str = Form("1"), user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.lessons.set_lesson_paid(user["id"], lesson_id, paid == "1")
+        return RedirectResponse("/tutor/finance", status_code=303)
+
+    @app.get("/tutor/finance", response_class=HTMLResponse)
+    async def tutor_finance(request: Request, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        overview = await services.lessons.finance_overview(user["id"])
+        lessons = await services.lessons.list_tutor_calendar(user["id"])
+        unpaid = [l for l in lessons if l.get("status") == "completed" and not l.get("paid")]
+        unpaid.sort(key=lambda l: l.get("starts_at") or "", reverse=True)
+        return templates.TemplateResponse("finance.html", _ctx(
+            request, user, "finance", overview=overview, unpaid=unpaid,
+        ))
+
+    @app.get("/tutor/requests", response_class=HTMLResponse)
+    async def tutor_requests(request: Request, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        requests = await services.public.list_requests(user["id"])
+        return templates.TemplateResponse("requests.html", _ctx(request, user, "requests", requests=requests))
+
+    @app.post("/tutor/requests/{request_id}/done")
+    async def mark_request_done(request_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.public.mark_request(user["id"], request_id, "done")
+        return RedirectResponse("/tutor/requests", status_code=303)
+
+    @app.post("/tutor/homework/templates")
+    async def create_homework_template(title: str = Form(...), description: str = Form(""), user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.homework.create_template(user["id"], title, description)
+        return RedirectResponse("/tutor/homework", status_code=303)
+
+    @app.post("/tutor/homework/templates/{template_id}/delete")
+    async def delete_homework_template(template_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.homework.delete_template(user["id"], template_id)
+        return RedirectResponse("/tutor/homework", status_code=303)
+
+    @app.post("/tutor/settings/public")
+    async def update_public_profile(
+        slug: str = Form(""),
+        bio: str = Form(""),
+        subjects: str = Form(""),
+        public_enabled: str = Form(""),
+        user: dict = Depends(current_user),
+    ) -> Response:
+        _require(user, "tutor")
+        _, err = await services.public.update_profile(
+            user["id"], slug, bio, subjects, public_enabled == "1",
+        )
+        if err:
+            from urllib.parse import quote
+            return RedirectResponse(f"/tutor/settings?error={quote(err)}", status_code=303)
+        return RedirectResponse("/tutor/settings?saved=1", status_code=303)
+
     @app.post("/tutor/lessons/{lesson_id}/reschedule")
     async def reschedule_lesson(lesson_id: str, new_at: str = Form(...), user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
@@ -398,9 +492,14 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         return RedirectResponse("/tutor/schedule", status_code=303)
 
     @app.get("/tutor/settings", response_class=HTMLResponse)
-    async def tutor_settings(request: Request, user: dict = Depends(current_user)) -> Response:
+    async def tutor_settings(request: Request, saved: str | None = None, error: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
-        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings", bot_username=_config.BOT_USERNAME))
+        profile = await services.public.get_profile(user["id"])
+        return templates.TemplateResponse("settings.html", _ctx(
+            request, user, "settings", bot_username=_config.BOT_USERNAME,
+            profile=profile, web_base=WEB_BASE_URL, referral_code=user.get("referral_code"),
+            saved=saved, error=error,
+        ))
 
     # ---------------- STUDENT ----------------
     @app.get("/student", response_class=HTMLResponse)
@@ -413,7 +512,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         active_hw = [h for h in homework if h.get("status") in ("new", "in_progress")]
         now_iso = datetime.now(timezone.utc).isoformat()
         upcoming = sorted(
-            [l for l in lessons if l.get("status") in ("scheduled", "confirmed") and (l.get("starts_at") or "") >= now_iso],
+            [l for l in lessons if l.get("status") in ("scheduled", "confirmed", "reschedule_requested") and (l.get("starts_at") or "") >= now_iso],
             key=lambda l: l.get("starts_at") or "",
         )[:6]
         return templates.TemplateResponse("student.html", _ctx(
@@ -461,6 +560,22 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             if target:
                 await _send_telegram(target[0], target[1])
         return RedirectResponse("/student", status_code=303)
+
+    @app.post("/student/lessons/{lesson_id}/reschedule-request")
+    async def student_request_reschedule(lesson_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "student")
+        lesson = await services.lessons.student_request_reschedule(user["id"], lesson_id)
+        if lesson:
+            target = await services.lessons.reschedule_request_push_target(lesson)
+            if target:
+                await _send_telegram(target[0], target[1])
+        return RedirectResponse("/student", status_code=303)
+
+    @app.get("/student/history", response_class=HTMLResponse)
+    async def student_history(request: Request, user: dict = Depends(current_user)) -> Response:
+        _require(user, "student")
+        history = await services.lessons.list_student_history(user["id"])
+        return templates.TemplateResponse("history.html", _ctx(request, user, "history", history=history))
 
     @app.get("/student/settings", response_class=HTMLResponse)
     async def student_settings(request: Request, user: dict = Depends(current_user)) -> Response:

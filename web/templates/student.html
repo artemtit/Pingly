@@ -40,6 +40,9 @@
         <button class="btn btn-secondary nl-btn">❌ Отменяю</button>
       </form>
     </div>
+    <form method="post" action="/student/lessons/{{ next_lesson.id }}/reschedule-request" style="margin-top:8px">
+      <button class="btn btn-ghost nl-btn" style="width:100%">🟠 Прошу перенести</button>
+    </form>
     {% elif next_lesson.status == 'confirmed' %}
     <div class="nl-actions">
       <div class="btn btn-primary nl-btn" style="flex:1;pointer-events:none;opacity:.85">✅ Подтверждено</div>
@@ -47,6 +50,11 @@
         <button class="btn btn-secondary nl-btn">❌ Отменяю</button>
       </form>
     </div>
+    <form method="post" action="/student/lessons/{{ next_lesson.id }}/reschedule-request" style="margin-top:8px">
+      <button class="btn btn-ghost nl-btn" style="width:100%">🟠 Прошу перенести</button>
+    </form>
+    {% elif next_lesson.status == 'reschedule_requested' %}
+    <p class="muted" style="margin-top:10px;font-size:14px;">🟠 Запрос на перенос отправлен — репетитор предложит новое время.</p>
     {% endif %}
     {% else %}
     <div class="card-head"><h2>📚 Ближайшее занятие</h2></div>

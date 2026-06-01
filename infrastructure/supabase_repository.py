@@ -1,13 +1,21 @@
 from __future__ import annotations
 
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import db
 
+# Statuses that count as "still upcoming" for a student (not finished/cancelled).
+ACTIVE_LESSON_STATUSES = ["scheduled", "confirmed", "reschedule_requested"]
+
 
 def _one(result: Any) -> dict[str, Any] | None:
     return result.data[0] if result.data else None
+
+
+def _gen_code() -> str:
+    return secrets.token_hex(4)
 
 
 class SupabasePinglyRepository:
@@ -30,17 +38,26 @@ class SupabasePinglyRepository:
                 return updated or existing
             return existing
 
+        extra: dict[str, Any] = {}
+        if role == "tutor":
+            extra = {
+                "trial_ends_at": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
+                "subscription_status": "trial",
+                "referral_code": _gen_code(),
+            }
         result = await self._db().table("users").insert({
             "role": role,
             "tg_id": tg_id,
             "tg_username": tg_username,
             "full_name": full_name,
+            **extra,
         }).execute()
         user = result.data[0]
         if role == "tutor":
             await self._db().table("tutor_profiles").insert({
                 "user_id": user["id"],
                 "display_name": full_name,
+                "slug": "t" + _gen_code(),
             }).execute()
         else:
             await self._db().table("student_profiles").insert({
@@ -62,11 +79,15 @@ class SupabasePinglyRepository:
             "email": email,
             "password_hash": password_hash,
             "full_name": full_name,
+            "trial_ends_at": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
+            "subscription_status": "trial",
+            "referral_code": _gen_code(),
         }).execute()
         user = result.data[0]
         await self._db().table("tutor_profiles").insert({
             "user_id": user["id"],
             "display_name": full_name,
+            "slug": "t" + _gen_code(),
         }).execute()
         return user
 
@@ -273,7 +294,7 @@ class SupabasePinglyRepository:
             self._db().table("lessons_v2")
             .select("*")
             .eq("schedule_rule_id", rule_id)
-            .in_("status", ["scheduled", "confirmed"])
+            .in_("status", ACTIVE_LESSON_STATUSES)
             .gte("starts_at", after.isoformat())
             .order("starts_at")
             .execute()
@@ -318,8 +339,23 @@ class SupabasePinglyRepository:
             "schedule_rule_id": schedule_rule_id,
             "starts_at": starts_at.isoformat(),
             "status": "scheduled",
+            "price": student.get("default_price") if student else None,
         }).execute()
         return result.data[0]
+
+    async def set_lesson_payment(self, tutor_user_id: str, lesson_id: str, paid: bool) -> dict[str, Any] | None:
+        patch: dict[str, Any] = {
+            "paid": paid,
+            "paid_at": datetime.now(timezone.utc).isoformat() if paid else None,
+        }
+        result = await (
+            self._db().table("lessons_v2")
+            .update(patch)
+            .eq("id", lesson_id)
+            .eq("tutor_user_id", tutor_user_id)
+            .execute()
+        )
+        return _one(result)
 
     async def list_lessons_for_tutor(self, tutor_user_id: str, limit: int = 100) -> list[dict[str, Any]]:
         result = await (
@@ -348,7 +384,7 @@ class SupabasePinglyRepository:
             self._db().table("lessons_v2")
             .select("*")
             .eq("student_user_id", student_user_id)
-            .in_("status", ["scheduled", "confirmed"])
+            .in_("status", ACTIVE_LESSON_STATUSES)
             .gte("starts_at", datetime.utcnow().isoformat())
             .order("starts_at")
             .limit(1)
@@ -501,3 +537,119 @@ class SupabasePinglyRepository:
         if row.get("used_at") is None:
             await self._db().table("web_login_tokens").update({"used_at": now.isoformat()}).eq("id", row["id"]).execute()
         return row["users"]
+
+    # ---------------- Tutor public profile ----------------
+    async def get_tutor_profile(self, tutor_user_id: str) -> dict[str, Any] | None:
+        result = await self._db().table("tutor_profiles").select("*").eq("user_id", tutor_user_id).execute()
+        return _one(result)
+
+    async def get_tutor_profile_by_slug(self, slug: str) -> dict[str, Any] | None:
+        result = await (
+            self._db().table("tutor_profiles")
+            .select("*, users(full_name)")
+            .ilike("slug", slug)
+            .execute()
+        )
+        return _one(result)
+
+    async def update_tutor_profile(self, tutor_user_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
+        clean = {k: v for k, v in patch.items() if v is not None}
+        if not clean:
+            return await self.get_tutor_profile(tutor_user_id)
+        result = await self._db().table("tutor_profiles").update(clean).eq("user_id", tutor_user_id).execute()
+        return _one(result)
+
+    # ---------------- Booking requests (leads) ----------------
+    async def create_booking_request(self, tutor_user_id: str, name: str, contact: str, preferred_time: str | None, comment: str | None) -> dict[str, Any]:
+        result = await self._db().table("booking_requests").insert({
+            "tutor_user_id": tutor_user_id,
+            "name": name,
+            "contact": contact,
+            "preferred_time": preferred_time,
+            "comment": comment,
+            "status": "new",
+        }).execute()
+        return result.data[0]
+
+    async def list_booking_requests(self, tutor_user_id: str, limit: int = 100) -> list[dict[str, Any]]:
+        result = await (
+            self._db().table("booking_requests")
+            .select("*")
+            .eq("tutor_user_id", tutor_user_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return result.data
+
+    async def update_booking_request_status(self, tutor_user_id: str, request_id: str, status: str) -> dict[str, Any] | None:
+        result = await (
+            self._db().table("booking_requests")
+            .update({"status": status})
+            .eq("id", request_id)
+            .eq("tutor_user_id", tutor_user_id)
+            .execute()
+        )
+        return _one(result)
+
+    # ---------------- Homework templates ----------------
+    async def create_homework_template(self, tutor_user_id: str, title: str, description: str | None) -> dict[str, Any]:
+        result = await self._db().table("homework_templates").insert({
+            "tutor_user_id": tutor_user_id,
+            "title": title,
+            "description": description,
+        }).execute()
+        return result.data[0]
+
+    async def list_homework_templates(self, tutor_user_id: str, limit: int = 100) -> list[dict[str, Any]]:
+        result = await (
+            self._db().table("homework_templates")
+            .select("*")
+            .eq("tutor_user_id", tutor_user_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return result.data
+
+    async def delete_homework_template(self, tutor_user_id: str, template_id: str) -> None:
+        await (
+            self._db().table("homework_templates")
+            .delete()
+            .eq("id", template_id)
+            .eq("tutor_user_id", tutor_user_id)
+            .execute()
+        )
+
+    # ---------------- Trial / referrals ----------------
+    async def get_user_by_referral_code(self, code: str) -> dict[str, Any] | None:
+        result = await self._db().table("users").select("*").eq("referral_code", code).execute()
+        return _one(result)
+
+    async def set_referred_by(self, user_id: str, referrer_id: str) -> None:
+        await self._db().table("users").update({"referred_by": referrer_id}).eq("id", user_id).execute()
+
+    async def extend_trial(self, user_id: str, days: int) -> None:
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return
+        base = datetime.now(timezone.utc)
+        current = user.get("trial_ends_at")
+        if current:
+            try:
+                parsed = datetime.fromisoformat(str(current).replace("Z", "+00:00"))
+                if parsed > base:
+                    base = parsed
+            except ValueError:
+                pass
+        new_end = (base + timedelta(days=days)).isoformat()
+        await self._db().table("users").update({"trial_ends_at": new_end}).eq("id", user_id).execute()
+
+    async def get_lesson_by_id(self, lesson_id: str) -> dict[str, Any] | None:
+        result = await (
+            self._db().table("lessons_v2")
+            .select("*, student_profiles(name)")
+            .eq("id", lesson_id)
+            .execute()
+        )
+        return _one(result)

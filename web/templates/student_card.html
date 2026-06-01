@@ -99,9 +99,11 @@ function copyInvite(){
         <div class="grid two-tight">
           <label class="field"><span>Класс</span>
             <input class="input" name="grade" value="{{ student.grade or '' }}" placeholder="9 класс"></label>
-          <label class="field"><span>Дата начала</span>
-            <input class="input" type="date" name="started_at" value="{{ student.started_at or '' }}"></label>
+          <label class="field"><span>Цена за занятие, ₽</span>
+            <input class="input" type="number" min="0" step="50" name="default_price" value="{{ student.default_price if student.default_price is not none else '' }}" placeholder="1000"></label>
         </div>
+        <label class="field"><span>Дата начала</span>
+          <input class="input" type="date" name="started_at" value="{{ student.started_at or '' }}"></label>
         <label class="field"><span>Цель обучения</span>
           <textarea name="goal" placeholder="Например: подготовка к ОГЭ на 5">{{ student.goal or '' }}</textarea></label>
         <button class="btn btn-primary">Сохранить профиль</button>

@@ -6,6 +6,7 @@ from application.services import (
     HomeworkService,
     LessonService,
     NotificationService,
+    PublicService,
     StudentService,
     WebAuthService,
 )
@@ -22,6 +23,7 @@ class Services:
         self.homework = HomeworkService(self.repo)
         self.notifications = NotificationService(self.repo)
         self.analytics = AnalyticsService(self.repo)
+        self.public = PublicService(self.repo)
         self.web_auth = WebAuthService(self.repo, WEB_BASE_URL, BOT_TOKEN)
 
 

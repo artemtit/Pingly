@@ -1,11 +1,45 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from application.repositories import PinglyRepository
+
+
+def subscription_info(user: dict) -> dict:
+    """Lightweight trial state for display (no hard paywall yet)."""
+    status = user.get("subscription_status") or "trial"
+    raw = user.get("trial_ends_at")
+    days_left = None
+    if raw:
+        try:
+            ends = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+            seconds = (ends - datetime.now(timezone.utc)).total_seconds()
+            days_left = max(0, -(-int(seconds) // 86400)) if seconds > 0 else 0
+        except (ValueError, TypeError):
+            days_left = None
+    return {
+        "status": status,
+        "days_left": days_left,
+        "active": status == "active" or (days_left is not None and days_left > 0),
+        "trial_ends_at": raw,
+    }
 
 
 class AccountService:
     def __init__(self, repo: PinglyRepository) -> None:
         self.repo = repo
+
+    async def apply_referral(self, new_user_id: str, ref_code: str) -> None:
+        """Link a freshly registered tutor to a referrer and reward both."""
+        code = (ref_code or "").strip()
+        if not code:
+            return
+        referrer = await self.repo.get_user_by_referral_code(code)
+        if not referrer or referrer["id"] == new_user_id:
+            return
+        await self.repo.set_referred_by(new_user_id, referrer["id"])
+        await self.repo.extend_trial(referrer["id"], 30)
+        await self.repo.extend_trial(new_user_id, 30)
 
     async def get_user(self, user_id: str) -> dict | None:
         return await self.repo.get_user_by_id(user_id)

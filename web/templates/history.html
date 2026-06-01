@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% import "macros.html" as ui %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">История</div>
+    <h1>📚 Прошедшие занятия</h1>
+    <p class="muted">Все занятия, которые уже прошли.</p>
+  </div>
+</div>
+
+<section class="stat-grid" style="margin-bottom:18px;">
+  <div class="stat-card">
+    <div class="stat-num">{{ history.total }}</div>
+    <div class="stat-label">Всего занятий</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">{{ history.completed }}</div>
+    <div class="stat-label">Проведено</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">{{ history.cancelled }}</div>
+    <div class="stat-label">Отменено</div>
+  </div>
+</section>
+
+<div class="card">
+  <h2>Занятия</h2>
+  <div class="day-list">
+    {% for l in history.lessons %}
+    <div class="day-lesson {{ l.status }}">
+      <div class="day-time">{{ l.starts_at | msk('%d.%m') }}<br><span class="muted">{{ l.starts_at | msk('%H:%M') }}</span></div>
+      <div class="day-lesson-body">
+        <strong>{{ l.starts_at | ru_weekday }}, {{ l.starts_at | msk('%d.%m.%Y') }}</strong>
+        {{ ui.status_badge(l.status) }}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty"><div class="empty-emoji">🌱</div><p>Прошедших занятий пока нет.</p></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

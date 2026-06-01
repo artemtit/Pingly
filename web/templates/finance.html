@@ -1,0 +1,68 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Финансы</div>
+    <h1>💰 Оплаты</h1>
+    <p class="muted">Считается по проведённым занятиям. Отмечай оплату — Pingly покажет, кто сколько должен.</p>
+  </div>
+</div>
+
+<section class="stat-grid" style="margin-bottom:18px;">
+  <div class="stat-card">
+    <div class="stat-num">{{ overview.month_earned }} ₽</div>
+    <div class="stat-label">Заработано в этом месяце</div>
+  </div>
+  <div class="stat-card {{ 'stat-warn' if overview.total_unpaid }}">
+    <div class="stat-num">{{ overview.total_unpaid }} ₽</div>
+    <div class="stat-label">Ждут оплаты</div>
+  </div>
+</section>
+
+<section class="grid two" style="align-items:start;">
+  <div class="card">
+    <h2>По ученикам</h2>
+    {% if overview.students %}
+    <div class="fin-list">
+      {% for s in overview.students %}
+      <div class="fin-row">
+        <div class="fin-name">
+          <strong>{{ s.name }}</strong>
+          <span class="muted">{{ s.lessons }} провед.</span>
+        </div>
+        <div class="fin-sums">
+          {% if s.unpaid_sum %}<span class="badge cancelled">долг {{ s.unpaid_sum }} ₽</span>{% endif %}
+          <span class="badge completed">оплачено {{ s.paid_sum }} ₽</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><div class="empty-emoji">📊</div><p>Пока нет проведённых занятий. Отмечай «Провести» в календаре — суммы появятся здесь.</p></div>
+    {% endif %}
+    <p class="muted" style="margin-top:14px;font-size:13px;">Цену за занятие задаёшь в карточке ученика. Новые занятия берут её автоматически.</p>
+  </div>
+
+  <div class="card">
+    <h2>Неоплаченные занятия</h2>
+    {% if unpaid %}
+    <div class="fin-list">
+      {% for l in unpaid %}
+      <div class="fin-row">
+        <div class="fin-name">
+          <strong>{{ l.student_profiles.name if l.student_profiles else "Ученик" }}</strong>
+          <span class="muted">{{ l.starts_at | msk('%d.%m %H:%M') }} · {{ l.price or 0 }} ₽</span>
+        </div>
+        <form method="post" action="/tutor/lessons/{{ l.id }}/paid">
+          <input type="hidden" name="paid" value="1">
+          <button class="btn btn-primary btn-sm">✅ Оплачено</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty"><div class="empty-emoji">🎉</div><p>Все проведённые занятия оплачены.</p></div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

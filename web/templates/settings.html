@@ -7,6 +7,9 @@
   </div>
 </div>
 
+{% if saved %}<div class="trial-banner">✅ Сохранено</div>{% endif %}
+{% if error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
+
 <section class="grid two" style="align-items: start;">
   <div class="card">
     <h2>Профиль</h2>
@@ -28,5 +31,62 @@
     <a class="btn btn-secondary" href="https://t.me/{{ bot_username }}" target="_blank" rel="noopener">Открыть бот →</a>
     {% endif %}
   </div>
+
+  {% if user.role == "tutor" %}
+  {% set sub = subscription_info(user) %}
+  <div class="card">
+    <h2>💎 Подписка</h2>
+    <div class="settings-row"><span class="muted">Статус</span>
+      {% if sub.status == 'active' %}<span class="badge completed">активна</span>
+      {% elif sub.days_left and sub.days_left > 0 %}<span class="badge submitted">пробный · {{ sub.days_left }} дн.</span>
+      {% else %}<span class="badge cancelled">пробный истёк</span>{% endif %}
+    </div>
+    <p class="muted" style="margin:10px 0 14px;">После пробного периода — 500 ₽/мес. Pingly продолжит работать; подписку добавим позже.</p>
+    {% if referral_code %}
+    <h3 style="font-size:15px;margin:6px 0 6px;">🎁 Приведи коллегу</h3>
+    <p class="muted" style="margin-bottom:8px;font-size:13px;">За каждого репетитора по твоей ссылке — +30 дней тебе и ему.</p>
+    <div class="copy-row">
+      <input class="input" id="ref-link" readonly value="{{ web_base }}/register?ref={{ referral_code }}">
+      <button class="btn btn-secondary btn-sm" type="button" onclick="copyField('ref-link', this)">Копировать</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>🌐 Публичная страница</h2>
+    <p class="muted" style="margin-bottom:12px;">Включи — и получишь ссылку, где новые ученики сами оставляют заявки.</p>
+    <form method="post" action="/tutor/settings/public" class="form">
+      <label class="field"><span>Адрес страницы</span>
+        <div class="slug-row">
+          <span class="slug-prefix">{{ web_base }}/u/</span>
+          <input class="input" name="slug" value="{{ profile.slug if profile else '' }}" placeholder="ivan-math" pattern="[a-z0-9\-]+">
+        </div>
+      </label>
+      <label class="field"><span>Предметы</span>
+        <input class="input" name="subjects" value="{{ profile.subjects if profile and profile.subjects else '' }}" placeholder="Математика, физика · 5–11 класс"></label>
+      <label class="field"><span>О себе</span>
+        <textarea name="bio" placeholder="Короткий рассказ: опыт, формат, результаты">{{ profile.bio if profile and profile.bio else '' }}</textarea></label>
+      <label class="check-row">
+        <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if profile and profile.public_enabled }}>
+        <span>Страница включена и принимает заявки</span>
+      </label>
+      <button class="btn btn-primary">Сохранить</button>
+    </form>
+    {% if profile and profile.slug and profile.public_enabled %}
+    <a class="btn btn-ghost btn-sm" style="margin-top:10px" href="/u/{{ profile.slug }}" target="_blank" rel="noopener">Открыть мою страницу →</a>
+    {% endif %}
+  </div>
+  {% endif %}
 </section>
+
+<script>
+function copyField(id, btn) {
+  var el = document.getElementById(id);
+  el.select(); el.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(el.value).then(function(){
+    var old = btn.textContent; btn.textContent = '✓ Скопировано';
+    setTimeout(function(){ btn.textContent = old; }, 1500);
+  });
+}
+</script>
 {% endblock %}

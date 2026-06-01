@@ -173,6 +173,18 @@ img { display: block; }
 .auth-foot { margin-top: 22px; font-size: 14px; color: var(--fg2); }
 .auth-foot a { color: var(--orange-600); font-weight: 600; }
 
+/* Public booking page (/u/<slug>) */
+.auth-note { background: #FFF7ED; border: 1px solid #FED7AA; color: var(--fg1); border-radius: 10px;
+  padding: 10px 12px; font-size: 14px; margin-top: 16px; text-align: left; }
+.pub-avatar { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 50%;
+  background: var(--orange-500); color: #fff; font-size: 28px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; }
+.pub-bio { color: var(--fg2); font-size: 15px; line-height: 1.55; margin-top: 12px; text-align: left;
+  white-space: pre-line; }
+.pub-h2 { font-size: 17px; font-weight: 700; margin-top: 26px; text-align: left; }
+.pub-success { background: var(--color-success-light); color: var(--success-text); border-radius: 12px;
+  padding: 16px; font-size: 15px; font-weight: 600; margin-top: 22px; }
+
 /* ---------------- Responsive ---------------- */
 @media (max-width: 860px) {
   .hero-grid { grid-template-columns: 1fr; gap: 36px; padding: 48px 0 40px; }

@@ -18,6 +18,15 @@ async def send_due_notifications(bot: Bot) -> None:
             continue
 
         payload = notification.get("payload") or {}
+
+        # "Tutor unconfirmed" nudge: only fire if the student still hasn't
+        # confirmed/cancelled. Otherwise quietly drop it.
+        if notification["type"] == "tutor_unconfirmed":
+            lesson_id = payload.get("lesson_id")
+            if not lesson_id or not await services.lessons.lesson_is_unconfirmed(lesson_id):
+                await services.notifications.mark_sent(notification["id"])
+                continue
+
         keyboard = None
         if payload.get("lesson_id") and notification["type"] in {"lesson_day_before", "lesson_hour_before"}:
             lesson_id = payload["lesson_id"]

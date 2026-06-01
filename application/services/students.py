@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from application.repositories import PinglyRepository
 
-PROFILE_FIELDS = ("name", "subject_summary", "grade", "level", "goal", "started_at", "progress_note", "status")
+PROFILE_FIELDS = ("name", "subject_summary", "grade", "level", "goal", "started_at", "progress_note", "status", "default_price")
 
 
 def _parse_dt(raw: object) -> datetime | None:

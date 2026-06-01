@@ -185,6 +185,18 @@ class LessonService:
                 {"lesson_id": lesson["id"]},
                 starts_at - delta,
             )
+        # Nudge the tutor 3h before if the student still hasn't confirmed.
+        # The scheduler skips this if the lesson is already confirmed/cancelled.
+        tutor_user_id = lesson.get("tutor_user_id")
+        if tutor_user_id:
+            await self.repo.create_notification(
+                tutor_user_id,
+                NotificationType.TUTOR_UNCONFIRMED.value,
+                "❓ Ученик не подтвердил занятие",
+                f"До занятия ({_fmt_dt_msk(starts_at)}) осталось немного, а ученик ещё не нажал «Буду». Стоит написать.",
+                {"lesson_id": lesson["id"]},
+                starts_at - timedelta(hours=3),
+            )
 
     # ---- reads ----------------------------------------------------------
     async def list_tutor_calendar(self, tutor_user_id: str) -> list[dict]:
@@ -287,6 +299,100 @@ class LessonService:
             return False
         await self.repo.update_lesson_fields(lesson_id, {"status": LessonStatus.CONFIRMED.value})
         return True
+
+    async def student_request_reschedule(self, student_user_id: str, lesson_id: str) -> dict | None:
+        """Student asks to move a lesson. Marks it and returns the lesson so the
+        caller can push the tutor (who then reschedules manually)."""
+        lessons = await self.repo.list_lessons_for_student_user(student_user_id)
+        lesson = next((l for l in lessons if l["id"] == lesson_id), None)
+        if not lesson or lesson.get("status") not in ("scheduled", "confirmed"):
+            return None
+        await self.repo.update_lesson_fields(lesson_id, {"status": LessonStatus.RESCHEDULE_REQUESTED.value})
+        if lesson.get("tutor_user_id"):
+            await self.repo.create_notification(
+                lesson["tutor_user_id"],
+                NotificationType.LESSON_RESCHEDULE_REQUEST.value,
+                "🟠 Ученик просит перенести занятие",
+                "Открой кабинет и предложи новое время.",
+                {"lesson_id": lesson_id},
+            )
+        return lesson
+
+    async def reschedule_request_push_target(self, lesson: dict) -> tuple[int, str] | None:
+        tutor_id = lesson.get("tutor_user_id")
+        if not tutor_id:
+            return None
+        tutor = await self.repo.get_user_by_id(tutor_id)
+        tg_id = (tutor or {}).get("tg_id")
+        if not tg_id:
+            return None
+        name = (lesson.get("student_profiles") or {}).get("name") or "Ученик"
+        when = _fmt_when_ru(lesson.get("starts_at", ""))
+        message = (
+            f"🟠 {name} просит перенести занятие {when}.\n\n"
+            "Напиши ученику и поставь новое время в кабинете."
+        )
+        return tg_id, message
+
+    async def set_lesson_paid(self, tutor_user_id: str, lesson_id: str, paid: bool) -> dict | None:
+        return await self.repo.set_lesson_payment(tutor_user_id, lesson_id, paid)
+
+    async def lesson_is_unconfirmed(self, lesson_id: str) -> bool:
+        """True if the lesson still exists and hasn't been confirmed/cancelled —
+        used by the scheduler to decide whether to nudge the tutor."""
+        lesson = await self.repo.get_lesson_by_id(lesson_id)
+        if not lesson:
+            return False
+        return lesson.get("status") == LessonStatus.SCHEDULED.value
+
+    async def finance_overview(self, tutor_user_id: str) -> dict:
+        """Per-student billing summary built from completed lessons."""
+        lessons = await self.repo.list_lessons_for_tutor(tutor_user_id, 1000)
+        now = datetime.now(timezone.utc)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        by_student: dict[str, dict] = {}
+        month_earned = 0
+        total_unpaid = 0
+        for l in lessons:
+            if l.get("status") != LessonStatus.COMPLETED.value:
+                continue
+            sid = l.get("student_id") or "—"
+            name = (l.get("student_profiles") or {}).get("name") or "Ученик"
+            row = by_student.setdefault(sid, {
+                "student_id": sid, "name": name,
+                "lessons": 0, "paid_sum": 0, "unpaid_sum": 0, "unpaid_count": 0,
+            })
+            price = l.get("price") or 0
+            row["lessons"] += 1
+            if l.get("paid"):
+                row["paid_sum"] += price
+            else:
+                row["unpaid_sum"] += price
+                row["unpaid_count"] += 1
+                total_unpaid += price
+            started = datetime.fromisoformat(str(l["starts_at"]).replace("Z", "+00:00")) if l.get("starts_at") else None
+            if started and started >= month_start:
+                month_earned += price
+        students = sorted(by_student.values(), key=lambda r: r["unpaid_sum"], reverse=True)
+        return {
+            "students": students,
+            "month_earned": month_earned,
+            "total_unpaid": total_unpaid,
+        }
+
+    async def list_student_history(self, student_user_id: str) -> dict:
+        """Past lessons for a student + simple counters."""
+        lessons = await self.repo.list_lessons_for_student_user(student_user_id, 1000)
+        now = datetime.now(timezone.utc)
+        past = []
+        for l in lessons:
+            started = datetime.fromisoformat(str(l["starts_at"]).replace("Z", "+00:00")) if l.get("starts_at") else None
+            if started and started < now:
+                past.append(l)
+        past.sort(key=lambda l: l.get("starts_at") or "", reverse=True)
+        completed = len([l for l in past if l.get("status") == LessonStatus.COMPLETED.value])
+        cancelled = len([l for l in past if l.get("status") == LessonStatus.CANCELLED.value])
+        return {"lessons": past, "completed": completed, "cancelled": cancelled, "total": len(past)}
 
     async def student_cancel_lesson(self, student_user_id: str, lesson_id: str) -> dict | None:
         """Cancel a scheduled/confirmed lesson on the student's behalf. Returns the lesson

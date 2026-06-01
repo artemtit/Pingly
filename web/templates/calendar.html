@@ -39,7 +39,7 @@
       </div>
       {% if user.role == "tutor" %}
       <div class="day-lesson-actions">
-        {% if lesson.status in ("scheduled", "confirmed") %}
+        {% if lesson.status in ("scheduled", "confirmed", "reschedule_requested") %}
         <form method="post" action="/tutor/lessons/{{ lesson.id }}/complete"><button class="btn btn-primary btn-sm">🔵 Провести</button></form>
         <form method="post" action="/tutor/lessons/{{ lesson.id }}/cancel"><button class="btn btn-ghost btn-sm">🔴 Отменить</button></form>
         {% if day.date >= cal.today %}

@@ -15,18 +15,37 @@
     {% if not students %}
     <div class="empty"><div class="empty-emoji">👥</div><p>Сначала добавь ученика в боте.</p></div>
     {% else %}
+    {% if hw_templates %}
+    <div class="tpl-chips">
+      <span class="muted" style="font-size:13px;">Шаблоны:</span>
+      {% for t in hw_templates %}
+      <button type="button" class="tpl-chip"
+        data-title="{{ t.title }}" data-desc="{{ t.description or '' }}"
+        onclick="useTemplate(this)">{{ t.title }}
+        <form method="post" action="/tutor/homework/templates/{{ t.id }}/delete" class="tpl-del" onclick="event.stopPropagation()">
+          <button type="submit" title="Удалить шаблон" onclick="return confirm('Удалить шаблон?')">×</button>
+        </form>
+      </button>
+      {% endfor %}
+    </div>
+    {% endif %}
     <form method="post" action="/tutor/homework" class="form">
       <label class="field"><span>Ученик</span>
         <select name="student_id" required>
           {% for s in students %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
         </select></label>
       <label class="field"><span>Задание</span>
-        <input class="input" name="title" placeholder="Например: решить задачи 1–5" required></label>
+        <input class="input" id="hw-title" name="title" placeholder="Например: решить задачи 1–5" required></label>
       <label class="field"><span>Описание</span>
-        <textarea name="description" placeholder="Материалы, ссылки, комментарий"></textarea></label>
+        <textarea id="hw-desc" name="description" placeholder="Материалы, ссылки, комментарий"></textarea></label>
       <label class="field"><span>Дедлайн (необязательно)</span>
         <input class="input" type="datetime-local" name="due_at"></label>
       <button class="btn btn-primary">📤 Выдать задание</button>
+    </form>
+    <form method="post" action="/tutor/homework/templates" class="tpl-save">
+      <input type="hidden" name="title" id="tpl-title">
+      <input type="hidden" name="description" id="tpl-desc">
+      <button type="submit" class="btn btn-ghost btn-sm" onclick="return saveTemplate()">💾 Сохранить как шаблон</button>
     </form>
     {% endif %}
   </div>
@@ -56,4 +75,19 @@
     </div>
   </div>
 </section>
+
+<script>
+function useTemplate(el) {
+  document.getElementById('hw-title').value = el.dataset.title || '';
+  document.getElementById('hw-desc').value = el.dataset.desc || '';
+  document.getElementById('hw-title').focus();
+}
+function saveTemplate() {
+  var title = document.getElementById('hw-title').value.trim();
+  if (!title) { alert('Сначала впиши задание'); return false; }
+  document.getElementById('tpl-title').value = title;
+  document.getElementById('tpl-desc').value = document.getElementById('hw-desc').value;
+  return true;
+}
+</script>
 {% endblock %}

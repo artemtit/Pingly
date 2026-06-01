@@ -121,8 +121,8 @@ h2 { font-size: 20px; letter-spacing: -.02em; margin-bottom: 14px; }
 /* ---------------- badges ---------------- */
 .badge { display: inline-flex; align-items: center; padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .scheduled, .new { background: var(--color-info-light); color: var(--info-text); }
-.completed, .reviewed { background: var(--color-success-light); color: var(--success-text); }
-.rescheduled, .submitted, .in_progress { background: var(--color-warning-light); color: var(--warning-text); }
+.completed, .reviewed, .confirmed { background: var(--color-success-light); color: var(--success-text); }
+.rescheduled, .submitted, .in_progress, .reschedule_requested { background: var(--color-warning-light); color: var(--warning-text); }
 .cancelled { background: var(--color-error-light); color: var(--error-text); }
 .chip { background: var(--color-neutral-100); color: var(--color-text-muted); padding: 4px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
@@ -222,6 +222,7 @@ textarea { min-height: 86px; resize: vertical; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .dot.scheduled { background: var(--color-info); } .dot.completed { background: var(--color-success); }
+.dot.confirmed { background: var(--color-success); } .dot.reschedule_requested { background: var(--color-warning); }
 .dot.rescheduled { background: var(--color-warning); } .dot.cancelled { background: var(--color-error); }
 
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
@@ -242,6 +243,8 @@ textarea { min-height: 86px; resize: vertical; }
 .day-list { display: grid; gap: 10px; }
 .day-lesson { display: flex; align-items: center; gap: 16px; padding: 14px; border: 1px solid var(--color-border); border-radius: 13px; border-left: 4px solid var(--color-neutral-200); flex-wrap: wrap; }
 .day-lesson.scheduled { border-left-color: var(--color-info); }
+.day-lesson.confirmed { border-left-color: var(--color-success); }
+.day-lesson.reschedule_requested { border-left-color: var(--color-warning); }
 .day-lesson.completed { border-left-color: var(--color-success); }
 .day-lesson.rescheduled { border-left-color: var(--color-warning); }
 .day-lesson.cancelled { border-left-color: var(--color-error); }
@@ -479,3 +482,62 @@ textarea { min-height: 86px; resize: vertical; }
   .tg-handle { display: none; }
   .tg-chip { padding: 8px; }
 }
+
+/* ── Growth features (v005) ─────────────────────────────────── */
+
+/* Trial / status banner */
+.trial-banner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--color-primary-50, #FFF7ED); border: 1px solid var(--color-primary-200, #FED7AA);
+  color: var(--color-text, #1f2937); border-radius: 12px; padding: 11px 15px; margin-bottom: 16px; font-size: 14px; }
+.trial-banner a { font-weight: 700; color: var(--color-primary-600, #ea580c); margin-left: auto; white-space: nowrap; }
+.trial-banner.trial-ending { background: var(--color-error-light); border-color: var(--color-error); }
+[data-theme="dark"] .trial-banner { background: #2A2017; border-color: #7C3A12; }
+
+/* Stat tiles (finance / history) */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.stat-card { background: #fff; border: 1px solid var(--color-border); border-radius: 14px; padding: 18px 20px; }
+[data-theme="dark"] .stat-card { background: #1E293B; border-color: #334155; }
+.stat-card.stat-warn { border-color: var(--color-warning); background: var(--color-warning-light); }
+.stat-num { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
+.stat-label { color: var(--color-text-muted); font-size: 13px; margin-top: 2px; }
+
+/* Finance rows */
+.fin-list { display: flex; flex-direction: column; gap: 10px; }
+.fin-row { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border: 1px solid var(--color-border); border-radius: 12px; flex-wrap: wrap; }
+.fin-name { display: flex; flex-direction: column; gap: 2px; }
+.fin-name .muted { font-size: 13px; }
+.fin-sums { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+/* Booking requests */
+.req-list { display: flex; flex-direction: column; gap: 12px; }
+.req-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 14px; border: 1px solid var(--color-border); border-radius: 12px; flex-wrap: wrap; }
+.req-row.req-done { opacity: .6; }
+.req-main { flex: 1; min-width: 200px; }
+.req-head { display: flex; gap: 10px; align-items: baseline; }
+.req-head .muted { font-size: 12px; }
+.req-comment { margin-top: 6px; font-size: 13px; color: var(--color-text-muted); }
+
+/* Homework templates */
+.tpl-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.tpl-chip { position: relative; display: inline-flex; align-items: center; gap: 6px;
+  background: var(--color-neutral-100); border: 1px solid var(--color-border); color: var(--color-text);
+  padding: 6px 11px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.tpl-chip:hover { border-color: var(--color-primary-400); }
+.tpl-del { display: inline; }
+.tpl-del button { background: none; border: none; color: var(--color-text-muted); font-size: 16px;
+  line-height: 1; cursor: pointer; padding: 0 0 0 2px; }
+.tpl-del button:hover { color: var(--color-error); }
+.tpl-save { margin-top: 10px; }
+
+/* Settings: copy + slug */
+.copy-row { display: flex; gap: 8px; }
+.copy-row .input { font-size: 13px; }
+.slug-row { display: flex; align-items: stretch; }
+.slug-prefix { display: flex; align-items: center; padding: 0 10px; background: var(--color-neutral-100);
+  border: 1px solid var(--color-border); border-right: none; border-radius: 11px 0 0 11px;
+  font-size: 13px; color: var(--color-text-muted); white-space: nowrap; }
+.slug-row .input { border-radius: 0 11px 11px 0; }
+.check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+.check-row input { width: auto; }

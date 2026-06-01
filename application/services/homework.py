@@ -46,6 +46,19 @@ class HomeworkService:
     async def mark_in_progress(self, student_user_id: str, homework_id: str) -> dict | None:
         return await self.repo.update_homework_status(student_user_id, homework_id, HomeworkStatus.IN_PROGRESS.value)
 
+    # ---- templates ----
+    async def list_templates(self, tutor_user_id: str) -> list[dict]:
+        return await self.repo.list_homework_templates(tutor_user_id)
+
+    async def create_template(self, tutor_user_id: str, title: str, description: str | None = None) -> dict | None:
+        title = (title or "").strip()
+        if not title:
+            return None
+        return await self.repo.create_homework_template(tutor_user_id, title, (description or "").strip() or None)
+
+    async def delete_template(self, tutor_user_id: str, template_id: str) -> None:
+        await self.repo.delete_homework_template(tutor_user_id, template_id)
+
     async def review(self, tutor_user_id: str, homework_id: str, comment: str | None = None) -> dict | None:
         homework = await self.repo.update_homework_status(tutor_user_id, homework_id, HomeworkStatus.REVIEWED.value, comment)
         if homework and homework.get("student_user_id"):

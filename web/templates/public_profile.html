@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ tutor_name }} — запись на занятие · Pingly</title>
+  <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
+  <link rel="stylesheet" href="/design-tokens.css?v=2">
+  <link rel="stylesheet" href="/static/landing.css?v=3">
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-top"><a href="/"><img src="/static/logo.svg" height="30" alt="Pingly"></a></div>
+  <main class="auth-main">
+    <div class="auth-card">
+      <div class="pub-avatar">{{ tutor_name[0] | upper }}</div>
+      <h1 style="margin-bottom:4px;">{{ tutor_name }}</h1>
+      {% if profile.subjects %}<p class="auth-sub">{{ profile.subjects }}</p>{% endif %}
+      {% if profile.bio %}<p class="pub-bio">{{ profile.bio }}</p>{% endif %}
+
+      {% if sent %}
+      <div class="pub-success">
+        ✅ Заявка отправлена! {{ tutor_name }} свяжется с тобой.
+      </div>
+      {% else %}
+      <h2 class="pub-h2">Записаться на занятие</h2>
+      <form class="auth-form" method="post" action="/u/{{ slug }}/book">
+        <div class="auth-field">
+          <label for="name">Как тебя зовут</label>
+          <input class="auth-input" type="text" id="name" name="name" required placeholder="Имя">
+        </div>
+        <div class="auth-field">
+          <label for="contact">Telegram или телефон</label>
+          <input class="auth-input" type="text" id="contact" name="contact" required placeholder="@username или +7…">
+        </div>
+        <div class="auth-field">
+          <label for="preferred_time">Удобное время (необязательно)</label>
+          <input class="auth-input" type="text" id="preferred_time" name="preferred_time" placeholder="например, будни после 18:00">
+        </div>
+        <div class="auth-field">
+          <label for="comment">Комментарий (необязательно)</label>
+          <input class="auth-input" type="text" id="comment" name="comment" placeholder="Предмет, цель, класс">
+        </div>
+        <button class="lbtn lbtn-primary lbtn-lg" type="submit">Отправить заявку</button>
+      </form>
+      {% endif %}
+
+      <div class="auth-foot">Работает на <a href="/">Pingly</a> — напоминания о занятиях для репетиторов</div>
+    </div>
+  </main>
+</div>
+</body>
+</html>
