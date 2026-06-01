@@ -12,6 +12,7 @@ MONTH_NAMES = [
 ]
 STATUS_LABELS = {
     "scheduled": "🟢 Запланировано",
+    "confirmed": "✅ Подтверждено",
     "completed": "🔵 Проведено",
     "rescheduled": "🟡 Перенесено",
     "cancelled": "🔴 Отменено",

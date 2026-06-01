@@ -279,16 +279,28 @@ class LessonService:
             )
         return count
 
-    async def student_cancel_lesson(self, student_user_id: str, lesson_id: str) -> dict | None:
-        """Cancel a scheduled lesson on the student's behalf. Returns the lesson
-        (with tutor_user_id, starts_at, student_profiles) so the caller can push
-        the tutor, or None if it wasn't a cancellable scheduled lesson."""
+    async def student_confirm_lesson(self, student_user_id: str, lesson_id: str) -> bool:
+        """Mark a scheduled lesson as confirmed by the student."""
         lessons = await self.repo.list_lessons_for_student_user(student_user_id)
         lesson = next((l for l in lessons if l["id"] == lesson_id), None)
         if not lesson or lesson.get("status") != "scheduled":
+            return False
+        await self.repo.update_lesson_fields(lesson_id, {"status": LessonStatus.CONFIRMED.value})
+        return True
+
+    async def student_cancel_lesson(self, student_user_id: str, lesson_id: str) -> dict | None:
+        """Cancel a scheduled/confirmed lesson on the student's behalf. Returns the lesson
+        (with tutor_user_id, starts_at, student_profiles) so the caller can push
+        the tutor, or None if it wasn't a cancellable lesson."""
+        lessons = await self.repo.list_lessons_for_student_user(student_user_id)
+        lesson = next((l for l in lessons if l["id"] == lesson_id), None)
+        if not lesson or lesson.get("status") not in ("scheduled", "confirmed"):
             return None
         await self.repo.update_lesson_fields(lesson_id, {"status": LessonStatus.CANCELLED.value})
         return lesson
+
+    async def delete_lesson(self, tutor_user_id: str, lesson_id: str) -> None:
+        await self.repo.delete_lesson(tutor_user_id, lesson_id)
 
     async def cancel_push_target(self, lesson: dict) -> tuple[int, str] | None:
         """Given a just-cancelled lesson, return (tutor_tg_id, message) to notify

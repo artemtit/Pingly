@@ -273,7 +273,7 @@ class SupabasePinglyRepository:
             self._db().table("lessons_v2")
             .select("*")
             .eq("schedule_rule_id", rule_id)
-            .eq("status", "scheduled")
+            .in_("status", ["scheduled", "confirmed"])
             .gte("starts_at", after.isoformat())
             .order("starts_at")
             .execute()
@@ -293,6 +293,20 @@ class SupabasePinglyRepository:
     async def update_lesson_fields(self, lesson_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
         result = await self._db().table("lessons_v2").update(patch).eq("id", lesson_id).execute()
         return _one(result)
+
+    async def delete_lesson(self, tutor_user_id: str, lesson_id: str) -> None:
+        # Cancel pending notifications for this lesson so they don't fire after deletion
+        notifs = await self._db().table("notifications").select("id, payload").eq("status", "pending").execute()
+        for n in notifs.data:
+            if (n.get("payload") or {}).get("lesson_id") == lesson_id:
+                await self._db().table("notifications").delete().eq("id", n["id"]).execute()
+        await (
+            self._db().table("lessons_v2")
+            .delete()
+            .eq("id", lesson_id)
+            .eq("tutor_user_id", tutor_user_id)
+            .execute()
+        )
 
     async def create_lesson(self, tutor_user_id: str, student_id: str, starts_at: datetime, subject_id: str | None = None, schedule_rule_id: str | None = None) -> dict[str, Any]:
         student = await self.get_student_for_tutor(tutor_user_id, student_id)
@@ -334,7 +348,7 @@ class SupabasePinglyRepository:
             self._db().table("lessons_v2")
             .select("*")
             .eq("student_user_id", student_user_id)
-            .eq("status", "scheduled")
+            .in_("status", ["scheduled", "confirmed"])
             .gte("starts_at", datetime.utcnow().isoformat())
             .order("starts_at")
             .limit(1)

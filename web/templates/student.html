@@ -40,6 +40,13 @@
         <button class="btn btn-secondary nl-btn">❌ Отменяю</button>
       </form>
     </div>
+    {% elif next_lesson.status == 'confirmed' %}
+    <div class="nl-actions">
+      <div class="btn btn-primary nl-btn" style="flex:1;pointer-events:none;opacity:.85">✅ Подтверждено</div>
+      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1">
+        <button class="btn btn-secondary nl-btn">❌ Отменяю</button>
+      </form>
+    </div>
     {% endif %}
     {% else %}
     <div class="card-head"><h2>📚 Ближайшее занятие</h2></div>

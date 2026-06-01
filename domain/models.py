@@ -13,6 +13,7 @@ class UserRole(str, Enum):
 
 class LessonStatus(str, Enum):
     SCHEDULED = "scheduled"
+    CONFIRMED = "confirmed"
     COMPLETED = "completed"
     RESCHEDULED = "rescheduled"
     CANCELLED = "cancelled"

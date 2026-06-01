@@ -217,7 +217,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         homework = await services.homework.list_for_tutor(user["id"])
         analytics = await services.analytics.tutor_dashboard(user["id"])
         now = datetime.now(timezone.utc).isoformat()
-        upcoming = [l for l in lessons if l.get("status") == "scheduled" and (l.get("starts_at") or "") >= now][:6]
+        upcoming = [l for l in lessons if l.get("status") in ("scheduled", "confirmed") and (l.get("starts_at") or "") >= now][:6]
         pending_hw = [h for h in homework if h.get("status") == "submitted"]
         return templates.TemplateResponse("tutor.html", _ctx(
             request, user, "overview",
@@ -371,6 +371,12 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         await services.lessons.cancel_lesson(user["id"], lesson_id)
         return RedirectResponse("/tutor/calendar", status_code=303)
 
+    @app.post("/tutor/lessons/{lesson_id}/delete")
+    async def delete_lesson(lesson_id: str, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        await services.lessons.delete_lesson(user["id"], lesson_id)
+        return RedirectResponse("/tutor/calendar", status_code=303)
+
     @app.post("/tutor/lessons/{lesson_id}/reschedule")
     async def reschedule_lesson(lesson_id: str, new_at: str = Form(...), user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
@@ -407,7 +413,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         active_hw = [h for h in homework if h.get("status") in ("new", "in_progress")]
         now_iso = datetime.now(timezone.utc).isoformat()
         upcoming = sorted(
-            [l for l in lessons if l.get("status") == "scheduled" and (l.get("starts_at") or "") >= now_iso],
+            [l for l in lessons if l.get("status") in ("scheduled", "confirmed") and (l.get("starts_at") or "") >= now_iso],
             key=lambda l: l.get("starts_at") or "",
         )[:6]
         return templates.TemplateResponse("student.html", _ctx(
@@ -443,6 +449,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.post("/student/lessons/{lesson_id}/confirm")
     async def student_confirm_lesson(lesson_id: str, user: dict = Depends(current_user)) -> Response:
         _require(user, "student")
+        await services.lessons.student_confirm_lesson(user["id"], lesson_id)
         return RedirectResponse("/student", status_code=303)
 
     @app.post("/student/lessons/{lesson_id}/cancel")
