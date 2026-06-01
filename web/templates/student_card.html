@@ -106,9 +106,9 @@ function copyInvite(){
         <button type="submit" class="btn btn-primary">{% if package %}Продлить{% else %}Подключить{% endif %}</button>
       </form>
       {% if package %}
-      <form method="post" action="/tutor/students/{{ student.id }}/package" style="margin-top:8px;">
+      <form method="post" action="/tutor/students/{{ student.id }}/package" style="margin-top:10px;">
         <input type="hidden" name="action" value="clear">
-        <button type="submit" class="btn btn-ghost" style="color:var(--color-error);padding-left:0;">Снять абонемент</button>
+        <button type="submit" class="link-danger">Снять абонемент</button>
       </form>
       {% endif %}
     </div>
