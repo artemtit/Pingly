@@ -447,10 +447,14 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         ))
 
     @app.get("/tutor/requests", response_class=HTMLResponse)
-    async def tutor_requests(request: Request, user: dict = Depends(current_user)) -> Response:
+    async def tutor_requests(request: Request, saved: str | None = None, error: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
         requests = await services.public.list_requests(user["id"])
-        return templates.TemplateResponse("requests.html", _ctx(request, user, "requests", requests=requests))
+        profile = await services.public.get_profile(user["id"])
+        return templates.TemplateResponse("requests.html", _ctx(
+            request, user, "requests", requests=requests,
+            profile=profile, web_base=WEB_BASE_URL, saved=saved, error=error,
+        ))
 
     @app.post("/tutor/requests/{request_id}/done")
     async def mark_request_done(request_id: str, user: dict = Depends(current_user)) -> Response:
@@ -484,8 +488,8 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         )
         if err:
             from urllib.parse import quote
-            return RedirectResponse(f"/tutor/settings?error={quote(err)}", status_code=303)
-        return RedirectResponse("/tutor/settings?saved=1", status_code=303)
+            return RedirectResponse(f"/tutor/requests?error={quote(err)}", status_code=303)
+        return RedirectResponse("/tutor/requests?saved=1", status_code=303)
 
     @app.post("/tutor/lessons/{lesson_id}/reschedule")
     async def reschedule_lesson(lesson_id: str, new_at: str = Form(...), user: dict = Depends(current_user)) -> Response:

@@ -94,37 +94,6 @@
     </div>
     {% endif %}
   </div>
-
-  <div class="card">
-    <h2>🌐 Публичная страница</h2>
-    <p class="muted" style="margin-bottom:12px;">Включи — и получишь ссылку, где новые ученики сами оставляют заявки.</p>
-    <form method="post" action="/tutor/settings/public" class="form">
-      <label class="field"><span>Адрес страницы</span>
-        <div class="slug-row">
-          <span class="slug-prefix">{{ web_base }}/u/</span>
-          <input class="input" name="slug" value="{{ profile.slug if profile else '' }}" placeholder="ivan-math" pattern="[a-z0-9\-]+">
-        </div>
-      </label>
-      <label class="field"><span>Предметы</span>
-        <input class="input" name="subjects" value="{{ profile.subjects if profile and profile.subjects else '' }}" placeholder="Математика, физика · 5–11 класс"></label>
-      <label class="field"><span>О себе</span>
-        <textarea name="bio" placeholder="Короткий рассказ: опыт, формат, результаты">{{ profile.bio if profile and profile.bio else '' }}</textarea></label>
-      <label class="check-row">
-        <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if profile and profile.public_enabled }}>
-        <span>Страница включена и принимает заявки</span>
-      </label>
-      <button class="btn btn-primary">Сохранить</button>
-    </form>
-    {% if profile and profile.slug and profile.public_enabled %}
-    <h3 style="font-size:15px;margin:16px 0 6px;">🔗 Твоя ссылка</h3>
-    <p class="muted" style="margin-bottom:8px;font-size:13px;">Делись ей в соцсетях, на Авито, в Telegram — по ней оставляют заявки.</p>
-    <div class="copy-row">
-      <input class="input" id="pub-link" readonly value="{{ web_base }}/u/{{ profile.slug }}">
-      <button class="btn btn-secondary btn-sm" type="button" onclick="copyField('pub-link', this)">Копировать</button>
-    </div>
-    <a class="btn btn-ghost btn-sm" style="margin-top:10px" href="/u/{{ profile.slug }}" target="_blank" rel="noopener">Открыть мою страницу →</a>
-    {% endif %}
-  </div>
   {% endif %}
 </section>
 
