@@ -191,9 +191,15 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/auth/telegram/callback")
     async def auth_telegram_widget(request: Request) -> Response:
         data = dict(request.query_params)
+        # `ref` is not part of Telegram's signed payload — pop it before the
+        # hash check. apply_referral is idempotent (one bonus per account), so
+        # it's safe to call whenever a ref link is used.
+        ref = (data.pop("ref", "") or "").strip()
         user = await services.web_auth.login_telegram_widget(data)
         if not user:
             return RedirectResponse("/login?error=tg_failed", status_code=303)
+        if ref:
+            await services.accounts.apply_referral(user["id"], ref)
         response = RedirectResponse(_cabinet_url(user), status_code=303)
         _set_session(response, user)
         return response

@@ -29,17 +29,22 @@ class AccountService:
     def __init__(self, repo: PinglyRepository) -> None:
         self.repo = repo
 
-    async def apply_referral(self, new_user_id: str, ref_code: str) -> None:
-        """Link a freshly registered tutor to a referrer and reward both."""
+    async def apply_referral(self, new_user_id: str, ref_code: str) -> bool:
+        """Link a freshly registered tutor to a referrer and reward both with
+        +30 trial days. Idempotent: skips if the new user is already referred."""
         code = (ref_code or "").strip()
         if not code:
-            return
+            return False
+        new_user = await self.repo.get_user_by_id(new_user_id)
+        if not new_user or new_user.get("referred_by"):
+            return False
         referrer = await self.repo.get_user_by_referral_code(code)
         if not referrer or referrer["id"] == new_user_id:
-            return
+            return False
         await self.repo.set_referred_by(new_user_id, referrer["id"])
         await self.repo.extend_trial(referrer["id"], 30)
         await self.repo.extend_trial(new_user_id, 30)
+        return True
 
     async def get_user(self, user_id: str) -> dict | None:
         return await self.repo.get_user_by_id(user_id)

@@ -40,12 +40,30 @@
   {% set sub = subscription_info(user) %}
   <div class="card">
     <h2>💎 Подписка</h2>
+    {% set n = sub.days_left or 0 %}
+    {% set days_word = 'день' if (n % 10 == 1 and n % 100 != 11) else ('дня' if (n % 10 in [2,3,4] and n % 100 not in [12,13,14]) else 'дней') %}
+    {% if sub.status == 'active' %}
+    <div class="sub-hero"><div class="sub-big">Активна ✅</div><div class="muted">Спасибо, что пользуешься Pingly 💙</div></div>
+    {% elif n > 0 %}
+    <div class="sub-hero {{ 'sub-warn' if n <= 3 }}">
+      <div class="sub-big">{{ n }} {{ days_word }}</div>
+      <div class="muted">осталось пробного периода</div>
+    </div>
+    {% else %}
+    <div class="sub-hero sub-warn"><div class="sub-big">Пробный истёк</div><div class="muted">Сервис продолжает работать — без блокировки</div></div>
+    {% endif %}
+
+    <div class="settings-row"><span class="muted">Тариф</span><strong>Pingly Pro</strong></div>
     <div class="settings-row"><span class="muted">Статус</span>
       {% if sub.status == 'active' %}<span class="badge completed">активна</span>
-      {% elif sub.days_left and sub.days_left > 0 %}<span class="badge submitted">пробный · {{ sub.days_left }} дн.</span>
+      {% elif n > 0 %}<span class="badge submitted">пробный период</span>
       {% else %}<span class="badge cancelled">пробный истёк</span>{% endif %}
     </div>
-    <p class="muted" style="margin:10px 0 14px;">После пробного периода — 990 ₽/мес. Pingly продолжит работать; подписку добавим позже.</p>
+    {% if sub.trial_ends_at %}
+    <div class="settings-row"><span class="muted">{{ 'Пробный до' if sub.status != 'active' else 'Действует до' }}</span><strong>{{ sub.trial_ends_at | msk('%d.%m.%Y') }}</strong></div>
+    {% endif %}
+    <div class="settings-row"><span class="muted">Цена после пробного</span><strong>990 ₽/мес</strong></div>
+    <p class="muted" style="margin:10px 0 14px;">Pingly продолжит работать и после пробного — жёсткой блокировки нет, оплату подключим позже.</p>
     {% if referral_code %}
     <h3 style="font-size:15px;margin:6px 0 6px;">🎁 Приведи коллегу</h3>
     <p class="muted" style="margin-bottom:8px;font-size:13px;">За каждого репетитора по твоей ссылке — +30 дней тебе и ему.</p>
