@@ -11,14 +11,17 @@
 
 <section class="stat-grid" style="margin-bottom:18px;">
   <div class="stat-card">
+    <span class="stat-ico">{{ ui.icon('book-open', 22) }}</span>
     <div class="stat-num">{{ history.total }}</div>
     <div class="stat-label">Всего занятий</div>
   </div>
   <div class="stat-card">
+    <span class="stat-ico">{{ ui.icon('circle-check', 22) }}</span>
     <div class="stat-num">{{ history.completed }}</div>
     <div class="stat-label">Проведено</div>
   </div>
   <div class="stat-card">
+    <span class="stat-ico stat-ico-warn">{{ ui.icon('circle-x', 22) }}</span>
     <div class="stat-num">{{ history.cancelled }}</div>
     <div class="stat-label">Отменено</div>
   </div>

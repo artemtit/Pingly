@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% import "macros.html" as ui %}
 {% block content %}
 <div class="topbar">
   <div>
@@ -10,10 +11,12 @@
 
 <section class="stat-grid" style="margin-bottom:18px;">
   <div class="stat-card">
+    <span class="stat-ico">{{ ui.icon('wallet', 22) }}</span>
     <div class="stat-num">{{ overview.month_earned }} ₽</div>
     <div class="stat-label">Заработано в этом месяце</div>
   </div>
   <div class="stat-card {{ 'stat-warn' if overview.total_unpaid }}">
+    <span class="stat-ico {{ 'stat-ico-warn' if overview.total_unpaid }}">{{ ui.icon('clock', 22) }}</span>
     <div class="stat-num">{{ overview.total_unpaid }} ₽</div>
     <div class="stat-label">Ждут оплаты</div>
   </div>

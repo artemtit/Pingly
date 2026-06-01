@@ -500,6 +500,8 @@ textarea { min-height: 86px; resize: vertical; }
 .stat-card.stat-warn { border-color: var(--color-warning); background: var(--color-warning-light); }
 .stat-num { font-size: 28px; font-weight: 800; letter-spacing: -.02em; }
 .stat-label { color: var(--color-text-muted); font-size: 13px; margin-top: 2px; }
+.stat-ico { display: inline-flex; color: var(--color-primary-600, #ea580c); margin-bottom: 8px; }
+.stat-ico-warn { color: var(--color-warning, #d97706); }
 
 /* Finance rows */
 .fin-list { display: flex; flex-direction: column; gap: 10px; }
