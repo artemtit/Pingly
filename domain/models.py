@@ -37,6 +37,7 @@ class NotificationType(str, Enum):
     LESSON_RESCHEDULE_REQUEST = "lesson_reschedule_request"
     TUTOR_UNCONFIRMED = "tutor_unconfirmed"
     BOOKING_REQUEST = "booking_request"
+    SUBSCRIPTION_EXPIRING = "subscription_expiring"
 
 
 class NotificationStatus(str, Enum):

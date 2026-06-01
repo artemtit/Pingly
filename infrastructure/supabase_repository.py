@@ -631,6 +631,17 @@ class SupabasePinglyRepository:
         )
 
     # ---------------- Trial / referrals ----------------
+    async def list_tutors_with_trial(self) -> list[dict[str, Any]]:
+        """Tutors that have a trial deadline and aren't on a paid plan yet."""
+        result = await (
+            self._db().table("users")
+            .select("*")
+            .eq("role", "tutor")
+            .neq("subscription_status", "active")
+            .execute()
+        )
+        return [u for u in result.data if u.get("trial_ends_at") and u.get("tg_id")]
+
     async def get_user_by_referral_code(self, code: str) -> dict[str, Any] | None:
         result = await self._db().table("users").select("*").eq("referral_code", code).execute()
         return _one(result)

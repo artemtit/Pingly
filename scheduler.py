@@ -1,12 +1,25 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram import Bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from application.factory import create_services
+from application.services.accounts import subscription_info
+from config import WEB_BASE_URL
 
 services = create_services()
+
+# Days-before-expiry milestones at which we remind a tutor once.
+_SUB_MILESTONES = (3, 1, 0)
+
+
+def _sub_link_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="💳 Оформить подписку", url=f"{WEB_BASE_URL}/tutor/settings"),
+    ]])
 
 
 async def send_due_notifications(bot: Bot) -> None:
@@ -34,6 +47,8 @@ async def send_due_notifications(bot: Bot) -> None:
                 InlineKeyboardButton(text="✅ Буду", callback_data=f"lesson_confirm:{lesson_id}"),
                 InlineKeyboardButton(text="❌ Отменяю", callback_data=f"lesson_cancel:{lesson_id}"),
             ]])
+        elif notification["type"] == "subscription_expiring":
+            keyboard = _sub_link_keyboard()
 
         await bot.send_message(
             tg_id,
@@ -43,7 +58,39 @@ async def send_due_notifications(bot: Bot) -> None:
         await services.notifications.mark_sent(notification["id"])
 
 
+async def enqueue_subscription_reminders() -> None:
+    """Once per day-ish, queue a Telegram reminder for tutors whose trial ends
+    in 3 / 1 / 0 days. Dedup per milestone via the notifications table."""
+    tutors = await services.repo.list_tutors_with_trial()
+    for tutor in tutors:
+        info = subscription_info(tutor)
+        days = info.get("days_left")
+        if info.get("status") == "active" or days is None or days not in _SUB_MILESTONES:
+            continue
+        recent = await services.repo.list_notifications_for_user(tutor["id"], 50)
+        already = any(
+            n.get("type") == "subscription_expiring" and (n.get("payload") or {}).get("milestone") == days
+            for n in recent
+        )
+        if already:
+            continue
+        if days > 0:
+            word = "день" if days == 1 else "дня"
+            title = "⏳ Пробный период заканчивается"
+            body = f"Осталось {days} {word}. Оформи подписку Pingly Pro (990 ₽/мес), чтобы не потерять напоминания и кабинет."
+        else:
+            title = "⛔ Пробный период закончился"
+            body = "Сервис пока работает, но скоро попросим оформить подписку — 990 ₽/мес. Поддержи Pingly 💙"
+        await services.repo.create_notification(
+            tutor["id"], "subscription_expiring", title, body, {"milestone": days},
+        )
+
+
 def create_scheduler(bot: Bot) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="UTC")
     scheduler.add_job(send_due_notifications, "interval", minutes=1, args=[bot])
+    scheduler.add_job(
+        enqueue_subscription_reminders, "interval", hours=12,
+        next_run_time=datetime.now() + timedelta(seconds=30),
+    )
     return scheduler
