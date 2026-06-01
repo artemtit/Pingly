@@ -261,6 +261,20 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             return RedirectResponse(f"/u/{slug}?sent=1", status_code=303)
         return RedirectResponse(f"/u/{slug}", status_code=303)
 
+    # ---------------- PAYMENTS (Platega webhook) ----------------
+    @app.post("/payments/platega/webhook")
+    async def platega_webhook(request: Request) -> Response:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        ok = await services.billing.handle_webhook(
+            request.headers.get("X-MerchantId"),
+            request.headers.get("X-Secret"),
+            body if isinstance(body, dict) else {},
+        )
+        return Response(status_code=200 if ok else 400)
+
     # ---------------- TUTOR ----------------
     @app.get("/tutor", response_class=HTMLResponse)
     async def tutor_dashboard(request: Request, user: dict = Depends(current_user)) -> Response:
@@ -517,13 +531,13 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         return RedirectResponse("/tutor/schedule", status_code=303)
 
     @app.get("/tutor/settings", response_class=HTMLResponse)
-    async def tutor_settings(request: Request, saved: str | None = None, error: str | None = None, user: dict = Depends(current_user)) -> Response:
+    async def tutor_settings(request: Request, saved: str | None = None, error: str | None = None, paid: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
         profile = await services.public.get_profile(user["id"])
         return templates.TemplateResponse("settings.html", _ctx(
             request, user, "settings", bot_username=_config.BOT_USERNAME,
             profile=profile, web_base=WEB_BASE_URL, referral_code=user.get("referral_code"),
-            saved=saved, error=error,
+            saved=saved, error=error, paid=paid, price=_config.SUBSCRIPTION_PRICE_RUB,
         ))
 
     # ---------------- STUDENT ----------------
@@ -601,6 +615,15 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         _require(user, "student")
         history = await services.lessons.list_student_history(user["id"])
         return templates.TemplateResponse("history.html", _ctx(request, user, "history", history=history))
+
+    @app.post("/tutor/billing/subscribe")
+    async def billing_subscribe(user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        redirect, err = await services.billing.start_subscription(user, WEB_BASE_URL)
+        if err or not redirect:
+            from urllib.parse import quote
+            return RedirectResponse(f"/tutor/settings?error={quote(err or 'Не удалось создать платёж')}", status_code=303)
+        return RedirectResponse(redirect, status_code=303)
 
     @app.post("/support")
     async def support(message: str = Form(...), user: dict = Depends(current_user)) -> Response:

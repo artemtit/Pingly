@@ -632,12 +632,12 @@ class SupabasePinglyRepository:
 
     # ---------------- Trial / referrals ----------------
     async def list_tutors_with_trial(self) -> list[dict[str, Any]]:
-        """Tutors that have a trial deadline and aren't on a paid plan yet."""
+        """Tutors with an access deadline and a linked Telegram — for trial and
+        renewal reminders (both trial and active subscribers)."""
         result = await (
             self._db().table("users")
             .select("*")
             .eq("role", "tutor")
-            .neq("subscription_status", "active")
             .execute()
         )
         return [u for u in result.data if u.get("trial_ends_at") and u.get("tg_id")]
@@ -664,6 +664,62 @@ class SupabasePinglyRepository:
                 pass
         new_end = (base + timedelta(days=days)).isoformat()
         await self._db().table("users").update({"trial_ends_at": new_end}).eq("id", user_id).execute()
+
+    # ---------------- Subscription payments (Platega) ----------------
+    async def create_subscription_payment(self, user_id: str, transaction_id: str, amount_rub: int) -> dict[str, Any]:
+        result = await self._db().table("subscription_payments").insert({
+            "user_id": user_id,
+            "provider": "platega",
+            "transaction_id": transaction_id,
+            "amount_rub": amount_rub,
+            "status": "pending",
+        }).execute()
+        return result.data[0]
+
+    async def get_subscription_payment_by_transaction(self, transaction_id: str) -> dict[str, Any] | None:
+        result = await (
+            self._db().table("subscription_payments")
+            .select("*")
+            .eq("transaction_id", transaction_id)
+            .execute()
+        )
+        return _one(result)
+
+    async def mark_subscription_payment(self, transaction_id: str, status: str, confirmed: bool = False) -> dict[str, Any] | None:
+        patch: dict[str, Any] = {"status": status}
+        if confirmed:
+            patch["confirmed_at"] = datetime.now(timezone.utc).isoformat()
+        result = await (
+            self._db().table("subscription_payments")
+            .update(patch)
+            .eq("transaction_id", transaction_id)
+            .execute()
+        )
+        return _one(result)
+
+    async def activate_subscription(self, user_id: str, days: int = 30) -> dict[str, Any] | None:
+        """Mark the user as a paying subscriber and extend access by `days`
+        from the later of now / current end date."""
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return None
+        base = datetime.now(timezone.utc)
+        current = user.get("trial_ends_at")
+        if current:
+            try:
+                parsed = datetime.fromisoformat(str(current).replace("Z", "+00:00"))
+                if parsed > base:
+                    base = parsed
+            except ValueError:
+                pass
+        new_end = (base + timedelta(days=days)).isoformat()
+        result = await (
+            self._db().table("users")
+            .update({"subscription_status": "active", "trial_ends_at": new_end})
+            .eq("id", user_id)
+            .execute()
+        )
+        return _one(result)
 
     async def get_lesson_by_id(self, lesson_id: str) -> dict[str, Any] | None:
         result = await (

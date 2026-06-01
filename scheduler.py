@@ -65,7 +65,7 @@ async def enqueue_subscription_reminders() -> None:
     for tutor in tutors:
         info = subscription_info(tutor)
         days = info.get("days_left")
-        if info.get("status") == "active" or days is None or days not in _SUB_MILESTONES:
+        if days is None or days not in _SUB_MILESTONES:
             continue
         recent = await services.repo.list_notifications_for_user(tutor["id"], 50)
         already = any(
@@ -74,13 +74,19 @@ async def enqueue_subscription_reminders() -> None:
         )
         if already:
             continue
+        paid = info.get("status") == "active"
+        period = "Подписка" if paid else "Пробный период"
         if days > 0:
             word = "день" if days == 1 else "дня"
-            title = "⏳ Пробный период заканчивается"
-            body = f"Осталось {days} {word}. Оформи подписку Pingly Pro (990 ₽/мес), чтобы не потерять напоминания и кабинет."
+            title = f"⏳ {period} заканчивается"
+            body = (
+                f"Осталось {days} {word}. "
+                + ("Продли подписку Pingly Pro" if paid else "Оформи подписку Pingly Pro")
+                + ", чтобы не потерять напоминания и кабинет."
+            )
         else:
-            title = "⛔ Пробный период закончился"
-            body = "Сервис пока работает, но скоро попросим оформить подписку — 990 ₽/мес. Поддержи Pingly 💙"
+            title = f"⛔ {period} закончился" if not paid else "⛔ Подписка закончилась"
+            body = "Продли подписку Pingly Pro, чтобы продолжить пользоваться сервисом 💙"
         await services.repo.create_notification(
             tutor["id"], "subscription_expiring", title, body, {"milestone": days},
         )
