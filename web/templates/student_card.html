@@ -93,7 +93,7 @@ function copyInvite(){
       <div class="card-head"><h2>🎓 Профиль обучения</h2>
         {% if saved == 'profile' %}<span class="save-ok" data-autohide>✅ Сохранено</span>{% endif %}
       </div>
-      <form method="post" action="/tutor/students/{{ student.id }}/profile" class="form" onsubmit="saving(this)">
+      <form method="post" action="/tutor/students/{{ student.id }}/profile" class="form locked" onsubmit="saving(this)">
         <label class="field"><span>Имя</span>
           <input class="input" name="name" value="{{ student.name }}" required></label>
         <label class="field"><span>Предмет</span>
@@ -108,7 +108,11 @@ function copyInvite(){
           <input class="input" type="date" name="started_at" value="{{ student.started_at or '' }}"></label>
         <label class="field"><span>Цель обучения</span>
           <textarea name="goal" placeholder="Например: подготовка к ОГЭ на 5">{{ student.goal or '' }}</textarea></label>
-        <button class="btn btn-primary">Сохранить профиль</button>
+        <div class="edit-actions">
+          <button type="button" class="btn btn-secondary edit-toggle" onclick="enableEdit(this)">✏️ Изменить</button>
+          <button type="submit" class="btn btn-primary edit-save">Сохранить профиль</button>
+          <button type="button" class="btn btn-ghost edit-cancel" onclick="location.reload()">Отмена</button>
+        </div>
       </form>
     </div>
 
@@ -116,9 +120,13 @@ function copyInvite(){
       <div class="card-head"><h2>🗒️ Заметки репетитора</h2>
         {% if saved == 'note' %}<span class="save-ok" data-autohide>✅ Сохранено</span>{% endif %}
       </div>
-      <form method="post" action="/tutor/students/{{ student.id }}/note" class="form" onsubmit="saving(this)">
+      <form method="post" action="/tutor/students/{{ student.id }}/note" class="form locked" onsubmit="saving(this)">
         <textarea name="note" placeholder="Личные заметки: сильные стороны, что повторить, договорённости...">{{ note }}</textarea>
-        <button class="btn btn-secondary">Сохранить заметку</button>
+        <div class="edit-actions">
+          <button type="button" class="btn btn-secondary edit-toggle" onclick="enableEdit(this)">✏️ Изменить</button>
+          <button type="submit" class="btn btn-primary edit-save">Сохранить заметку</button>
+          <button type="button" class="btn btn-ghost edit-cancel" onclick="location.reload()">Отмена</button>
+        </div>
       </form>
     </div>
   </div>
@@ -163,6 +171,13 @@ function copyInvite(){
 </section>
 
 <script>
+// Switch a card form from read-only to edit mode.
+function enableEdit(btn){
+  var form = btn.closest('form');
+  form.classList.remove('locked');
+  var first = form.querySelector('.input, select, textarea');
+  if (first){ first.focus(); }
+}
 // Instant feedback: button shows "Сохраняю…" while the form posts.
 function saving(form){
   var b = form.querySelector('button[type="submit"], button:not([type])');
