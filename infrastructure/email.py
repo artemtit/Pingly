@@ -30,7 +30,7 @@ async def send_email(to: str, subject: str, html: str) -> None:
         raise EmailError(f"Resend {resp.status_code}: {resp.text}")
 
 
-_LOGO_URL = "https://pingly-app.ru/static/logo-email.png"
+_LOGO_URL = "https://pingly-app.ru/static/logo-email.png?v=2"
 
 
 def verification_html(code: str) -> str:
