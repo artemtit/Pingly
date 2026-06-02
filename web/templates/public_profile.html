@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  // Tutor-chosen page theme: auto follows the visitor's device, light/dark are forced.
+  (function(){
+    var t = "{{ page_theme or 'auto' }}";
+    var dark = t === 'dark' || (t !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) document.documentElement.setAttribute('data-dark', '1');
+  })();
+</script>
 <title>{{ tutor_name }} — запись на занятие · Pingly</title>
 <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,23 +49,21 @@
     --ease: cubic-bezier(0, 0, 0.2, 1);
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --fg1:    #F8FAFC;
-      --fg2:    #94A3B8;
-      --surface:#1E293B;
-      --surface-2:#1E293B;
-      --page-bg:#0F172A;
-      --border: #334155;
-      --chip-bg:#1E293B;
+  :root[data-dark] {
+    --fg1:    #F8FAFC;
+    --fg2:    #94A3B8;
+    --surface:#1E293B;
+    --surface-2:#1E293B;
+    --page-bg:#0F172A;
+    --border: #334155;
+    --chip-bg:#1E293B;
 
-      --success:      #4ADE80;
-      --success-bg:   #0F2A1A;
-      --success-text: #86EFAC;
-      --success-border:#1F4D33;
+    --success:      #4ADE80;
+    --success-bg:   #0F2A1A;
+    --success-text: #86EFAC;
+    --success-border:#1F4D33;
 
-      --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
-    }
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
   }
 
   * { box-sizing: border-box; }
@@ -82,19 +88,15 @@
     pointer-events: none;
     z-index: 0;
   }
-  @media (prefers-color-scheme: dark) {
-    body::before { background: radial-gradient(ellipse at center, rgb(249 115 22 / 0.10), transparent 70%); }
-  }
+  :root[data-dark] body::before { background: radial-gradient(ellipse at center, rgb(249 115 22 / 0.10), transparent 70%); }
 
   .wrap { position: relative; z-index: 1; width: 100%; max-width: 480px; margin: 0 auto; padding: 0 20px 40px; }
 
   .topbar { display: flex; align-items: center; height: 60px; }
   .brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: var(--fg1); }
   .brand-logo-dark { display: none; }
-  @media (prefers-color-scheme: dark) {
-    .brand-logo-light { display: none; }
-    .brand-logo-dark { display: inline-block; }
-  }
+  :root[data-dark] .brand-logo-light { display: none; }
+  :root[data-dark] .brand-logo-dark { display: inline-block; }
 
   .hero { text-align: center; padding: 12px 0 4px; }
   .avatar {
@@ -106,7 +108,7 @@
   }
   .hero h1 { margin: 0; font-size: clamp(1.75rem, 1.2rem + 2.6vw, 2.25rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
   .hero .subjects { margin: 10px 0 0; font-size: 16px; font-weight: 600; color: var(--orange-600); }
-  @media (prefers-color-scheme: dark) { .hero .subjects { color: var(--orange-500); } }
+  :root[data-dark] .hero .subjects { color: var(--orange-500); }
   .hero .bio { margin: 14px auto 0; max-width: 38ch; font-size: 16px; color: var(--fg2); }
 
   .chips { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
@@ -116,7 +118,7 @@
   .card { margin-top: 26px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); padding: 24px 20px 22px; }
   .card-head { display: flex; align-items: center; gap: 11px; margin-bottom: 20px; }
   .card-head .ico { width: 38px; height: 38px; flex: 0 0 auto; border-radius: 11px; background: var(--orange-50); color: var(--orange-600); display: grid; place-items: center; }
-  @media (prefers-color-scheme: dark) { .card-head .ico { background: rgb(249 115 22 / 0.14); color: var(--orange-500); } }
+  :root[data-dark] .card-head .ico { background: rgb(249 115 22 / 0.14); color: var(--orange-500); }
   .card-head .ico svg { width: 20px; height: 20px; }
   .card-head h2 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
   .card-head p { margin: 2px 0 0; font-size: 13.5px; color: var(--fg2); }

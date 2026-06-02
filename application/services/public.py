@@ -40,7 +40,7 @@ class PublicService:
                 break
         return out
 
-    async def update_profile(self, tutor_user_id: str, slug: str, bio: str, subjects: str, public_enabled: bool, badges: str = "") -> tuple[dict | None, str | None]:
+    async def update_profile(self, tutor_user_id: str, slug: str, bio: str, subjects: str, public_enabled: bool, badges: str = "", page_theme: str = "auto") -> tuple[dict | None, str | None]:
         slug = normalize_slug(slug)
         if public_enabled and len(slug) < 3:
             return None, "Адрес страницы — минимум 3 символа (латиница, цифры, дефис)"
@@ -55,10 +55,12 @@ class PublicService:
             "public_enabled": public_enabled,
         }
         # update_tutor_profile drops None values, so push booleans/empties explicitly
+        theme = page_theme if page_theme in ("auto", "light", "dark") else "auto"
         profile = await self.repo.update_tutor_profile(tutor_user_id, {
             **{k: v for k, v in patch.items() if v is not None},
             "public_enabled": public_enabled,
             "badges": "\n".join(self.parse_badges(badges)),
+            "page_theme": theme,
         })
         return profile, None
 

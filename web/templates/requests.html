@@ -30,6 +30,13 @@
       <textarea name="bio" placeholder="Короткий рассказ: опыт, формат, результаты">{{ profile.bio if profile and profile.bio else '' }}</textarea></label>
     <label class="field"><span>Плашки под именем <span class="muted" style="font-weight:400;">— по одной на строку, до 6</span></span>
       <textarea name="badges" rows="4" placeholder="Онлайн и очно&#10;Опыт 8 лет&#10;Удобное время">{{ profile.badges if profile and profile.badges else '' }}</textarea></label>
+    {% set pt = profile.page_theme if profile and profile.page_theme else 'auto' %}
+    <label class="field"><span>Тема страницы</span>
+      <select class="input" name="page_theme">
+        <option value="auto" {{ 'selected' if pt == 'auto' }}>Авто (как у гостя)</option>
+        <option value="light" {{ 'selected' if pt == 'light' }}>Светлая</option>
+        <option value="dark" {{ 'selected' if pt == 'dark' }}>Тёмная</option>
+      </select></label>
     <label class="check-row">
       <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if profile and profile.public_enabled }} onchange="this.form.submit()">
       <span>Принимать заявки (включить страницу) — сохраняется сразу</span>
