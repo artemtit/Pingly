@@ -11,7 +11,8 @@
   'star': '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
   'graduation-cap': '<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>',
   'russian-ruble': '<path d="M6 11h8a4 4 0 0 0 0-8H9v18"/><path d="M6 15h8"/>',
-  'inbox': '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'
+  'inbox': '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  'menu': '<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>'
 } -%}
 <svg class="ic" aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{{ paths.get(name, '') | safe }}</svg>
 {%- endmacro -%}
@@ -99,6 +100,7 @@
   </main>
 </div>
 
+{% set more_sections = ['schedule', 'finance', 'requests', 'history', 'settings'] %}
 <nav class="bottom-nav" aria-label="Навигация">
   <div class="bottom-nav-inner">
     {% if user.role == "tutor" %}
@@ -106,14 +108,40 @@
     <a href="/tutor/students" class="{{ 'active' if active == 'students' }}">{{ icon('users') }}<span>Ученики</span></a>
     <a href="/tutor/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }}<span>Занятия</span></a>
     <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }}<span>Задания</span></a>
-    <a href="/tutor/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }}<span>Ещё</span></a>
+    <button type="button" class="more-toggle {{ 'active' if active in more_sections }}" onclick="toggleMore()" aria-label="Ещё разделы">{{ icon('menu') }}<span>Ещё</span></button>
     {% else %}
     <a href="/student" class="{{ 'active' if active == 'overview' }}">{{ icon('graduation-cap') }}<span>Главная</span></a>
     <a href="/student/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }}<span>Занятия</span></a>
     <a href="/student/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }}<span>Задания</span></a>
-    <a href="/student/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }}<span>Ещё</span></a>
+    <button type="button" class="more-toggle {{ 'active' if active in more_sections }}" onclick="toggleMore()" aria-label="Ещё разделы">{{ icon('menu') }}<span>Ещё</span></button>
     {% endif %}
   </div>
 </nav>
+
+<div class="more-backdrop" id="more-backdrop" onclick="toggleMore()"></div>
+<div class="more-sheet" id="more-sheet" role="menu" aria-label="Ещё разделы">
+  <div class="more-sheet-grip"></div>
+  {% if user.role == "tutor" %}
+  <a href="/tutor/schedule" class="{{ 'active' if active == 'schedule' }}">{{ icon('calendar-clock') }} Расписание</a>
+  <a href="/tutor/finance" class="{{ 'active' if active == 'finance' }}">{{ icon('russian-ruble') }} Финансы</a>
+  <a href="/tutor/requests" class="{{ 'active' if active == 'requests' }}">{{ icon('inbox') }} Заявки</a>
+  <a href="/tutor/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} Настройки</a>
+  {% else %}
+  <a href="/student/history" class="{{ 'active' if active == 'history' }}">{{ icon('calendar-clock') }} История</a>
+  <a href="/student/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} Настройки</a>
+  {% endif %}
+</div>
+<script>
+function toggleMore(){
+  document.getElementById('more-sheet').classList.toggle('open');
+  document.getElementById('more-backdrop').classList.toggle('open');
+}
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') {
+    document.getElementById('more-sheet').classList.remove('open');
+    document.getElementById('more-backdrop').classList.remove('open');
+  }
+});
+</script>
 
 {% endblock %}

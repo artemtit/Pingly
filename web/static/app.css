@@ -344,7 +344,7 @@ textarea { min-height: 86px; resize: vertical; }
   grid-auto-columns: 1fr;
   grid-auto-flow: column;
 }
-.bottom-nav a {
+.bottom-nav a, .bottom-nav .more-toggle {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -355,9 +355,33 @@ textarea { min-height: 86px; resize: vertical; }
   font-weight: 600;
   letter-spacing: .01em;
   transition: color .15s;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
 }
-.bottom-nav a .ic { color: inherit; width: 22px; height: 22px; }
-.bottom-nav a.active { color: var(--orange-700); }
+.bottom-nav a .ic, .bottom-nav .more-toggle .ic { color: inherit; width: 22px; height: 22px; }
+.bottom-nav a.active, .bottom-nav .more-toggle.active { color: var(--orange-700); }
+
+/* "Ещё" bottom sheet (mobile overflow menu) */
+.more-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 110; }
+.more-backdrop.open { display: block; }
+.more-sheet { display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 120;
+  flex-direction: column; gap: 2px; background: #fff;
+  border-top-left-radius: 18px; border-top-right-radius: 18px;
+  padding: 8px 10px calc(12px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -6px 24px rgba(0,0,0,.18); }
+.more-sheet.open { display: flex; animation: sheetUp .22s ease; }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+.more-sheet-grip { width: 38px; height: 4px; border-radius: 999px; background: var(--gray-300, #cbd5e1);
+  margin: 6px auto 8px; }
+.more-sheet a { display: flex; align-items: center; gap: 13px; padding: 14px 14px; border-radius: 12px;
+  color: var(--fg1); font-weight: 600; font-size: 15px; }
+.more-sheet a .ic { color: var(--gray-400); width: 22px; height: 22px; }
+.more-sheet a.active { background: var(--orange-50); color: var(--orange-700); }
+.more-sheet a.active .ic { color: var(--orange-600); }
+[data-theme="dark"] .more-sheet { background: #1E293B; }
+[data-theme="dark"] .more-sheet a { color: var(--fg1); }
 
 /* ---------------- responsive tablet (641–980px) ---------------- */
 @media (max-width: 980px) {
