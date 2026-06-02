@@ -94,11 +94,23 @@ async def _not_found(request: Request, exc: Exception) -> Response:
     return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
 
 
+async def _unauthorized(request: Request, exc: Exception) -> Response:
+    """Not logged in → send to login instead of raw {"detail":"Unauthorized"}."""
+    return RedirectResponse("/login", status_code=303)
+
+
+async def _forbidden(request: Request, exc: Exception) -> Response:
+    """Logged in but wrong role → bounce to the home router (their cabinet)."""
+    return RedirectResponse("/", status_code=303)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Pingly")
     app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
     register_routes(app)
     app.add_exception_handler(404, _not_found)
+    app.add_exception_handler(401, _unauthorized)
+    app.add_exception_handler(403, _forbidden)
     return app
 
 
