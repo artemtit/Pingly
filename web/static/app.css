@@ -637,7 +637,8 @@ textarea { min-height: 86px; resize: vertical; }
 
 /* Public-page badge editor (icon + text rows) */
 .badge-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-.badge-row .badge-icon { flex: 0 0 auto; width: 190px; text-overflow: ellipsis; }
+.badge-row .badge-icon { flex: 0 0 auto; width: 190px; height: 44px; line-height: 1.4;
+  padding-top: 0; padding-bottom: 0; text-overflow: ellipsis; }
 .badge-row input[name="badge_text"] { flex: 1; min-width: 0; }
 .badge-del { flex: 0 0 auto; width: 40px; height: 44px; border: 1px solid var(--color-border);
   border-radius: 10px; background: none; color: var(--color-text-muted); cursor: pointer; font-size: 15px; }
