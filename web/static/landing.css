@@ -179,6 +179,9 @@ img { display: block; }
 .auth-legal a:hover { color: var(--orange-600); }
 .link-inline { background: none; border: 0; padding: 0; font: inherit; color: var(--orange-600); font-weight: 600; cursor: pointer; }
 .link-inline:hover { text-decoration: underline; }
+.auth-consent { margin: 12px 2px 0; font-size: 12px; line-height: 1.5; color: var(--fg3); text-align: center; }
+.auth-consent a { color: var(--fg2); font-weight: 600; text-decoration: underline; }
+.auth-consent a:hover { color: var(--orange-600); }
 
 /* Public booking page (/u/<slug>) */
 .auth-note { background: #FFF7ED; border: 1px solid #FED7AA; color: var(--fg1); border-radius: 10px;

@@ -90,6 +90,11 @@
 
   .topbar { display: flex; align-items: center; height: 60px; }
   .brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: var(--fg1); }
+  .brand-logo-dark { display: none; }
+  @media (prefers-color-scheme: dark) {
+    .brand-logo-light { display: none; }
+    .brand-logo-dark { display: inline-block; }
+  }
 
   .hero { text-align: center; padding: 12px 0 4px; }
   .avatar {
@@ -165,7 +170,7 @@
   <div class="wrap">
 
     <header class="topbar">
-      <a class="brand" href="/" aria-label="Pingly"><img src="/static/logo.svg" height="28" alt="Pingly"></a>
+      <a class="brand" href="/" aria-label="Pingly"><img class="brand-logo-light" src="/static/logo.svg" height="28" alt="Pingly"><img class="brand-logo-dark" src="/static/logo-dark.svg" height="28" alt="Pingly"></a>
     </header>
 
     <section class="hero reveal">
