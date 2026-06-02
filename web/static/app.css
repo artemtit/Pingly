@@ -135,7 +135,8 @@ h2 { font-size: 20px; letter-spacing: -.02em; margin-bottom: 14px; }
 .form { display: grid; gap: 13px; }
 .field { display: grid; gap: 6px; }
 .field > span { font-size: 13px; font-weight: 600; color: var(--color-text-muted); }
-.input, select, textarea { width: 100%; border: 1px solid var(--color-border); border-radius: 11px; padding: 11px 13px; font: inherit; background: #fff; transition: border-color .15s, box-shadow .15s; }
+.input, select, textarea { width: 100%; border: 1px solid var(--color-border); border-radius: 11px; padding: 11px 13px; font: inherit; line-height: 1.4; background: #fff; transition: border-color .15s, box-shadow .15s; }
+select { height: 44px; padding-top: 0; padding-bottom: 0; }
 .input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-primary-400); box-shadow: 0 0 0 3px rgba(249,115,22,.15); }
 textarea { min-height: 86px; resize: vertical; }
 .search { display: flex; gap: 10px; margin-bottom: 18px; }
@@ -637,8 +638,7 @@ textarea { min-height: 86px; resize: vertical; }
 
 /* Public-page badge editor (icon + text rows) */
 .badge-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-.badge-row .badge-icon { flex: 0 0 auto; width: 190px; height: 44px; line-height: 1.4;
-  padding-top: 0; padding-bottom: 0; text-overflow: ellipsis; }
+.badge-row .badge-icon { flex: 0 0 auto; width: 190px; text-overflow: ellipsis; }
 .badge-row input[name="badge_text"] { flex: 1; min-width: 0; }
 .badge-del { flex: 0 0 auto; width: 40px; height: 44px; border: 1px solid var(--color-border);
   border-radius: 10px; background: none; color: var(--color-text-muted); cursor: pointer; font-size: 15px; }
