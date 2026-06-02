@@ -348,6 +348,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         return templates.TemplateResponse("public_profile.html", {
             "request": request, "profile": profile, "tutor_name": tutor_name,
             "slug": profile.get("slug"), "sent": sent, "bot_username": _config.BOT_USERNAME,
+            "badges": services.public.parse_badges(profile.get("badges")),
         })
 
     @app.post("/u/{slug}/book")
@@ -622,11 +623,12 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         bio: str = Form(""),
         subjects: str = Form(""),
         public_enabled: str = Form(""),
+        badges: str = Form(""),
         user: dict = Depends(current_user),
     ) -> Response:
         _require(user, "tutor")
         _, err = await services.public.update_profile(
-            user["id"], slug, bio, subjects, public_enabled == "1",
+            user["id"], slug, bio, subjects, public_enabled == "1", badges,
         )
         if err:
             from urllib.parse import quote

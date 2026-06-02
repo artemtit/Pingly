@@ -28,7 +28,19 @@ class PublicService:
             return None
         return profile
 
-    async def update_profile(self, tutor_user_id: str, slug: str, bio: str, subjects: str, public_enabled: bool) -> tuple[dict | None, str | None]:
+    @staticmethod
+    def parse_badges(raw: str | None) -> list[str]:
+        """One badge per line. Trim, drop blanks, cap at 6 badges / 40 chars each."""
+        out: list[str] = []
+        for line in (raw or "").splitlines():
+            text = line.strip()[:40]
+            if text:
+                out.append(text)
+            if len(out) >= 6:
+                break
+        return out
+
+    async def update_profile(self, tutor_user_id: str, slug: str, bio: str, subjects: str, public_enabled: bool, badges: str = "") -> tuple[dict | None, str | None]:
         slug = normalize_slug(slug)
         if public_enabled and len(slug) < 3:
             return None, "Адрес страницы — минимум 3 символа (латиница, цифры, дефис)"
@@ -46,6 +58,7 @@ class PublicService:
         profile = await self.repo.update_tutor_profile(tutor_user_id, {
             **{k: v for k, v in patch.items() if v is not None},
             "public_enabled": public_enabled,
+            "badges": "\n".join(self.parse_badges(badges)),
         })
         return profile, None
 

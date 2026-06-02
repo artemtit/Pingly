@@ -28,6 +28,8 @@
       <input class="input" name="subjects" value="{{ profile.subjects if profile and profile.subjects else '' }}" placeholder="Математика, физика · 5–11 класс"></label>
     <label class="field"><span>О себе</span>
       <textarea name="bio" placeholder="Короткий рассказ: опыт, формат, результаты">{{ profile.bio if profile and profile.bio else '' }}</textarea></label>
+    <label class="field"><span>Плашки под именем <span class="muted" style="font-weight:400;">— по одной на строку, до 6</span></span>
+      <textarea name="badges" rows="4" placeholder="Онлайн и очно&#10;Опыт 8 лет&#10;Удобное время">{{ profile.badges if profile and profile.badges else '' }}</textarea></label>
     <label class="check-row">
       <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if profile and profile.public_enabled }} onchange="this.form.submit()">
       <span>Принимать заявки (включить страницу) — сохраняется сразу</span>
