@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="legal-page">
+  <header class="legal-top">
+    <a href="/" aria-label="Pingly">
+      <img class="brand-logo" src="/static/logo.svg" data-light-src="/static/logo.svg" data-dark-src="/static/logo-dark.svg" height="28" alt="Pingly">
+    </a>
+    <nav class="legal-nav">
+      <a href="/privacy">Конфиденциальность</a>
+      <a href="/terms">Соглашение</a>
+      <a href="/contacts">Контакты</a>
+    </nav>
+  </header>
+
+  <main class="legal-main">
+    <article class="legal-article">
+      {% block legal %}{% endblock %}
+    </article>
+  </main>
+
+  <footer class="legal-foot">
+    <div class="legal-foot-links">
+      <a href="/privacy">Политика конфиденциальности</a>
+      <a href="/terms">Пользовательское соглашение</a>
+      <a href="/contacts">Контакты и поддержка</a>
+    </div>
+    <div class="muted">© 2026 Pingly · pingly-app.ru</div>
+  </footer>
+</div>
+{% endblock %}

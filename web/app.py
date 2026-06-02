@@ -80,6 +80,8 @@ templates.env.filters["ru_weekday"] = _ru_weekday
 templates.env.filters["msk"] = _fmt_msk
 templates.env.filters["ru_days"] = _ru_days
 templates.env.globals["subscription_info"] = _subscription_info
+templates.env.globals["support_email"] = _config.SUPPORT_EMAIL
+templates.env.globals["support_username"] = _config.SUPPORT_USERNAME
 services = create_services()
 signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")
 
@@ -184,6 +186,19 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         except HTTPException:
             return templates.TemplateResponse("landing.html", {"request": request, "bot_username": _config.BOT_USERNAME})
         return RedirectResponse(_cabinet_url(user), status_code=303)
+
+    # Public legal pages — always reachable, no auth (payment provider review needs these).
+    @app.get("/privacy", response_class=HTMLResponse)
+    async def privacy(request: Request) -> Response:
+        return templates.TemplateResponse("legal_privacy.html", {"request": request})
+
+    @app.get("/terms", response_class=HTMLResponse)
+    async def terms(request: Request) -> Response:
+        return templates.TemplateResponse("legal_terms.html", {"request": request})
+
+    @app.get("/contacts", response_class=HTMLResponse)
+    async def contacts(request: Request) -> Response:
+        return templates.TemplateResponse("contacts.html", {"request": request, "bot_username": _config.BOT_USERNAME})
 
     @app.get("/login", response_class=HTMLResponse)
     async def login(request: Request, error: str | None = None) -> Response:

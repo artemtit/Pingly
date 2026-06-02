@@ -16,6 +16,9 @@ BOT_USERNAME: str = os.getenv("BOT_USERNAME", "")  # also set at startup in bot.
 
 # Telegram id that receives support messages from the web form (the founder).
 SUPPORT_TG_ID: int = int(os.getenv("SUPPORT_TG_ID", "2091126912") or 0)
+# Public support contacts shown to users (and to the payment provider's review).
+SUPPORT_USERNAME: str = os.getenv("SUPPORT_USERNAME", "ligr5").lstrip("@")
+SUPPORT_EMAIL: str = os.getenv("SUPPORT_EMAIL", "at147824@gmail.com")
 
 # Platega payments (subscriptions). Secrets live in .env, never in git.
 PLATEGA_API_URL: str = os.getenv("PLATEGA_API_URL", "https://app.platega.io")

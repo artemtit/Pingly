@@ -3,12 +3,28 @@ from __future__ import annotations
 from aiogram import Router
 from aiogram.filters import Command, CommandStart
 from aiogram.filters.command import CommandObject
-from aiogram.types import LinkPreviewOptions, Message, ReplyKeyboardRemove
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    LinkPreviewOptions,
+    Message,
+    ReplyKeyboardRemove,
+)
 
+import config
 from application.factory import create_services
 
 NO_PREVIEW = LinkPreviewOptions(is_disabled=True)
 WEB_URL = "https://pingly-app.ru"
+
+
+def _legal_keyboard() -> InlineKeyboardMarkup:
+    """Permanent-access buttons to the legal docs and support (payment review needs these)."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📄 Политика конфиденциальности", url=f"{WEB_URL}/privacy")],
+        [InlineKeyboardButton(text="📑 Пользовательское соглашение", url=f"{WEB_URL}/terms")],
+        [InlineKeyboardButton(text="💬 Поддержка", url=f"https://t.me/{config.SUPPORT_USERNAME}")],
+    ])
 
 router = Router()
 services = create_services()
@@ -71,8 +87,20 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
         f"Привет, {message.from_user.first_name}! 👋\n\n"
         "Pingly сам напоминает ученикам о занятиях, а ты видишь, кто придёт.\n\n"
         f"👨‍🏫 Репетитор? Зарегистрируйся на сайте: {WEB_URL}\n"
-        "🎓 Ученик? Попроси репетитора прислать ссылку-приглашение — она придёт прямо сюда.",
+        "🎓 Ученик? Попроси репетитора прислать ссылку-приглашение — она придёт прямо сюда.\n\n"
+        "📄 Документы и поддержка — команда /help.",
         reply_markup=ReplyKeyboardRemove(),
+        link_preview_options=NO_PREVIEW,
+    )
+
+
+@router.message(Command("help"))
+async def cmd_help(message: Message) -> None:
+    await message.answer(
+        "ℹ️ Pingly — сервис напоминаний о занятиях для репетиторов.\n\n"
+        f"Поддержка: Telegram @{config.SUPPORT_USERNAME}, e-mail {config.SUPPORT_EMAIL}\n\n"
+        "Документы и контакты — по кнопкам ниже:",
+        reply_markup=_legal_keyboard(),
         link_preview_options=NO_PREVIEW,
     )
 

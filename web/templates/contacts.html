@@ -1,0 +1,26 @@
+{% extends "legal_base.html" %}
+{% block legal %}
+<h1>Контакты и поддержка</h1>
+<p class="legal-meta">Сервис Pingly (pingly-app.ru)</p>
+
+<p>Если у вас есть вопрос, проблема или предложение — напишите нам любым удобным способом. Мы отвечаем в течение рабочего дня.</p>
+
+<div class="legal-contacts">
+  <a class="legal-contact" href="https://t.me/{{ support_username }}">
+    <span class="legal-contact-label">Telegram</span>
+    <span class="legal-contact-value">@{{ support_username }}</span>
+  </a>
+  <a class="legal-contact" href="mailto:{{ support_email }}">
+    <span class="legal-contact-label">E-mail</span>
+    <span class="legal-contact-value">{{ support_email }}</span>
+  </a>
+  {% if bot_username %}
+  <a class="legal-contact" href="https://t.me/{{ bot_username }}">
+    <span class="legal-contact-label">Telegram-бот</span>
+    <span class="legal-contact-value">@{{ bot_username }}</span>
+  </a>
+  {% endif %}
+</div>
+
+<p class="muted" style="margin-top:18px;">Зарегистрированные пользователи также могут отправить обращение прямо из личного кабинета — в разделе «Настройки» есть форма обратной связи, сообщения из которой поступают в поддержку напрямую.</p>
+{% endblock %}
