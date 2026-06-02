@@ -31,3 +31,14 @@ SUBSCRIPTION_PRICE_RUB: int = int(os.getenv("SUBSCRIPTION_PRICE_RUB", "990") or 
 # provider — all billing infrastructure stays in place, only the entry point
 # (subscribe button + route) is gated. Flip PAYMENTS_ENABLED=1 in .env to turn on.
 PAYMENTS_ENABLED: bool = os.getenv("PAYMENTS_ENABLED", "0") == "1"
+
+# Email confirmation on registration (codes sent via Resend). Off until the
+# Resend API key + verified sender are configured. Flip to 1 to require codes.
+EMAIL_VERIFICATION_ENABLED: bool = os.getenv("EMAIL_VERIFICATION_ENABLED", "0") == "1"
+RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+RESEND_FROM: str = os.getenv("RESEND_FROM", "Pingly <onboarding@resend.dev>")
+
+# Cloudflare Turnstile CAPTCHA on registration. Off until site/secret keys are set.
+CAPTCHA_ENABLED: bool = os.getenv("CAPTCHA_ENABLED", "0") == "1"
+TURNSTILE_SITE_KEY: str = os.getenv("TURNSTILE_SITE_KEY", "")
+TURNSTILE_SECRET_KEY: str = os.getenv("TURNSTILE_SECRET_KEY", "")

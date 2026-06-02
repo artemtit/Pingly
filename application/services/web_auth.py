@@ -6,9 +6,11 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from application.repositories import PinglyRepository
+from infrastructure import email as email_client
 
 _PBKDF2_ITERATIONS = 200_000
 _TG_AUTH_MAX_AGE = 86400  # accept Telegram login payloads up to 24h old
+_CODE_TTL_MINUTES = 15
 
 
 def hash_password(password: str) -> str:
@@ -54,7 +56,9 @@ class WebAuthService:
         return await self.repo.consume_web_token(self._hash(token), datetime.now(timezone.utc))
 
     # ---------------- Email + password ----------------
-    async def register_tutor_email(self, full_name: str, email: str, password: str) -> tuple[dict | None, str | None]:
+    async def register_tutor_email(
+        self, full_name: str, email: str, password: str, require_verification: bool = False,
+    ) -> tuple[dict | None, str | None]:
         full_name = (full_name or "").strip()
         email = (email or "").strip().lower()
         if not full_name:
@@ -66,7 +70,9 @@ class WebAuthService:
         existing = await self.repo.get_user_by_email(email)
         if existing:
             return None, "Аккаунт с таким email уже есть — войди"
-        user = await self.repo.create_email_tutor(email, hash_password(password), full_name)
+        user = await self.repo.create_email_tutor(
+            email, hash_password(password), full_name, email_verified=not require_verification,
+        )
         return user, None
 
     async def login_email(self, email: str, password: str) -> dict | None:
@@ -75,6 +81,54 @@ class WebAuthService:
         if not user or not verify_password(password, user.get("password_hash")):
             return None
         return user
+
+    # ---------------- Email verification codes ----------------
+    async def send_verification_code(self, user: dict) -> tuple[bool, str | None]:
+        """Generate, store and email a fresh 6-digit code. Returns (ok, error)."""
+        email = (user or {}).get("email")
+        if not email:
+            return False, "У аккаунта нет email"
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        expires_at = (datetime.now(timezone.utc) + timedelta(minutes=_CODE_TTL_MINUTES)).isoformat()
+        await self.repo.set_verification_code(user["id"], code, expires_at)
+        try:
+            await email_client.send_email(
+                email, "Код подтверждения Pingly", email_client.verification_html(code),
+            )
+        except email_client.EmailError as exc:
+            return False, str(exc)
+        return True, None
+
+    async def verify_email_code(self, email: str, code: str) -> tuple[dict | None, str | None]:
+        """Check the code for an account and mark it verified. Returns (user, error)."""
+        email = (email or "").strip().lower()
+        code = (code or "").strip()
+        user = await self.repo.get_user_by_email(email)
+        if not user:
+            return None, "Аккаунт не найден"
+        if user.get("email_verified"):
+            return user, None
+        stored = user.get("verification_code")
+        expires = user.get("verification_expires_at")
+        if not stored or not code or not hmac.compare_digest(str(stored), code):
+            return None, "Неверный код"
+        if expires:
+            try:
+                if datetime.fromisoformat(str(expires).replace("Z", "+00:00")) < datetime.now(timezone.utc):
+                    return None, "Код устарел — запроси новый"
+            except ValueError:
+                pass
+        verified = await self.repo.mark_email_verified(user["id"])
+        return verified or user, None
+
+    async def resend_code(self, email: str) -> bool:
+        """Re-send a code for an unverified account. No-op if already verified."""
+        email = (email or "").strip().lower()
+        user = await self.repo.get_user_by_email(email)
+        if not user or user.get("email_verified"):
+            return False
+        ok, _ = await self.send_verification_code(user)
+        return ok
 
     # ---------------- Telegram Login Widget ----------------
     def verify_telegram_widget(self, data: dict[str, str]) -> bool:

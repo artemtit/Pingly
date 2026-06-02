@@ -73,12 +73,30 @@ class SupabasePinglyRepository:
         result = await self._db().table("users").select("*").ilike("email", email).execute()
         return _one(result)
 
-    async def create_email_tutor(self, email: str, password_hash: str, full_name: str) -> dict[str, Any]:
+    async def set_verification_code(self, user_id: str, code: str, expires_at: str) -> None:
+        await (
+            self._db().table("users")
+            .update({"verification_code": code, "verification_expires_at": expires_at})
+            .eq("id", user_id)
+            .execute()
+        )
+
+    async def mark_email_verified(self, user_id: str) -> dict[str, Any] | None:
+        result = await (
+            self._db().table("users")
+            .update({"email_verified": True, "verification_code": None, "verification_expires_at": None})
+            .eq("id", user_id)
+            .execute()
+        )
+        return _one(result)
+
+    async def create_email_tutor(self, email: str, password_hash: str, full_name: str, email_verified: bool = True) -> dict[str, Any]:
         result = await self._db().table("users").insert({
             "role": "tutor",
             "email": email,
             "password_hash": password_hash,
             "full_name": full_name,
+            "email_verified": email_verified,
             "trial_ends_at": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
             "subscription_status": "trial",
             "referral_code": _gen_code(),

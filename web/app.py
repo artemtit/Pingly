@@ -11,6 +11,7 @@ from itsdangerous import BadSignature, URLSafeSerializer
 
 import config as _config
 from application.factory import create_services
+from infrastructure import captcha as _captcha
 from application.services.accounts import subscription_info as _subscription_info
 from config import WEB_BASE_URL, WEB_SECRET
 from web.calendar_view import STATUS_LABELS, build_calendar, parse_anchor
@@ -83,6 +84,8 @@ templates.env.globals["subscription_info"] = _subscription_info
 templates.env.globals["support_email"] = _config.SUPPORT_EMAIL
 templates.env.globals["support_username"] = _config.SUPPORT_USERNAME
 templates.env.globals["payments_enabled"] = _config.PAYMENTS_ENABLED
+templates.env.globals["captcha_enabled"] = _config.CAPTCHA_ENABLED
+templates.env.globals["turnstile_site_key"] = _config.TURNSTILE_SITE_KEY
 services = create_services()
 signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")
 
@@ -212,6 +215,10 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         user = await services.web_auth.login_email(email, password)
         if not user:
             return RedirectResponse("/login?error=bad_credentials", status_code=303)
+        if _config.EMAIL_VERIFICATION_ENABLED and not user.get("email_verified"):
+            from urllib.parse import quote
+            await services.web_auth.send_verification_code(user)
+            return RedirectResponse(f"/verify?email={quote(email.strip().lower())}", status_code=303)
         response = RedirectResponse(_cabinet_url(user), status_code=303)
         _set_session(response, user)
         return response
@@ -224,18 +231,51 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
 
     @app.post("/register")
     async def register_submit(
+        request: Request,
         full_name: str = Form(...), email: str = Form(...), password: str = Form(...),
         ref: str = Form(""),
+        cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
     ) -> Response:
-        user, err = await services.web_auth.register_tutor_email(full_name, email, password)
+        from urllib.parse import quote
+        if _config.CAPTCHA_ENABLED:
+            ip = request.client.host if request.client else None
+            if not await _captcha.verify_turnstile(cf_turnstile_response, ip):
+                return RedirectResponse(f"/register?error={quote('Подтвердите, что вы не робот')}", status_code=303)
+        user, err = await services.web_auth.register_tutor_email(
+            full_name, email, password, require_verification=_config.EMAIL_VERIFICATION_ENABLED,
+        )
         if err or not user:
-            from urllib.parse import quote
             return RedirectResponse(f"/register?error={quote(err or 'Не удалось зарегистрироваться')}", status_code=303)
         if ref.strip():
             await services.accounts.apply_referral(user["id"], ref.strip())
+        if _config.EMAIL_VERIFICATION_ENABLED:
+            await services.web_auth.send_verification_code(user)
+            return RedirectResponse(f"/verify?email={quote(user['email'])}", status_code=303)
         response = RedirectResponse(_cabinet_url(user), status_code=303)
         _set_session(response, user)
         return response
+
+    @app.get("/verify", response_class=HTMLResponse)
+    async def verify_page(request: Request, email: str = "", error: str | None = None, sent: str | None = None) -> Response:
+        return templates.TemplateResponse("verify.html", {
+            "request": request, "email": email, "error": error, "sent": sent,
+        })
+
+    @app.post("/verify")
+    async def verify_submit(email: str = Form(...), code: str = Form(...)) -> Response:
+        from urllib.parse import quote
+        user, err = await services.web_auth.verify_email_code(email, code)
+        if err or not user:
+            return RedirectResponse(f"/verify?email={quote(email)}&error={quote(err or 'Неверный код')}", status_code=303)
+        response = RedirectResponse(_cabinet_url(user), status_code=303)
+        _set_session(response, user)
+        return response
+
+    @app.post("/verify/resend")
+    async def verify_resend(email: str = Form(...)) -> Response:
+        from urllib.parse import quote
+        await services.web_auth.resend_code(email)
+        return RedirectResponse(f"/verify?email={quote(email.strip().lower())}&sent=1", status_code=303)
 
     @app.get("/auth/telegram")
     async def auth_telegram(token: str) -> Response:
