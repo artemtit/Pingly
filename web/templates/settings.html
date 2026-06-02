@@ -11,7 +11,8 @@
 {% elif saved %}<div class="trial-banner">✅ Сохранено</div>{% endif %}
 {% if paid == '1' %}<div class="trial-banner">✅ Оплата прошла — подписка активна</div>
 {% elif paid == '0' %}<div class="trial-banner trial-ending">Оплата не завершена. Если списание прошло — статус обновится в течение минуты.</div>{% endif %}
-{% if error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
+{% if error == 'payments_off' %}<div class="trial-banner">💳 Онлайн-оплата временно недоступна. Сервис работает в полном объёме.</div>
+{% elif error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
 
 <section class="grid two" style="align-items: start;">
   <div class="card">
@@ -87,10 +88,16 @@
     <div class="settings-row"><span class="muted">{{ 'Пробный до' if sub.status != 'active' else 'Действует до' }}</span><strong>{{ sub.trial_ends_at | msk('%d.%m.%Y') }}</strong></div>
     {% endif %}
     <div class="settings-row"><span class="muted">Цена</span><strong>{{ price or 990 }} ₽/мес</strong></div>
+    {% if payments_enabled %}
     <form method="post" action="/tutor/billing/subscribe" style="margin:12px 0 6px;">
       <button class="btn btn-primary" style="width:100%;">💳 {{ 'Продлить подписку' if sub.status == 'active' else 'Оформить подписку' }} — {{ price or 990 }} ₽</button>
     </form>
-    <p class="muted" style="margin:0 0 14px;font-size:13px;">Оплата картой через Platega. Доступ продлевается на 30 дней. Автосписаний нет — за 3 дня до конца напомним в Telegram.</p>
+    <p class="muted" style="margin:0 0 14px;font-size:13px;">Оплата через СБП. Доступ продлевается на 30 дней. Автосписаний нет — за 3 дня до конца напомним в Telegram.</p>
+    {% else %}
+    <div style="margin:12px 0 14px;padding:12px 14px;border-radius:12px;background:var(--color-bg-subtle);border:1px solid var(--color-border);font-size:13px;" class="muted">
+      💳 Онлайн-оплата скоро будет доступна. Сервис продолжает работать в полном объёме.
+    </div>
+    {% endif %}
     {% if referral_code %}
     <h3 style="font-size:15px;margin:6px 0 6px;">🎁 Приведи коллегу</h3>
     <p class="muted" style="margin-bottom:8px;font-size:13px;">За каждого репетитора по твоей ссылке — +30 дней тебе и ему.</p>
