@@ -380,8 +380,13 @@ textarea { min-height: 86px; resize: vertical; }
 .more-sheet a .ic { color: var(--gray-400); width: 22px; height: 22px; }
 .more-sheet a.active { background: var(--orange-50); color: var(--orange-700); }
 .more-sheet a.active .ic { color: var(--orange-600); }
+.more-sheet-sep { height: 1px; background: var(--color-border); margin: 6px 8px; }
+.more-sheet a.more-logout { color: var(--color-error); }
+.more-sheet a.more-logout .ic { color: var(--color-error); }
 [data-theme="dark"] .more-sheet { background: #1E293B; }
 [data-theme="dark"] .more-sheet a { color: var(--fg1); }
+[data-theme="dark"] .more-sheet a.more-logout { color: #f87171; }
+[data-theme="dark"] .more-sheet a.more-logout .ic { color: #f87171; }
 
 /* ---------------- responsive tablet (641–980px) ---------------- */
 @media (max-width: 980px) {
