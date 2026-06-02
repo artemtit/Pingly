@@ -29,14 +29,22 @@ class PublicService:
         return profile
 
     @staticmethod
-    def parse_badges(raw: str | None) -> list[str]:
-        """One badge per line. Trim, drop blanks, cap at 6 badges / 40 chars each."""
-        out: list[str] = []
+    def parse_badges(raw: str | None) -> list[dict]:
+        """Badges stored one per line as "icon|text". Returns [{icon, text}], max 4,
+        text capped at 40 chars. Legacy plain-text lines default to the check icon."""
+        out: list[dict] = []
         for line in (raw or "").splitlines():
-            text = line.strip()[:40]
+            line = line.strip()
+            if not line:
+                continue
+            if "|" in line:
+                icon, text = line.split("|", 1)
+                icon, text = icon.strip() or "check", text.strip()[:40]
+            else:
+                icon, text = "check", line[:40]
             if text:
-                out.append(text)
-            if len(out) >= 6:
+                out.append({"icon": icon, "text": text})
+            if len(out) >= 4:
                 break
         return out
 

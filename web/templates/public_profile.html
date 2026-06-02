@@ -182,13 +182,13 @@
       {% if profile.bio %}<p class="bio">{{ profile.bio }}</p>{% endif %}
     </section>
 
-    {% set chips = badges if badges else ['Ответ в течение дня', 'Удобное время', 'Напоминания в Telegram'] %}
+    {% set chips = badges if badges else default_badges %}
     {% if chips %}
     <ul class="chips reveal d1">
       {% for c in chips %}
       <li class="chip">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
-        {{ c }}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ (badge_icons.get(c.icon) or badge_icons['check']).svg | safe }}</svg>
+        {{ c.text }}
       </li>
       {% endfor %}
     </ul>

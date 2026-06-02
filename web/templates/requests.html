@@ -28,8 +28,29 @@
       <input class="input" name="subjects" value="{{ profile.subjects if profile and profile.subjects else '' }}" placeholder="Математика, физика · 5–11 класс"></label>
     <label class="field"><span>О себе</span>
       <textarea name="bio" placeholder="Короткий рассказ: опыт, формат, результаты">{{ profile.bio if profile and profile.bio else '' }}</textarea></label>
-    <label class="field"><span>Плашки под именем <span class="muted" style="font-weight:400;">— по одной на строку, до 6</span></span>
-      <textarea name="badges" rows="4" placeholder="Онлайн и очно&#10;Опыт 8 лет&#10;Удобное время">{{ profile.badges if profile and profile.badges else '' }}</textarea></label>
+    <div class="field"><span>Плашки под именем <span class="muted" style="font-weight:400;">— иконка + текст, до 4</span></span>
+      <div id="badge-rows">
+        {% for b in badge_list %}
+        <div class="badge-row">
+          <select name="badge_icon" class="input badge-icon">
+            {% for key, ic in badge_icons.items() %}<option value="{{ key }}" {{ 'selected' if b.icon == key }}>{{ ic.label }}</option>{% endfor %}
+          </select>
+          <input class="input" name="badge_text" value="{{ b.text }}" maxlength="40" placeholder="Например: Опыт 8 лет">
+          <button type="button" class="badge-del" onclick="this.closest('.badge-row').remove()" aria-label="Удалить">✕</button>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" id="badge-add" onclick="addBadgeRow()" style="margin-top:6px;">+ Добавить плашку</button>
+    </div>
+    <template id="badge-row-tpl">
+      <div class="badge-row">
+        <select name="badge_icon" class="input badge-icon">
+          {% for key, ic in badge_icons.items() %}<option value="{{ key }}">{{ ic.label }}</option>{% endfor %}
+        </select>
+        <input class="input" name="badge_text" maxlength="40" placeholder="Например: Опыт 8 лет">
+        <button type="button" class="badge-del" onclick="this.closest('.badge-row').remove()" aria-label="Удалить">✕</button>
+      </div>
+    </template>
     {% set pt = profile.page_theme if profile and profile.page_theme else 'auto' %}
     <label class="field"><span>Тема страницы</span>
       <select class="input" name="page_theme">
@@ -95,6 +116,15 @@ function copyField(id, btn) {
     navigator.clipboard.writeText(el.value).then(done, fallback);
   } else { fallback(); }
   el.setAttribute('readonly', '');
+}
+function addBadgeRow() {
+  var rows = document.getElementById('badge-rows');
+  if (rows.querySelectorAll('.badge-row').length >= 4) return;
+  var tpl = document.getElementById('badge-row-tpl');
+  rows.appendChild(tpl.content.cloneNode(true));
+  if (rows.querySelectorAll('.badge-row').length >= 4) {
+    document.getElementById('badge-add').style.display = 'none';
+  }
 }
 </script>
 {% endblock %}

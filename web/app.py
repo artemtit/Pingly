@@ -86,6 +86,33 @@ templates.env.globals["support_username"] = _config.SUPPORT_USERNAME
 templates.env.globals["payments_enabled"] = _config.PAYMENTS_ENABLED
 templates.env.globals["captcha_enabled"] = _config.CAPTCHA_ENABLED
 templates.env.globals["turnstile_site_key"] = _config.TURNSTILE_SITE_KEY
+
+# Brand icon set for the public-page badges (chips). key -> {label for the picker,
+# svg = inner paths rendered inside a stroked 24x24 <svg>}.
+BADGE_ICONS: dict[str, dict[str, str]] = {
+    "monitor": {"label": "💻 Онлайн / экран", "svg": '<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>'},
+    "map-pin": {"label": "📍 Очно / место", "svg": '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>'},
+    "gauge": {"label": "📊 Опыт / уровень", "svg": '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>'},
+    "clock": {"label": "🕐 Время", "svg": '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'},
+    "calendar": {"label": "📅 Расписание", "svg": '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>'},
+    "graduation-cap": {"label": "🎓 Образование", "svg": '<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>'},
+    "award": {"label": "🏅 Результат", "svg": '<path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="12" cy="8" r="6"/>'},
+    "users": {"label": "👥 Ученики", "svg": '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'},
+    "star": {"label": "⭐ Рейтинг", "svg": '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>'},
+    "check": {"label": "✓ Галочка / гарантия", "svg": '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>'},
+    "ruble": {"label": "₽ Цена", "svg": '<path d="M6 11h8a4 4 0 0 0 0-8H9v18"/><path d="M6 15h8"/>'},
+    "bell": {"label": "🔔 Напоминания", "svg": '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>'},
+    "message": {"label": "💬 Telegram / связь", "svg": '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/>'},
+}
+
+DEFAULT_BADGES = [
+    {"icon": "clock", "text": "Ответ в течение дня"},
+    {"icon": "calendar", "text": "Удобное время"},
+    {"icon": "bell", "text": "Напоминания в Telegram"},
+]
+
+templates.env.globals["badge_icons"] = BADGE_ICONS
+templates.env.globals["default_badges"] = DEFAULT_BADGES
 services = create_services()
 signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")
 
@@ -595,9 +622,11 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         _require(user, "tutor")
         requests = await services.public.list_requests(user["id"])
         profile = await services.public.get_profile(user["id"])
+        badge_list = services.public.parse_badges((profile or {}).get("badges")) or DEFAULT_BADGES
         return templates.TemplateResponse("requests.html", _ctx(
             request, user, "requests", requests=requests,
             profile=profile, web_base=WEB_BASE_URL, saved=saved, error=error,
+            badge_list=badge_list,
         ))
 
     @app.post("/tutor/requests/{request_id}/done")
@@ -624,11 +653,17 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         bio: str = Form(""),
         subjects: str = Form(""),
         public_enabled: str = Form(""),
-        badges: str = Form(""),
+        badge_icon: list[str] = Form(default=[]),
+        badge_text: list[str] = Form(default=[]),
         page_theme: str = Form("auto"),
         user: dict = Depends(current_user),
     ) -> Response:
         _require(user, "tutor")
+        # Pair each icon with its text; drop empty rows. Stored as "icon|text" lines.
+        badges = "\n".join(
+            f"{(ic or 'check').strip()}|{tx.strip()}"
+            for ic, tx in zip(badge_icon, badge_text) if (tx or "").strip()
+        )
         _, err = await services.public.update_profile(
             user["id"], slug, bio, subjects, public_enabled == "1", badges, page_theme,
         )
