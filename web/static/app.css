@@ -434,6 +434,8 @@ textarea { min-height: 86px; resize: vertical; }
      читается. Прячем сетку и показываем вертикальный список-агенду. */
   .cal-grid { display: none; }
   .cal-agenda { display: block; }
+  /* «Месяц» на телефоне выглядит как «Неделя» (оба — агенда) — убираем дубль */
+  .view-switch .view-month { display: none; }
 
   .mobile-header {
     display: flex !important;

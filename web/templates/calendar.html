@@ -9,7 +9,7 @@
   <div class="view-switch">
     <a href="{{ base }}?view=day&date={{ cal.anchor }}" class="{{ 'active' if cal.view == 'day' }}">День</a>
     <a href="{{ base }}?view=week&date={{ cal.anchor }}" class="{{ 'active' if cal.view == 'week' }}">Неделя</a>
-    <a href="{{ base }}?view=month&date={{ cal.anchor }}" class="{{ 'active' if cal.view == 'month' }}">Месяц</a>
+    <a href="{{ base }}?view=month&date={{ cal.anchor }}" class="view-month {{ 'active' if cal.view == 'month' }}">Месяц</a>
   </div>
 </div>
 
