@@ -631,24 +631,25 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
 
     @app.get("/tutor/requests/preview", response_class=HTMLResponse)
     async def public_preview(request: Request, user: dict = Depends(current_user)) -> Response:
-        # Live preview of the tutor's own public page using their currently saved
-        # profile — works even when the page is not enabled yet, so they can see
-        # how it looks before publishing. Submitting the form here is a no-op
-        # (the booking endpoint only accepts real, enabled slugs).
+        # An *ideal-example* page (a well-filled sample profile) so the tutor sees
+        # how a good public page looks and how to fill their own. It does NOT show
+        # the tutor's own data — it's a reference. The booking form is disabled.
         _require(user, "tutor")
-        profile = await services.public.get_profile(user["id"]) or {}
-        tutor_name = (
-            (profile.get("users") or {}).get("full_name")
-            or profile.get("display_name")
-            or user.get("full_name")
-            or "Анна Соколова"
-        )
-        badges = services.public.parse_badges(profile.get("badges")) or DEFAULT_BADGES
+        sample_profile = {
+            "subjects": "Математика, физика · 5–11 класс",
+            "bio": ("Помогаю подтянуть оценки и подготовиться к ОГЭ и ЕГЭ без "
+                    "зубрёжки. Объясняю простым языком, занятия онлайн и очно."),
+        }
+        sample_badges = [
+            {"icon": "monitor", "text": "Онлайн и очно"},
+            {"icon": "gauge", "text": "Опыт 8 лет"},
+            {"icon": "award", "text": "90% сдали на 4 и 5"},
+            {"icon": "clock", "text": "Удобное время"},
+        ]
         return templates.TemplateResponse("public_profile.html", {
-            "request": request, "profile": profile, "tutor_name": tutor_name,
-            "slug": profile.get("slug") or "preview", "sent": None,
-            "bot_username": _config.BOT_USERNAME, "badges": badges,
-            "page_theme": profile.get("page_theme") or "auto", "preview": True,
+            "request": request, "profile": sample_profile, "tutor_name": "Анна Соколова",
+            "slug": "example", "sent": None, "bot_username": _config.BOT_USERNAME,
+            "badges": sample_badges, "page_theme": "auto", "example": True,
         })
 
     @app.post("/tutor/requests/{request_id}/done")
@@ -821,9 +822,10 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             who = user.get("full_name") or "Пользователь"
             role = "репетитор" if user["role"] == "tutor" else "ученик"
             contact = ("@" + user["tg_username"]) if user.get("tg_username") else (user.get("email") or "—")
+            acct_id = str(user.get("id") or "")[:8].upper()
             await _send_telegram(
                 _config.SUPPORT_TG_ID,
-                f"🆘 Поддержка Pingly\n\nОт: {who} ({role}, {contact})\n\n{text[:3000]}",
+                f"🆘 Поддержка Pingly\n\nОт: {who} ({role}, {contact})\nID: {acct_id}\n\n{text[:3000]}",
             )
         return RedirectResponse(f"{base}?saved=support", status_code=303)
 

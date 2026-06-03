@@ -28,7 +28,12 @@
         <span class="dot"></span>{{ "👨‍🏫 Репетитор" if user.role == "tutor" else "🎓 Ученик" }}
       </span>
     </div>
-    <p class="muted" style="margin-top:14px;">Имя видят твои ученики в напоминаниях. Сайт и бот используют один аккаунт.</p>
+    <div class="settings-row"><span class="muted">ID для поддержки</span>
+      <button class="id-chip" type="button" data-id="{{ user.id[:8] | upper }}" onclick="copyText(this)" title="Скопировать">
+        <code>{{ user.id[:8] | upper }}</code><span class="id-copy">📋</span>
+      </button>
+    </div>
+    <p class="muted" style="margin-top:14px;">Имя видят твои ученики в напоминаниях. Сайт и бот используют один аккаунт. <b>ID для поддержки</b> назови, когда пишешь нам — так мы быстро найдём твой аккаунт.</p>
   </div>
 
   <div class="card">
@@ -138,6 +143,23 @@ function copyField(id, btn) {
     fallback();
   }
   el.setAttribute('readonly', '');
+}
+function copyText(btn) {
+  var val = btn.getAttribute('data-id');
+  var mark = btn.querySelector('.id-copy');
+  function done(){
+    if (!mark) return;
+    var old = mark.textContent; mark.textContent = '✓';
+    setTimeout(function(){ mark.textContent = old; }, 1500);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(val).then(done, done);
+  } else {
+    var t = document.createElement('textarea'); t.value = val;
+    document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); done(); } catch (e) {}
+    document.body.removeChild(t);
+  }
 }
 </script>
 {% endblock %}

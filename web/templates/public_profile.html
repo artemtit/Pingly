@@ -171,6 +171,12 @@
 <body>
   <div class="wrap">
 
+    {% if example %}
+    <div style="margin:10px 0 -6px;padding:11px 15px;border-radius:12px;background:var(--orange-50);border:1px solid #FED7AA;color:#9A3412;font-size:13.5px;font-weight:600;text-align:center;">
+      Это пример идеально оформленной страницы — заполни свою так же
+    </div>
+    {% endif %}
+
     <header class="topbar">
       <a class="brand" href="/" aria-label="Pingly"><img class="brand-logo-light" src="/static/logo.svg" height="28" alt="Pingly"><img class="brand-logo-dark" src="/static/logo-dark.svg" height="28" alt="Pingly"></a>
     </header>
@@ -219,7 +225,7 @@
         </div>
       </div>
 
-      <form method="post" action="/u/{{ slug }}/book">
+      <form method="post" action="/u/{{ slug }}/book"{% if example %} onsubmit="return false"{% endif %}>
         <div class="field">
           <label for="name">Имя</label>
           <div class="input-shell">
