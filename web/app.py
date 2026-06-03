@@ -113,6 +113,29 @@ DEFAULT_BADGES = [
 
 templates.env.globals["badge_icons"] = BADGE_ICONS
 templates.env.globals["default_badges"] = DEFAULT_BADGES
+
+
+def _user_plan(user: dict | None) -> str:
+    """Effective tier. Default 'max' so accounts stay fully unlocked while the
+    paywall is dormant; only matters once PLANS_ENABLED is turned on."""
+    return ((user or {}).get("plan") or "max").lower()
+
+
+def _plan_locked(user: dict | None, section: str) -> bool:
+    """True only when the tier paywall is live AND this section is Max-only AND
+    the account is not on Max. With PLANS_ENABLED off this is always False."""
+    return bool(
+        _config.PLANS_ENABLED
+        and section in _config.MAX_ONLY_SECTIONS
+        and _user_plan(user) != "max"
+    )
+
+
+templates.env.globals["plans_enabled"] = _config.PLANS_ENABLED
+templates.env.globals["price_pro"] = _config.PRICE_PRO_RUB
+templates.env.globals["price_max"] = _config.PRICE_MAX_RUB
+templates.env.globals["plan_locked"] = _plan_locked
+templates.env.globals["user_plan"] = _user_plan
 services = create_services()
 signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")
 
@@ -562,6 +585,8 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/tutor/homework", response_class=HTMLResponse)
     async def tutor_homework(request: Request, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
+        if _plan_locked(user, "homework"):
+            return RedirectResponse("/tutor/settings?upgrade=homework", status_code=303)
         students = await services.students.list_students_by_user(user["id"])
         homework = await services.homework.list_for_tutor(user["id"])
         hw_templates = await services.homework.list_templates(user["id"])
@@ -613,6 +638,8 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/tutor/finance", response_class=HTMLResponse)
     async def tutor_finance(request: Request, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
+        if _plan_locked(user, "finance"):
+            return RedirectResponse("/tutor/settings?upgrade=finance", status_code=303)
         overview = await services.lessons.finance_overview(user["id"])
         lessons = await services.lessons.list_tutor_calendar(user["id"])
         unpaid = [l for l in lessons if l.get("status") == "completed" and not l.get("paid")]
@@ -624,6 +651,8 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/tutor/requests", response_class=HTMLResponse)
     async def tutor_requests(request: Request, saved: str | None = None, error: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
+        if _plan_locked(user, "requests"):
+            return RedirectResponse("/tutor/settings?upgrade=requests", status_code=303)
         requests = await services.public.list_requests(user["id"])
         profile = await services.public.get_profile(user["id"])
         badge_list = services.public.parse_badges((profile or {}).get("badges")) or DEFAULT_BADGES
@@ -720,13 +749,13 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         return RedirectResponse("/tutor/schedule", status_code=303)
 
     @app.get("/tutor/settings", response_class=HTMLResponse)
-    async def tutor_settings(request: Request, saved: str | None = None, error: str | None = None, paid: str | None = None, user: dict = Depends(current_user)) -> Response:
+    async def tutor_settings(request: Request, saved: str | None = None, error: str | None = None, paid: str | None = None, upgrade: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
         profile = await services.public.get_profile(user["id"])
         return templates.TemplateResponse("settings.html", _ctx(
             request, user, "settings", bot_username=_config.BOT_USERNAME,
             profile=profile, web_base=WEB_BASE_URL, referral_code=user.get("referral_code"),
-            saved=saved, error=error, paid=paid, price=_config.SUBSCRIPTION_PRICE_RUB,
+            saved=saved, error=error, paid=paid, upgrade=upgrade, price=_config.SUBSCRIPTION_PRICE_RUB,
         ))
 
     # ---------------- STUDENT ----------------

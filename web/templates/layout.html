@@ -46,9 +46,9 @@
       <a href="/tutor/students" class="{{ 'active' if active == 'students' }}">{{ icon('users') }} Ученики</a>
       <a href="/tutor/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }} Календарь</a>
       <a href="/tutor/schedule" class="{{ 'active' if active == 'schedule' }}">{{ icon('calendar-clock') }} Расписание</a>
-      <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }} Задания</a>
-      <a href="/tutor/finance" class="{{ 'active' if active == 'finance' }}">{{ icon('russian-ruble') }} Финансы</a>
-      <a href="/tutor/requests" class="{{ 'active' if active == 'requests' }}">{{ icon('inbox') }} Заявки</a>
+      <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }} Задания{% if plan_locked(user, 'homework') %} <span class="lock-badge">🔒</span>{% endif %}</a>
+      <a href="/tutor/finance" class="{{ 'active' if active == 'finance' }}">{{ icon('russian-ruble') }} Финансы{% if plan_locked(user, 'finance') %} <span class="lock-badge">🔒</span>{% endif %}</a>
+      <a href="/tutor/requests" class="{{ 'active' if active == 'requests' }}">{{ icon('inbox') }} Заявки{% if plan_locked(user, 'requests') %} <span class="lock-badge">🔒</span>{% endif %}</a>
       <a href="/tutor/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} Настройки</a>
       {% else %}
       <a href="/student" class="{{ 'active' if active == 'overview' }}">{{ icon('graduation-cap') }} Главная</a>
@@ -108,7 +108,7 @@
     <a href="/tutor" class="{{ 'active' if active == 'overview' }}">{{ icon('zap') }}<span>Обзор</span></a>
     <a href="/tutor/students" class="{{ 'active' if active == 'students' }}">{{ icon('users') }}<span>Ученики</span></a>
     <a href="/tutor/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }}<span>Занятия</span></a>
-    <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }}<span>Задания</span></a>
+    <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }}<span>Задания{% if plan_locked(user, 'homework') %} 🔒{% endif %}</span></a>
     <button type="button" class="more-toggle {{ 'active' if active in more_sections }}" onclick="toggleMore()" aria-label="Ещё разделы">{{ icon('menu') }}<span>Ещё</span></button>
     {% else %}
     <a href="/student" class="{{ 'active' if active == 'overview' }}">{{ icon('graduation-cap') }}<span>Главная</span></a>
@@ -124,8 +124,8 @@
   <div class="more-sheet-grip"></div>
   {% if user.role == "tutor" %}
   <a href="/tutor/schedule" class="{{ 'active' if active == 'schedule' }}">{{ icon('calendar-clock') }} Расписание</a>
-  <a href="/tutor/finance" class="{{ 'active' if active == 'finance' }}">{{ icon('russian-ruble') }} Финансы</a>
-  <a href="/tutor/requests" class="{{ 'active' if active == 'requests' }}">{{ icon('inbox') }} Заявки</a>
+  <a href="/tutor/finance" class="{{ 'active' if active == 'finance' }}">{{ icon('russian-ruble') }} Финансы{% if plan_locked(user, 'finance') %} <span class="lock-badge">🔒</span>{% endif %}</a>
+  <a href="/tutor/requests" class="{{ 'active' if active == 'requests' }}">{{ icon('inbox') }} Заявки{% if plan_locked(user, 'requests') %} <span class="lock-badge">🔒</span>{% endif %}</a>
   <a href="/tutor/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} Настройки</a>
   {% else %}
   <a href="/student/history" class="{{ 'active' if active == 'history' }}">{{ icon('calendar-clock') }} История</a>

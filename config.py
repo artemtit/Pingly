@@ -32,6 +32,15 @@ SUBSCRIPTION_PRICE_RUB: int = int(os.getenv("SUBSCRIPTION_PRICE_RUB", "990") or 
 # (subscribe button + route) is gated. Flip PAYMENTS_ENABLED=1 in .env to turn on.
 PAYMENTS_ENABLED: bool = os.getenv("PAYMENTS_ENABLED", "0") == "1"
 
+# Two subscription tiers: Pro (essentials) and Max (+ Задания, Финансы, Заявки).
+# Dormant until PLANS_ENABLED=1: with it off, every account behaves as Max and
+# nothing is locked. Turn on together with PAYMENTS_ENABLED when billing is live.
+PLANS_ENABLED: bool = os.getenv("PLANS_ENABLED", "0") == "1"
+PRICE_PRO_RUB: int = int(os.getenv("PRICE_PRO_RUB", "590") or 590)
+PRICE_MAX_RUB: int = int(os.getenv("PRICE_MAX_RUB", "990") or 990)
+# Sections available only on the Max tier (route keys / nav `active` ids).
+MAX_ONLY_SECTIONS: frozenset = frozenset({"homework", "finance", "requests"})
+
 # Email confirmation on registration (codes sent via Resend). Off until the
 # Resend API key + verified sender are configured. Flip to 1 to require codes.
 EMAIL_VERIFICATION_ENABLED: bool = os.getenv("EMAIL_VERIFICATION_ENABLED", "0") == "1"

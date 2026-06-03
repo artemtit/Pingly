@@ -13,6 +13,7 @@
 {% elif paid == '0' %}<div class="trial-banner trial-ending">Оплата не завершена. Если списание прошло — статус обновится в течение минуты.</div>{% endif %}
 {% if error == 'payments_off' %}<div class="trial-banner">💳 Онлайн-оплата временно недоступна. Сервис работает в полном объёме.</div>
 {% elif error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
+{% if upgrade %}<div class="trial-banner trial-ending">🔒 Раздел «{{ {'finance':'Финансы','requests':'Заявки','homework':'Задания'}.get(upgrade, upgrade) }}» доступен на тарифе Max. Оформи Max, чтобы открыть его.</div>{% endif %}
 
 <section class="grid two" style="align-items: start;">
   <div class="card">
@@ -112,6 +113,43 @@
     </div>
     {% endif %}
   </div>
+
+  {% if plans_enabled %}
+  <div class="card">
+    <h2>🎚️ Тарифы</h2>
+    <p class="muted" style="margin-bottom:12px;">Твой тариф: <strong>{{ 'Max' if user_plan(user) == 'max' else 'Pro' }}</strong></p>
+    <div class="plan-grid">
+      <div class="plan {{ 'current' if user_plan(user) == 'pro' }}">
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">{{ price_pro }} ₽<span>/мес</span></div>
+        <ul class="plan-feats">
+          <li class="on">Ученики</li>
+          <li class="on">Расписание и календарь</li>
+          <li class="on">Напоминания в Telegram</li>
+          <li class="off">Задания</li>
+          <li class="off">Финансы</li>
+          <li class="off">Заявки</li>
+        </ul>
+        {% if user_plan(user) == 'pro' %}<div class="plan-current-tag">Текущий</div>{% endif %}
+      </div>
+      <div class="plan plan-max {{ 'current' if user_plan(user) == 'max' }}">
+        <div class="plan-name">Max <span class="plan-badge">всё включено</span></div>
+        <div class="plan-price">{{ price_max }} ₽<span>/мес</span></div>
+        <ul class="plan-feats">
+          <li class="on">Всё из Pro</li>
+          <li class="on">Задания</li>
+          <li class="on">Финансы</li>
+          <li class="on">Заявки</li>
+        </ul>
+        {% if user_plan(user) == 'max' %}
+        <div class="plan-current-tag">Текущий</div>
+        {% elif payments_enabled %}
+        <form method="post" action="/tutor/billing/subscribe"><button class="btn btn-primary" style="width:100%;">Перейти на Max — {{ price_max }} ₽</button></form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
   {% endif %}
 
   <div class="card">
