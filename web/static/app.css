@@ -238,6 +238,11 @@ textarea { min-height: 86px; resize: vertical; }
 .dot.rescheduled { background: var(--color-warning); } .dot.cancelled { background: var(--color-error); }
 
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.invite-banner { border: 1px solid var(--orange-200); background: var(--orange-50); }
+.invite-banner strong { color: var(--orange-700); }
+[data-theme="dark"] .invite-banner { background: rgba(249,115,22,.12); border-color: rgba(249,115,22,.38); }
+[data-theme="dark"] .invite-banner strong { color: #fdba74; }
+[data-theme="dark"] .invite-banner .muted { color: #cbd5e1; }
 .cal-agenda { display: none; }
 .agenda-day { padding: 10px 0; border-bottom: 1px solid var(--color-border); }
 .agenda-day:last-child { border-bottom: none; }
