@@ -418,6 +418,14 @@ textarea { min-height: 86px; resize: vertical; }
   .app { display: block; }
   .sidebar { display: none !important; }
 
+  /* Календарь: в узких ячейках месяца/недели имя и точка не влезают и режут
+     время до «15…». На телефоне показываем только время целиком. */
+  .cal-pill .cp-name,
+  .cal-pill .dot { display: none; }
+  .cal-pill { justify-content: center; padding: 3px 4px; font-size: 11px;
+    overflow: visible; text-overflow: clip; }
+  .cal-pill .cp-time { font-variant-numeric: tabular-nums; }
+
   .mobile-header {
     display: flex !important;
     align-items: center;

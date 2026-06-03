@@ -71,7 +71,7 @@
       <div class="cal-daynum">{{ day.day }}</div>
       <div class="cal-cell-lessons">
         {% for lesson in day.lessons[:4] %}
-        <div class="cal-pill {{ lesson.status }}"><i class="dot {{ lesson.status }}"></i>{{ lesson.time }} {{ lesson.student }}</div>
+        <div class="cal-pill {{ lesson.status }}"><i class="dot {{ lesson.status }}"></i><span class="cp-time">{{ lesson.time }}</span> <span class="cp-name">{{ lesson.student }}</span></div>
         {% endfor %}
         {% if day.lessons|length > 4 %}<div class="cal-more">+{{ day.lessons|length - 4 }}</div>{% endif %}
       </div>
