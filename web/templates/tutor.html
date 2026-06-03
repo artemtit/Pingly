@@ -90,4 +90,31 @@
     {% endfor %}
   </div>
 </section>
+
+{% if analytics.students_count > 0 %}
+<section class="grid two" style="margin-top: 18px;">
+  <div class="card">
+    <div class="card-head"><h2>💰 Финансы</h2><a class="link-btn" href="/tutor/finance">Подробнее →</a></div>
+    <div class="settings-row"><span class="muted">Заработано в этом месяце</span><strong>{{ finance.month_earned }} ₽</strong></div>
+    <div class="settings-row"><span class="muted">Не оплачено</span>
+      <strong style="{{ 'color: var(--color-error);' if finance.total_unpaid else '' }}">{{ finance.total_unpaid }} ₽</strong>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>📥 Новые заявки {% if new_requests %}<span class="badge submitted">{{ new_requests | length }}</span>{% endif %}</h2><a class="link-btn" href="/tutor/requests">Все →</a></div>
+    {% for r in new_requests[:3] %}
+    <div class="timeline-row">
+      <div class="timeline-body">
+        <div class="timeline-who">{{ r.name }}</div>
+        <div class="muted">📞 {{ r.contact }}{% if r.preferred_time %} · 🕒 {{ r.preferred_time }}{% endif %}</div>
+      </div>
+      <span class="muted">{{ r.created_at | msk('%d.%m') }}</span>
+    </div>
+    {% else %}
+    <div class="empty"><div class="empty-emoji">📭</div><p>Новых заявок нет.</p></div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}

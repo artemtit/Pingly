@@ -36,7 +36,7 @@
       <form method="post" action="/student/lessons/{{ next_lesson.id }}/confirm" style="flex:1">
         <button class="btn btn-primary nl-btn">✅ Буду</button>
       </form>
-      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1">
+      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1" onsubmit="return confirm('Отменить занятие? Репетитор увидит, что тебя не будет.')">
         <button class="btn btn-secondary nl-btn">❌ Отменяю</button>
       </form>
     </div>
@@ -46,7 +46,7 @@
     {% elif next_lesson.status == 'confirmed' %}
     <div class="nl-actions">
       <div class="btn btn-primary nl-btn" style="flex:1;pointer-events:none;opacity:.85">✅ Подтверждено</div>
-      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1">
+      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1" onsubmit="return confirm('Отменить занятие? Репетитор увидит, что тебя не будет.')">
         <button class="btn btn-secondary nl-btn">❌ Отменяю</button>
       </form>
     </div>

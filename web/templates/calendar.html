@@ -41,7 +41,7 @@
       <div class="day-lesson-actions">
         {% if lesson.status in ("scheduled", "confirmed", "reschedule_requested") %}
         <form method="post" action="/tutor/lessons/{{ lesson.id }}/complete"><button class="btn btn-primary btn-sm">🔵 Провести</button></form>
-        <form method="post" action="/tutor/lessons/{{ lesson.id }}/cancel"><button class="btn btn-ghost btn-sm">🔴 Отменить</button></form>
+        <form method="post" action="/tutor/lessons/{{ lesson.id }}/cancel" onsubmit="return confirm('Отменить это занятие?')"><button class="btn btn-ghost btn-sm">🔴 Отменить</button></form>
         {% if day.date >= cal.today %}
         <details class="resched">
           <summary class="btn btn-ghost btn-sm">🟡 Перенести</summary>

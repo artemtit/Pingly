@@ -425,10 +425,14 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         now = datetime.now(timezone.utc).isoformat()
         upcoming = [l for l in lessons if l.get("status") in ("scheduled", "confirmed", "reschedule_requested") and (l.get("starts_at") or "") >= now][:6]
         pending_hw = [h for h in homework if h.get("status") == "submitted"]
+        finance = await services.lessons.finance_overview(user["id"])
+        all_requests = await services.public.list_requests(user["id"])
+        new_requests = [r for r in all_requests if r.get("status") == "new"]
         return templates.TemplateResponse("tutor.html", _ctx(
             request, user, "overview",
             students=students, analytics=analytics,
             upcoming=upcoming, pending_hw=pending_hw,
+            finance=finance, new_requests=new_requests,
         ))
 
     @app.get("/tutor/students", response_class=HTMLResponse)
