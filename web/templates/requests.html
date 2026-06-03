@@ -63,7 +63,11 @@
       <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if profile and profile.public_enabled }} onchange="this.form.submit()">
       <span>Принимать заявки (включить страницу) — сохраняется сразу</span>
     </label>
-    <button class="btn btn-primary">Сохранить изменения</button>
+    <div class="btn-row">
+      <button class="btn btn-primary">Сохранить изменения</button>
+      <a class="btn btn-secondary" href="/tutor/requests/preview" target="_blank" rel="noopener">👁 Посмотреть пример</a>
+    </div>
+    <p class="muted" style="font-size:13px;margin-top:8px;">«Пример» открывает твою страницу так, как её увидят ученики — даже до включения.</p>
   </form>
   {% if profile and profile.slug and profile.public_enabled %}
   <h3 style="font-size:15px;margin:16px 0 6px;">🔗 Твоя ссылка</h3>

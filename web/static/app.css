@@ -644,6 +644,8 @@ textarea { min-height: 86px; resize: vertical; }
 .userbox-legal a:hover { color: var(--color-primary-700); }
 
 /* Public-page badge editor (icon + text rows) */
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-row .btn { flex: 1 1 auto; }
 .badge-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .badge-row .badge-icon { flex: 0 0 auto; width: 190px; text-overflow: ellipsis; }
 .badge-row input[name="badge_text"] { flex: 1; min-width: 0; }

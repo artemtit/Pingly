@@ -629,6 +629,28 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             badge_list=badge_list,
         ))
 
+    @app.get("/tutor/requests/preview", response_class=HTMLResponse)
+    async def public_preview(request: Request, user: dict = Depends(current_user)) -> Response:
+        # Live preview of the tutor's own public page using their currently saved
+        # profile — works even when the page is not enabled yet, so they can see
+        # how it looks before publishing. Submitting the form here is a no-op
+        # (the booking endpoint only accepts real, enabled slugs).
+        _require(user, "tutor")
+        profile = await services.public.get_profile(user["id"]) or {}
+        tutor_name = (
+            (profile.get("users") or {}).get("full_name")
+            or profile.get("display_name")
+            or user.get("full_name")
+            or "Анна Соколова"
+        )
+        badges = services.public.parse_badges(profile.get("badges")) or DEFAULT_BADGES
+        return templates.TemplateResponse("public_profile.html", {
+            "request": request, "profile": profile, "tutor_name": tutor_name,
+            "slug": profile.get("slug") or "preview", "sent": None,
+            "bot_username": _config.BOT_USERNAME, "badges": badges,
+            "page_theme": profile.get("page_theme") or "auto", "preview": True,
+        })
+
     @app.post("/tutor/requests/{request_id}/done")
     async def mark_request_done(request_id: str, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
