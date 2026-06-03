@@ -238,6 +238,18 @@ textarea { min-height: 86px; resize: vertical; }
 .dot.rescheduled { background: var(--color-warning); } .dot.cancelled { background: var(--color-error); }
 
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.cal-agenda { display: none; }
+.agenda-day { padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+.agenda-day:last-child { border-bottom: none; }
+.agenda-date { font-size: 13px; font-weight: 700; color: var(--color-text-muted); text-transform: capitalize; margin-bottom: 8px; }
+.agenda-day.today .agenda-date { color: var(--color-primary-600); }
+.agenda-lessons { display: grid; gap: 6px; }
+.agenda-row { display: flex; align-items: center; gap: 12px; padding: 11px 13px; border: 1px solid var(--color-border); border-radius: 11px; background: #fff; color: inherit; text-decoration: none; }
+.agenda-time { font-family: var(--font-mono); font-size: 18px; font-weight: 700; letter-spacing: -.01em; min-width: 56px; }
+.agenda-name { flex: 1; font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agenda-row .dot { flex: 0 0 auto; }
+.agenda-row.completed { opacity: .7; }
+.agenda-row.cancelled .agenda-time, .agenda-row.cancelled .agenda-name { text-decoration: line-through; opacity: .6; }
 .cal-weekday { font-size: 12px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; padding: 4px; text-align: center; }
 .cal-cell { min-height: 96px; border: 1px solid var(--color-border); border-radius: 11px; padding: 7px; display: flex; flex-direction: column; gap: 5px; transition: border-color .15s, transform .12s; background: #fff; }
 .cal-week .cal-cell { min-height: 200px; }
@@ -418,12 +430,10 @@ textarea { min-height: 86px; resize: vertical; }
   .app { display: block; }
   .sidebar { display: none !important; }
 
-  /* Календарь: в узких ячейках месяца/недели имя и точка не влезают и режут
-     время до «15…». На телефоне показываем только время целиком. */
-  .cal-pill .cp-name,
-  .cal-pill .dot { display: none; }
-  .cal-pill { justify-content: center; padding: 3px 2px; font-size: 11px; }
-  .cal-pill .cp-time { font-variant-numeric: tabular-nums; }
+  /* Календарь: на телефоне сетка месяца/недели слишком тесная — время не
+     читается. Прячем сетку и показываем вертикальный список-агенду. */
+  .cal-grid { display: none; }
+  .cal-agenda { display: block; }
 
   .mobile-header {
     display: flex !important;

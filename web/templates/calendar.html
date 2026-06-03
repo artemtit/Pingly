@@ -78,6 +78,28 @@
     </a>
     {% endfor %}
   </div>
+
+  <div class="cal-agenda">
+    {% set ns = namespace(any=false) %}
+    {% for day in cal.days %}
+    {% if day.lessons %}
+    {% set ns.any = true %}
+    <div class="agenda-day {{ 'today' if day.is_today }}">
+      <div class="agenda-date">{{ day.weekday }}, {{ day.day }}</div>
+      <div class="agenda-lessons">
+        {% for lesson in day.lessons %}
+        <a class="agenda-row {{ lesson.status }}" href="{{ base }}?view=day&date={{ day.date }}">
+          <span class="agenda-time">{{ lesson.time }}</span>
+          <span class="agenda-name">{{ lesson.student }}</span>
+          <i class="dot {{ lesson.status }}"></i>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% if not ns.any %}<div class="empty"><div class="empty-emoji">🗓️</div><p>В этом периоде занятий нет.</p></div>{% endif %}
+  </div>
 </div>
 {% endif %}
 {% endblock %}
