@@ -67,7 +67,7 @@ class PublicService:
         profile = await self.repo.update_tutor_profile(tutor_user_id, {
             **{k: v for k, v in patch.items() if v is not None},
             "public_enabled": public_enabled,
-            "badges": "\n".join(self.parse_badges(badges)),
+            "badges": "\n".join(f"{b['icon']}|{b['text']}" for b in self.parse_badges(badges)),
             "page_theme": theme,
         })
         return profile, None
