@@ -131,6 +131,9 @@ def _plan_locked(user: dict | None, section: str) -> bool:
     )
 
 
+templates.env.globals["vk_enabled"] = _config.VK_ENABLED
+# Read at call time: VK_GROUP_ID is resolved from the token at startup.
+templates.env.globals["vk_invite_base"] = lambda: f"https://vk.me/club{_config.VK_GROUP_ID}"
 templates.env.globals["plans_enabled"] = _config.PLANS_ENABLED
 templates.env.globals["price_pro"] = _config.PRICE_PRO_RUB
 templates.env.globals["price_max"] = _config.PRICE_MAX_RUB

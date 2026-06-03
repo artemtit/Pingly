@@ -195,6 +195,32 @@ class SupabasePinglyRepository:
         student["user_id"] = user["id"]
         return student
 
+    async def get_user_by_vk_id(self, vk_id: int) -> dict[str, Any] | None:
+        result = await self._db().table("users").select("*").eq("vk_id", vk_id).execute()
+        return _one(result)
+
+    async def link_student_to_vk(self, invite_token: str, vk_id: int, full_name: str) -> dict[str, Any] | None:
+        """VK mirror of link_student_to_tg: attach a VK identity to a student via
+        an invite token, creating a student `users` row if needed."""
+        student = await self.get_student_by_invite_token(invite_token)
+        if not student:
+            return None
+        user = await self.get_user_by_vk_id(vk_id)
+        if user and user.get("role") == "tutor":
+            return None
+        if not user:
+            result = await self._db().table("users").insert({
+                "role": "student",
+                "vk_id": vk_id,
+                "full_name": full_name or student["name"],
+            }).execute()
+            user = result.data[0]
+        await self._db().table("student_profiles").update({
+            "user_id": user["id"],
+        }).eq("id", student["id"]).execute()
+        student["user_id"] = user["id"]
+        return student
+
     async def list_tutor_students(self, tutor_user_id: str, search: str | None = None) -> list[dict[str, Any]]:
         query = (
             self._db().table("tutor_students")
@@ -545,7 +571,7 @@ class SupabasePinglyRepository:
     async def list_due_notifications(self, now: datetime, limit: int = 100) -> list[dict[str, Any]]:
         result = await (
             self._db().table("notifications")
-            .select("*, users(tg_id)")
+            .select("*, users(tg_id, vk_id)")
             .eq("status", "pending")
             .lte("scheduled_for", now.isoformat())
             .limit(limit)

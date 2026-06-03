@@ -34,7 +34,20 @@ async def main() -> None:
     dp.include_router(tutor.router)
     dp.include_router(student.router)
 
-    scheduler = create_scheduler(bot)
+    # VK is a parallel delivery channel (per-student). Off unless VK_ENABLED +
+    # token are set; when on, it runs its own Long Poll loop alongside Telegram.
+    vk = None
+    if config.VK_ENABLED and config.VK_TOKEN:
+        from vk_bot import VkBot
+        vk = VkBot(config.VK_TOKEN, tg_bot=bot)
+        try:
+            await vk.resolve_group_id()
+            asyncio.create_task(vk.run())
+        except Exception as exc:
+            print(f"[vk] failed to start: {exc}")
+            vk = None
+
+    scheduler = create_scheduler(bot, vk)
     scheduler.start()
 
     if config.WEB_ENABLED:

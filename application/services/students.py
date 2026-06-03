@@ -47,6 +47,9 @@ class StudentService:
     async def link_student_from_invite(self, token: str, tg_id: int, full_name: str, tg_username: str | None) -> dict | None:
         return await self.repo.link_student_to_tg(token, tg_id, full_name, tg_username)
 
+    async def link_student_from_invite_vk(self, token: str, vk_id: int, full_name: str) -> dict | None:
+        return await self.repo.link_student_to_vk(token, vk_id, full_name)
+
     async def list_students(self, tutor_tg_id: int, search: str | None = None) -> list[dict]:
         tutor = await self.repo.get_user_by_tg_id(tutor_tg_id)
         if not tutor or tutor["role"] != "tutor":

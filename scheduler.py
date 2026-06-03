@@ -10,6 +10,7 @@ from application.factory import create_services
 from application.services.accounts import subscription_info
 from application.services.lessons import package_status
 from config import WEB_BASE_URL
+from vk_bot import lesson_keyboard as vk_lesson_keyboard
 
 services = create_services()
 
@@ -26,12 +27,13 @@ def _sub_link_keyboard() -> InlineKeyboardMarkup:
     ]])
 
 
-async def send_due_notifications(bot: Bot) -> None:
+async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
     notifications = await services.notifications.due_notifications()
     for notification in notifications:
         user = notification.get("users") or {}
+        vk_id = user.get("vk_id")
         tg_id = user.get("tg_id")
-        if not tg_id:
+        if not tg_id and not vk_id:
             continue
 
         payload = notification.get("payload") or {}
@@ -44,21 +46,29 @@ async def send_due_notifications(bot: Bot) -> None:
                 await services.notifications.mark_sent(notification["id"])
                 continue
 
-        keyboard = None
-        if payload.get("lesson_id") and notification["type"] in {"lesson_day_before", "lesson_hour_before"}:
-            lesson_id = payload["lesson_id"]
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text="✅ Буду", callback_data=f"lesson_confirm:{lesson_id}"),
-                InlineKeyboardButton(text="❌ Отменяю", callback_data=f"lesson_cancel:{lesson_id}"),
-            ]])
-        elif notification["type"] == "subscription_expiring":
-            keyboard = _sub_link_keyboard()
+        text = f"{notification['title']}\n\n{notification['body']}"
+        is_lesson = bool(payload.get("lesson_id")) and notification["type"] in {"lesson_day_before", "lesson_hour_before"}
 
-        await bot.send_message(
-            tg_id,
-            f"{notification['title']}\n\n{notification['body']}",
-            reply_markup=keyboard,
-        )
+        # Per-student channel: deliver to VK if the recipient is on VK, else Telegram.
+        if vk_id and vk_bot is not None:
+            keyboard = vk_lesson_keyboard(payload["lesson_id"]) if is_lesson else None
+            try:
+                await vk_bot.send_message(vk_id, text, keyboard=keyboard)
+            except Exception as exc:
+                print(f"[vk] send failed: {exc}")
+        elif tg_id:
+            keyboard = None
+            if is_lesson:
+                lesson_id = payload["lesson_id"]
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+                    InlineKeyboardButton(text="✅ Буду", callback_data=f"lesson_confirm:{lesson_id}"),
+                    InlineKeyboardButton(text="❌ Отменяю", callback_data=f"lesson_cancel:{lesson_id}"),
+                ]])
+            elif notification["type"] == "subscription_expiring":
+                keyboard = _sub_link_keyboard()
+            await tg_bot.send_message(tg_id, text, reply_markup=keyboard)
+        else:
+            continue
         await services.notifications.mark_sent(notification["id"])
 
 
@@ -163,9 +173,9 @@ async def _alert_package(tutor_user_id: str, student: dict, status: dict) -> Non
             )
 
 
-def create_scheduler(bot: Bot) -> AsyncIOScheduler:
+def create_scheduler(bot: Bot, vk_bot=None) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="UTC")
-    scheduler.add_job(send_due_notifications, "interval", minutes=1, args=[bot])
+    scheduler.add_job(send_due_notifications, "interval", minutes=1, args=[bot, vk_bot])
     scheduler.add_job(
         enqueue_subscription_reminders, "interval", hours=12,
         next_run_time=datetime.now() + timedelta(seconds=30),

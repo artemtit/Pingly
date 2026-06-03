@@ -51,3 +51,13 @@ RESEND_FROM: str = os.getenv("RESEND_FROM", "Pingly <onboarding@resend.dev>")
 CAPTCHA_ENABLED: bool = os.getenv("CAPTCHA_ENABLED", "0") == "1"
 TURNSTILE_SITE_KEY: str = os.getenv("TURNSTILE_SITE_KEY", "")
 TURNSTILE_SECRET_KEY: str = os.getenv("TURNSTILE_SECRET_KEY", "")
+
+# VK (VKontakte) — second delivery channel alongside Telegram (per-student).
+# Off until the community token is set. VK_GROUP_ID is auto-resolved from the
+# token at startup (groups.getById), like BOT_USERNAME for Telegram.
+VK_ENABLED: bool = os.getenv("VK_ENABLED", "0") == "1"
+VK_TOKEN: str = os.getenv("VK_TOKEN", "")
+VK_GROUP_ID: int = int(os.getenv("VK_GROUP_ID", "0") or 0)  # filled at startup if 0
+# VK ID login for tutors (Фаза 2 — OAuth app, separate from the community bot).
+VK_APP_ID: str = os.getenv("VK_APP_ID", "")
+VK_APP_SECRET: str = os.getenv("VK_APP_SECRET", "")

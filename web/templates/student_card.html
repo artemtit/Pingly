@@ -48,21 +48,29 @@
 
 {% if not student.user_id %}
 <div class="card invite-banner" style="margin-bottom: 16px;">
-  <strong>📲 Ученик ещё не подключил Telegram</strong>
-  <p class="muted" style="margin: 6px 0 12px;">Отправь ему эту ссылку — после входа в бота он начнёт получать напоминания о занятиях, а ты увидишь его ответы «Буду / Отменяю».</p>
+  <strong>📲 Ученик ещё не подключил мессенджер</strong>
+  <p class="muted" style="margin: 6px 0 12px;">Отправь ему ссылку в {{ 'Telegram или ВКонтакте' if vk_enabled else 'Telegram' }} — после входа в бота он начнёт получать напоминания о занятиях, а ты увидишь его ответы «Буду / Отменяю».</p>
   <div style="display:flex; gap:10px; flex-wrap:wrap;">
     <input class="input" id="invite-url" readonly style="flex:1; min-width:220px; font-size:14px;"
       value="https://t.me/{{ bot_username }}?start=inv_{{ student.invite_token }}">
-    <button type="button" class="btn btn-primary" id="invite-copy" onclick="copyInvite()">Копировать</button>
+    <button type="button" class="btn btn-primary" id="invite-copy" onclick="copyInvite('invite-url', this)">Telegram</button>
   </div>
+  {% if vk_enabled %}
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+    <input class="input" id="invite-url-vk" readonly style="flex:1; min-width:220px; font-size:14px;"
+      value="{{ vk_invite_base() }}?ref=inv_{{ student.invite_token }}">
+    <button type="button" class="btn btn-secondary" onclick="copyInvite('invite-url-vk', this)">ВКонтакте</button>
+  </div>
+  {% endif %}
 </div>
 <script>
-function copyInvite(){
-  var i = document.getElementById('invite-url');
+function copyInvite(id, btn){
+  var i = document.getElementById(id);
   i.select(); i.setSelectionRange(0, 99999);
+  var label = btn.textContent;
   navigator.clipboard.writeText(i.value).then(function(){
-    var b = document.getElementById('invite-copy'); b.textContent = 'Скопировано ✓';
-    setTimeout(function(){ b.textContent = 'Копировать'; }, 1800);
+    btn.textContent = 'Скопировано ✓';
+    setTimeout(function(){ btn.textContent = label; }, 1800);
   });
 }
 </script>
