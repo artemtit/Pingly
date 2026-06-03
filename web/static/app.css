@@ -237,7 +237,7 @@ textarea { min-height: 86px; resize: vertical; }
 .dot.confirmed { background: var(--color-success); } .dot.reschedule_requested { background: var(--color-warning); }
 .dot.rescheduled { background: var(--color-warning); } .dot.cancelled { background: var(--color-error); }
 
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .cal-weekday { font-size: 12px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; padding: 4px; text-align: center; }
 .cal-cell { min-height: 96px; border: 1px solid var(--color-border); border-radius: 11px; padding: 7px; display: flex; flex-direction: column; gap: 5px; transition: border-color .15s, transform .12s; background: #fff; }
 .cal-week .cal-cell { min-height: 200px; }
@@ -422,8 +422,7 @@ textarea { min-height: 86px; resize: vertical; }
      время до «15…». На телефоне показываем только время целиком. */
   .cal-pill .cp-name,
   .cal-pill .dot { display: none; }
-  .cal-pill { justify-content: center; padding: 3px 4px; font-size: 11px;
-    overflow: visible; text-overflow: clip; }
+  .cal-pill { justify-content: center; padding: 3px 2px; font-size: 11px; }
   .cal-pill .cp-time { font-variant-numeric: tabular-nums; }
 
   .mobile-header {
