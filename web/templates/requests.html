@@ -36,11 +36,12 @@
             {% for key, ic in badge_icons.items() %}<option value="{{ key }}" {{ 'selected' if b.icon == key }}>{{ ic.label }}</option>{% endfor %}
           </select>
           <input class="input" name="badge_text" value="{{ b.text }}" maxlength="40" placeholder="Например: Опыт 8 лет">
-          <button type="button" class="badge-del" onclick="this.closest('.badge-row').remove()" aria-label="Удалить">✕</button>
+          <button type="button" class="badge-del" onclick="this.closest('.badge-row').remove(); updateAddBtn();" aria-label="Удалить">✕</button>
         </div>
         {% endfor %}
       </div>
       <button type="button" class="btn btn-ghost btn-sm" id="badge-add" onclick="addBadgeRow()" style="margin-top:6px;">+ Добавить плашку</button>
+      <p class="muted" id="badge-max-hint" style="margin-top:6px;display:none;font-size:13px;">Максимум 4 плашки.</p>
     </div>
     <template id="badge-row-tpl">
       <div class="badge-row">
@@ -48,7 +49,7 @@
           {% for key, ic in badge_icons.items() %}<option value="{{ key }}">{{ ic.label }}</option>{% endfor %}
         </select>
         <input class="input" name="badge_text" maxlength="40" placeholder="Например: Опыт 8 лет">
-        <button type="button" class="badge-del" onclick="this.closest('.badge-row').remove()" aria-label="Удалить">✕</button>
+        <button type="button" class="badge-del" onclick="this.closest('.badge-row').remove(); updateAddBtn();" aria-label="Удалить">✕</button>
       </div>
     </template>
     {% set pt = profile.page_theme if profile and profile.page_theme else 'auto' %}
@@ -117,14 +118,22 @@ function copyField(id, btn) {
   } else { fallback(); }
   el.setAttribute('readonly', '');
 }
+function updateAddBtn() {
+  var rows = document.getElementById('badge-rows');
+  if (!rows) return;
+  var n = rows.querySelectorAll('.badge-row').length;
+  var btn = document.getElementById('badge-add');
+  var hint = document.getElementById('badge-max-hint');
+  if (btn) btn.style.display = n >= 4 ? 'none' : '';
+  if (hint) hint.style.display = n >= 4 ? '' : 'none';
+}
 function addBadgeRow() {
   var rows = document.getElementById('badge-rows');
   if (rows.querySelectorAll('.badge-row').length >= 4) return;
   var tpl = document.getElementById('badge-row-tpl');
   rows.appendChild(tpl.content.cloneNode(true));
-  if (rows.querySelectorAll('.badge-row').length >= 4) {
-    document.getElementById('badge-add').style.display = 'none';
-  }
+  updateAddBtn();
 }
+document.addEventListener('DOMContentLoaded', updateAddBtn);
 </script>
 {% endblock %}
