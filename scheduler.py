@@ -49,14 +49,20 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
         text = f"{notification['title']}\n\n{notification['body']}"
         is_lesson = bool(payload.get("lesson_id")) and notification["type"] in {"lesson_day_before", "lesson_hour_before"}
 
-        # Per-student channel: deliver to VK if the recipient is on VK, else Telegram.
+        # A student can have both channels connected — deliver to each one they
+        # have. The "Буду / Отменяю" buttons write to the same account, so it
+        # doesn't matter which message the student answers from.
+        delivered = False
+
         if vk_id and vk_bot is not None:
             keyboard = vk_lesson_keyboard(payload["lesson_id"]) if is_lesson else None
             try:
                 await vk_bot.send_message(vk_id, text, keyboard=keyboard)
+                delivered = True
             except Exception as exc:
                 print(f"[vk] send failed: {exc}")
-        elif tg_id:
+
+        if tg_id:
             keyboard = None
             if is_lesson:
                 lesson_id = payload["lesson_id"]
@@ -66,10 +72,14 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
                 ]])
             elif notification["type"] == "subscription_expiring":
                 keyboard = _sub_link_keyboard()
-            await tg_bot.send_message(tg_id, text, reply_markup=keyboard)
-        else:
-            continue
-        await services.notifications.mark_sent(notification["id"])
+            try:
+                await tg_bot.send_message(tg_id, text, reply_markup=keyboard)
+                delivered = True
+            except Exception as exc:
+                print(f"[tg] send failed: {exc}")
+
+        if delivered:
+            await services.notifications.mark_sent(notification["id"])
 
 
 async def enqueue_subscription_reminders() -> None:

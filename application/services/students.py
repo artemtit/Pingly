@@ -126,6 +126,10 @@ class StudentService:
         student = await self.repo.get_student_for_tutor(tutor_user_id, student_id)
         if not student:
             raise PermissionError("Student does not belong to tutor")
+        # Per-channel connection status (a student can connect both TG and VK).
+        linked = await self.repo.get_user_by_id(student["user_id"]) if student.get("user_id") else None
+        student["tg_connected"] = bool(linked and linked.get("tg_id"))
+        student["vk_connected"] = bool(linked and linked.get("vk_id"))
         relation = await self.repo.get_tutor_student_relation(tutor_user_id, student_id)
         lessons = [l for l in await self.repo.list_lessons_for_tutor(tutor_user_id, 1000) if l.get("student_id") == student_id]
         homework = [h for h in await self.repo.list_homework_for_tutor(tutor_user_id, 1000) if h.get("student_id") == student_id]

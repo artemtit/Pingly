@@ -46,21 +46,32 @@
 </div>
 {% endif %}
 
-{% if not student.user_id %}
+{% set all_connected = student.tg_connected and (student.vk_connected or not vk_enabled) %}
+{% if not all_connected %}
 <div class="card invite-banner" style="margin-bottom: 16px;">
-  <strong>📲 Ученик ещё не подключил мессенджер</strong>
-  <p class="muted" style="margin: 6px 0 12px;">Отправь ему ссылку в {{ 'Telegram или ВКонтакте' if vk_enabled else 'Telegram' }} — после входа в бота он начнёт получать напоминания о занятиях, а ты увидишь его ответы «Буду / Отменяю».</p>
+  <strong>📲 Подключение мессенджеров</strong>
+  <p class="muted" style="margin: 6px 0 12px;">Ученик может получать напоминания в {{ 'Telegram и во ВКонтакте — можно подключить оба сразу' if vk_enabled else 'Telegram' }}. Отправь ссылку в нужный мессенджер: после входа в бота начнут приходить напоминания о занятиях, а ты увидишь ответы «Буду / Отменяю».</p>
+
+  {% if student.tg_connected %}
+  <div class="chan-ok">✅ Telegram подключён</div>
+  {% else %}
   <div style="display:flex; gap:10px; flex-wrap:wrap;">
     <input class="input" id="invite-url" readonly style="flex:1; min-width:220px; font-size:14px;"
       value="https://t.me/{{ bot_username }}?start=inv_{{ student.invite_token }}">
     <button type="button" class="btn btn-primary" id="invite-copy" onclick="copyInvite('invite-url', this)">Telegram</button>
   </div>
+  {% endif %}
+
   {% if vk_enabled %}
-  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-    <input class="input" id="invite-url-vk" readonly style="flex:1; min-width:220px; font-size:14px;"
-      value="{{ vk_invite_base() }}?ref=inv_{{ student.invite_token }}">
-    <button type="button" class="btn btn-secondary" onclick="copyInvite('invite-url-vk', this)">ВКонтакте</button>
-  </div>
+    {% if student.vk_connected %}
+    <div class="chan-ok" style="margin-top:10px;">✅ ВКонтакте подключён</div>
+    {% else %}
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+      <input class="input" id="invite-url-vk" readonly style="flex:1; min-width:220px; font-size:14px;"
+        value="{{ vk_invite_base() }}?ref=inv_{{ student.invite_token }}">
+      <button type="button" class="btn btn-secondary" onclick="copyInvite('invite-url-vk', this)">ВКонтакте</button>
+    </div>
+    {% endif %}
   {% endif %}
 </div>
 <script>

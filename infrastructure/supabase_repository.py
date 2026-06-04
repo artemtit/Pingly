@@ -177,22 +177,35 @@ class SupabasePinglyRepository:
         student = await self.get_student_by_invite_token(invite_token)
         if not student:
             return None
-        user = await self.get_user_by_tg_id(tg_id)
-        if user and user.get("role") == "tutor":
+        existing = await self.get_user_by_tg_id(tg_id)
+        if existing and existing.get("role") == "tutor":
             return None
-        if not user:
+        linked_user_id = student.get("user_id")
+        username = tg_username or student.get("tg_username")
+        if existing:
+            # This Telegram account already exists — point the profile at it.
+            user_id = existing["id"]
+        elif linked_user_id:
+            # Student is already linked (e.g. via VK) — attach Telegram to the
+            # same account so both channels coexist on one student.
+            await self._db().table("users").update({
+                "tg_id": tg_id,
+                "tg_username": username,
+            }).eq("id", linked_user_id).execute()
+            user_id = linked_user_id
+        else:
             result = await self._db().table("users").insert({
                 "role": "student",
                 "tg_id": tg_id,
-                "tg_username": tg_username or student.get("tg_username"),
+                "tg_username": username,
                 "full_name": full_name or student["name"],
             }).execute()
-            user = result.data[0]
+            user_id = result.data[0]["id"]
         await self._db().table("student_profiles").update({
-            "user_id": user["id"],
-            "tg_username": tg_username or student.get("tg_username"),
+            "user_id": user_id,
+            "tg_username": username,
         }).eq("id", student["id"]).execute()
-        student["user_id"] = user["id"]
+        student["user_id"] = user_id
         return student
 
     async def get_user_by_vk_id(self, vk_id: int) -> dict[str, Any] | None:
@@ -205,20 +218,30 @@ class SupabasePinglyRepository:
         student = await self.get_student_by_invite_token(invite_token)
         if not student:
             return None
-        user = await self.get_user_by_vk_id(vk_id)
-        if user and user.get("role") == "tutor":
+        existing = await self.get_user_by_vk_id(vk_id)
+        if existing and existing.get("role") == "tutor":
             return None
-        if not user:
+        linked_user_id = student.get("user_id")
+        if existing:
+            user_id = existing["id"]
+        elif linked_user_id:
+            # Student is already linked (e.g. via Telegram) — attach VK to the
+            # same account so both channels coexist on one student.
+            await self._db().table("users").update({
+                "vk_id": vk_id,
+            }).eq("id", linked_user_id).execute()
+            user_id = linked_user_id
+        else:
             result = await self._db().table("users").insert({
                 "role": "student",
                 "vk_id": vk_id,
                 "full_name": full_name or student["name"],
             }).execute()
-            user = result.data[0]
+            user_id = result.data[0]["id"]
         await self._db().table("student_profiles").update({
-            "user_id": user["id"],
+            "user_id": user_id,
         }).eq("id", student["id"]).execute()
-        student["user_id"] = user["id"]
+        student["user_id"] = user_id
         return student
 
     async def list_tutor_students(self, tutor_user_id: str, search: str | None = None) -> list[dict[str, Any]]:
