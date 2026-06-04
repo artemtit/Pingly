@@ -839,9 +839,10 @@ class SupabasePinglyRepository:
         )
         return _one(result)
 
-    async def activate_subscription(self, user_id: str, days: int = 30) -> dict[str, Any] | None:
+    async def activate_subscription(self, user_id: str, days: int = 30, plan: str | None = None) -> dict[str, Any] | None:
         """Mark the user as a paying subscriber and extend access by `days`
-        from the later of now / current end date."""
+        from the later of now / current end date. When `plan` is given, also
+        set the purchased tier ('pro' / 'max')."""
         user = await self.get_user_by_id(user_id)
         if not user:
             return None
@@ -855,9 +856,12 @@ class SupabasePinglyRepository:
             except ValueError:
                 pass
         new_end = (base + timedelta(days=days)).isoformat()
+        patch: dict[str, Any] = {"subscription_status": "active", "trial_ends_at": new_end}
+        if plan:
+            patch["plan"] = plan
         result = await (
             self._db().table("users")
-            .update({"subscription_status": "active", "trial_ends_at": new_end})
+            .update(patch)
             .eq("id", user_id)
             .execute()
         )

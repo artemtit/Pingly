@@ -7,6 +7,18 @@ from infrastructure import platega
 SUBSCRIPTION_DAYS = 30
 
 
+def _normalize_plan(plan: str | None) -> str:
+    p = (plan or "max").lower()
+    return p if p in ("pro", "max") else "max"
+
+
+def _price_for_plan(plan: str) -> int:
+    """Price for the chosen tier. With tiers off, every charge is the single price."""
+    if not config.PLANS_ENABLED:
+        return config.SUBSCRIPTION_PRICE_RUB
+    return config.PRICE_PRO_RUB if plan == "pro" else config.PRICE_MAX_RUB
+
+
 class BillingService:
     """Platega subscription payments. One-time charge that grants 30 days; the
     Platega API has no card-on-file rebill, so renewal is prompted via reminders."""
@@ -14,16 +26,21 @@ class BillingService:
     def __init__(self, repo: PinglyRepository) -> None:
         self.repo = repo
 
-    async def start_subscription(self, user: dict, base_url: str) -> tuple[str | None, str | None]:
-        """Create a Platega payment and return (redirect_url, error)."""
+    async def start_subscription(self, user: dict, base_url: str, plan: str = "max") -> tuple[str | None, str | None]:
+        """Create a Platega payment for the chosen tier and return (redirect_url, error)."""
         base = base_url.rstrip("/")
+        plan = _normalize_plan(plan)
+        price = _price_for_plan(plan)
+        tier_label = "Max" if plan == "max" else "Pro"
         try:
             result = await platega.create_payment(
-                amount=float(config.SUBSCRIPTION_PRICE_RUB),
-                description="Подписка Pingly Pro (1 месяц)",
+                amount=float(price),
+                description=f"Подписка Pingly {tier_label} (1 месяц)",
                 return_url=f"{base}/tutor/settings?paid=1",
                 failed_url=f"{base}/tutor/settings?paid=0",
-                payload=user["id"],
+                # The plan rides along in the payload so the webhook can grant the
+                # right tier even if the ledger write below didn't land.
+                payload=f"{user['id']}:{plan}",
             )
         except platega.PlategaError as exc:
             return None, str(exc)
@@ -32,10 +49,10 @@ class BillingService:
         if not transaction_id or not redirect:
             return None, "Platega не вернула ссылку на оплату"
         # Ledger write is best-effort: the payment already exists at Platega and
-        # the webhook can still activate via payload=user_id, so a ledger hiccup
-        # must not block the user from reaching the payment page.
+        # the webhook can still activate via payload, so a ledger hiccup must not
+        # block the user from reaching the payment page.
         try:
-            await self.repo.create_subscription_payment(user["id"], transaction_id, config.SUBSCRIPTION_PRICE_RUB)
+            await self.repo.create_subscription_payment(user["id"], transaction_id, price)
         except Exception:
             pass
         return redirect, None
@@ -53,12 +70,22 @@ class BillingService:
             payment = await self.repo.get_subscription_payment_by_transaction(transaction_id)
         except Exception:
             payment = None
-        user_id = (payment or {}).get("user_id") or body.get("payload")
+        # Payload is "<user_id>:<plan>" (plan optional for older payments).
+        raw_payload = str(body.get("payload") or "")
+        payload_uid, plan = raw_payload, "max"
+        if ":" in raw_payload:
+            payload_uid, plan = raw_payload.rsplit(":", 1)
+        plan = _normalize_plan(plan)
+        user_id = (payment or {}).get("user_id") or payload_uid or None
+        # Expected charge: the ledger amount if we have it, else the tier price.
+        expected_rub = (payment or {}).get("amount_rub")
+        if expected_rub is None:
+            expected_rub = _price_for_plan(plan)
         if status == "CONFIRMED":
             # Defense-in-depth: if the callback reports an amount, it must match the
             # price we charge. The amount is server-set at creation, so a mismatch
             # means a tampered/foreign callback — refuse to grant entitlement.
-            if not self._amount_ok(body):
+            if not self._amount_ok(body, expected_rub):
                 return False
             if not user_id:
                 # Nothing to activate; acknowledge so Platega stops retrying.
@@ -69,7 +96,7 @@ class BillingService:
             # CONFIRMED callbacks can never stack extra 30-day extensions.
             try:
                 await self.repo.upsert_subscription_payment_pending(
-                    user_id, transaction_id, config.SUBSCRIPTION_PRICE_RUB
+                    user_id, transaction_id, expected_rub
                 )
                 transitioned = await self.repo.confirm_subscription_payment_once(transaction_id)
             except Exception:
@@ -78,7 +105,9 @@ class BillingService:
                 return False
             if transitioned:
                 activate_uid = transitioned.get("user_id") or user_id
-                await self.repo.activate_subscription(activate_uid, SUBSCRIPTION_DAYS)
+                await self.repo.activate_subscription(
+                    activate_uid, SUBSCRIPTION_DAYS, plan if config.PLANS_ENABLED else None
+                )
         elif status in ("CANCELED", "CHARGEBACKED"):
             try:
                 await self.repo.mark_subscription_payment(transaction_id, "canceled")
@@ -87,7 +116,7 @@ class BillingService:
         return True
 
     @staticmethod
-    def _amount_ok(body: dict) -> bool:
+    def _amount_ok(body: dict, expected_rub: float) -> bool:
         """True if the callback's amount equals the expected price, or if no amount
         is present (older callbacks omit it; the amount is server-set at creation)."""
         raw = body.get("amount")
@@ -98,6 +127,6 @@ class BillingService:
         if raw is None:
             return True
         try:
-            return abs(float(raw) - float(config.SUBSCRIPTION_PRICE_RUB)) < 0.01
+            return abs(float(raw) - float(expected_rub)) < 0.01
         except (TypeError, ValueError):
             return False

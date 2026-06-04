@@ -838,13 +838,13 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         return templates.TemplateResponse("history.html", _ctx(request, user, "history", history=history))
 
     @app.post("/tutor/billing/subscribe")
-    async def billing_subscribe(user: dict = Depends(current_user)) -> Response:
+    async def billing_subscribe(plan: str = Form("max"), user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
         if not _config.PAYMENTS_ENABLED:
             # Payments are temporarily off (pending bank approval). Infra stays;
             # we just don't start a charge.
             return RedirectResponse("/tutor/settings?error=payments_off", status_code=303)
-        redirect, err = await services.billing.start_subscription(user, WEB_BASE_URL)
+        redirect, err = await services.billing.start_subscription(user, WEB_BASE_URL, plan)
         if err or not redirect:
             from urllib.parse import quote
             return RedirectResponse(f"/tutor/settings?error={quote(err or 'Не удалось создать платёж')}", status_code=303)

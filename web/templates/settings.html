@@ -93,12 +93,15 @@
     {% if sub.trial_ends_at %}
     <div class="settings-row"><span class="muted">{{ 'Пробный до' if sub.status != 'active' else 'Действует до' }}</span><strong>{{ sub.trial_ends_at | msk('%d.%m.%Y') }}</strong></div>
     {% endif %}
-    <div class="settings-row"><span class="muted">Цена</span><strong>{{ price or 990 }} ₽/мес</strong></div>
-    {% if payments_enabled %}
+    <div class="settings-row"><span class="muted">Цена</span><strong>{% if plans_enabled %}Pro {{ price_pro }} ₽ · Max {{ price_max }} ₽{% else %}{{ price or 990 }} ₽/мес{% endif %}</strong></div>
+    {% if payments_enabled and not plans_enabled %}
     <form method="post" action="/tutor/billing/subscribe" style="margin:12px 0 6px;">
+      <input type="hidden" name="plan" value="max">
       <button class="btn btn-primary" style="width:100%;">💳 {{ 'Продлить подписку' if sub.status == 'active' else 'Оформить подписку' }} — {{ price or 990 }} ₽</button>
     </form>
     <p class="muted" style="margin:0 0 14px;font-size:13px;">Оплата через СБП. Доступ продлевается на 30 дней. Автосписаний нет — за 3 дня до конца напомним в Telegram.</p>
+    {% elif payments_enabled and plans_enabled %}
+    <p class="muted" style="margin:12px 0 14px;font-size:13px;">Выбери тариф ниже и оплати через СБП. Доступ — на 30 дней, автосписаний нет: за 3 дня до конца напомним в Telegram.</p>
     {% else %}
     <div style="margin:12px 0 14px;padding:12px 14px;border-radius:12px;background:var(--color-bg-subtle);border:1px solid var(--color-border);font-size:13px;" class="muted">
       💳 Онлайн-оплата скоро будет доступна. Сервис продолжает работать в полном объёме.
@@ -130,7 +133,13 @@
           <li class="off">Финансы</li>
           <li class="off">Заявки</li>
         </ul>
-        {% if user_plan(user) == 'pro' %}<div class="plan-current-tag">Текущий</div>{% endif %}
+        {% if sub.status == 'active' and user_plan(user) == 'pro' %}<div class="plan-current-tag">Текущий</div>{% endif %}
+        {% if payments_enabled %}
+        <form method="post" action="/tutor/billing/subscribe" style="margin-top:10px;">
+          <input type="hidden" name="plan" value="pro">
+          <button class="btn btn-secondary" style="width:100%;">{{ 'Продлить Pro' if (sub.status == 'active' and user_plan(user) == 'pro') else 'Оформить Pro' }} — {{ price_pro }} ₽</button>
+        </form>
+        {% endif %}
       </div>
       <div class="plan plan-max {{ 'current' if user_plan(user) == 'max' }}">
         <div class="plan-name">Max <span class="plan-badge">всё включено</span></div>
@@ -141,10 +150,12 @@
           <li class="on">Финансы</li>
           <li class="on">Заявки</li>
         </ul>
-        {% if user_plan(user) == 'max' %}
-        <div class="plan-current-tag">Текущий</div>
-        {% elif payments_enabled %}
-        <form method="post" action="/tutor/billing/subscribe"><button class="btn btn-primary" style="width:100%;">Перейти на Max — {{ price_max }} ₽</button></form>
+        {% if sub.status == 'active' and user_plan(user) == 'max' %}<div class="plan-current-tag">Текущий</div>{% endif %}
+        {% if payments_enabled %}
+        <form method="post" action="/tutor/billing/subscribe" style="margin-top:10px;">
+          <input type="hidden" name="plan" value="max">
+          <button class="btn btn-primary" style="width:100%;">{{ 'Продлить Max' if (sub.status == 'active' and user_plan(user) == 'max') else 'Оформить Max' }} — {{ price_max }} ₽</button>
+        </form>
         {% endif %}
       </div>
     </div>
