@@ -121,14 +121,36 @@ def _user_plan(user: dict | None) -> str:
     return ((user or {}).get("plan") or "max").lower()
 
 
+def _access_until_active(user: dict | None) -> bool:
+    """True while the account's access window (trial_ends_at, reused as the
+    'access until' date for paid periods too) is still in the future."""
+    raw = (user or {}).get("trial_ends_at")
+    if not raw:
+        return False
+    try:
+        ends = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return False
+    return (ends - datetime.now(timezone.utc)).total_seconds() > 0
+
+
 def _plan_locked(user: dict | None, section: str) -> bool:
-    """True only when the tier paywall is live AND this section is Max-only AND
-    the account is not on Max. With PLANS_ENABLED off this is always False."""
-    return bool(
-        _config.PLANS_ENABLED
-        and section in _config.MAX_ONLY_SECTIONS
-        and _user_plan(user) != "max"
-    )
+    """Whether a Max-only section is locked for this account. With PLANS_ENABLED
+    off this is always False.
+
+    Access model (tiers live):
+    - Paid subscriber (subscription_status == 'active'): the chosen tier decides —
+      Max keeps everything, Pro loses the Max-only sections.
+    - Still on trial (window not expired, not yet paid): full access.
+    - Trial expired without a Max subscription: Max-only sections lock (drop to Pro)."""
+    if not (_config.PLANS_ENABLED and section in _config.MAX_ONLY_SECTIONS):
+        return False
+    user = user or {}
+    status = (user.get("subscription_status") or "trial").lower()
+    if status == "active":
+        return _user_plan(user) != "max"
+    # Not a paying subscriber → open during the trial, locked once it expires.
+    return not _access_until_active(user)
 
 
 templates.env.globals["vk_enabled"] = _config.VK_ENABLED
