@@ -632,6 +632,18 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         await services.lessons.delete_lesson(user["id"], lesson_id)
         return RedirectResponse("/tutor/calendar", status_code=303)
 
+    @app.post("/tutor/lessons/{lesson_id}/comment")
+    async def set_lesson_comment(
+        lesson_id: str, comment: str = Form(""), date: str = Form(""), user: dict = Depends(current_user),
+    ) -> Response:
+        _require(user, "tutor")
+        try:
+            await services.lessons.set_lesson_comment(user["id"], lesson_id, comment)
+        except PermissionError as exc:
+            raise HTTPException(status_code=404) from exc
+        back = f"/tutor/calendar?view=day&date={date}" if date else "/tutor/calendar"
+        return RedirectResponse(back, status_code=303)
+
     @app.post("/tutor/lessons/{lesson_id}/paid")
     async def toggle_lesson_paid(lesson_id: str, paid: str = Form("1"), user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")

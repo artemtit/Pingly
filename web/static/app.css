@@ -245,6 +245,9 @@ textarea { min-height: 86px; resize: vertical; }
 [data-theme="dark"] .invite-banner .muted { color: #cbd5e1; }
 .chan-ok { font-size: 14px; font-weight: 600; color: var(--color-success, #16a34a); padding: 8px 0; }
 [data-theme="dark"] .chan-ok { color: #4ade80; }
+.lesson-topic { margin-top: 6px; font-size: 13px; color: var(--color-fg-2, #475569); line-height: 1.4; }
+[data-theme="dark"] .lesson-topic { color: #cbd5e1; }
+.lesson-topic-edit .resched-form textarea { width: 100%; min-width: 220px; }
 .lock-badge { font-size: 11px; opacity: .85; }
 .plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .plan { border: 1px solid var(--color-border); border-radius: 14px; padding: 16px; position: relative; }

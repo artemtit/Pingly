@@ -49,6 +49,17 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
         text = f"{notification['title']}\n\n{notification['body']}"
         is_lesson = bool(payload.get("lesson_id")) and notification["type"] in {"lesson_day_before", "lesson_hour_before"}
 
+        # Append the lesson topic (if the tutor set one) at send time, so the
+        # student sees the latest version even if it was added after scheduling.
+        if is_lesson:
+            try:
+                lesson = await services.repo.get_lesson_by_id(payload["lesson_id"])
+            except Exception:
+                lesson = None
+            topic = (lesson or {}).get("public_comment")
+            if topic:
+                text += f"\n\n📝 Тема: {topic}"
+
         # A student can have both channels connected — deliver to each one they
         # have. The "Буду / Отменяю" buttons write to the same account, so it
         # doesn't matter which message the student answers from.

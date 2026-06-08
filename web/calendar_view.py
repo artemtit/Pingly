@@ -48,6 +48,7 @@ def _normalize(lessons: list[dict]) -> list[dict]:
             "status": lesson.get("status", "scheduled"),
             "student": _student_name(lesson),
             "rule_id": lesson.get("schedule_rule_id"),
+            "comment": lesson.get("public_comment") or "",
         })
     return sorted(out, key=lambda x: x["dt"])
 

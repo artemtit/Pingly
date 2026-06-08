@@ -271,6 +271,15 @@ class LessonService:
             )
         return lesson
 
+    async def set_lesson_comment(self, tutor_user_id: str, lesson_id: str, comment: str | None) -> dict | None:
+        """Set/clear the lesson topic (public_comment) the student sees in the
+        reminder and calendar. Optional — empty clears it."""
+        existing = await self.repo.get_lesson_for_tutor(tutor_user_id, lesson_id)
+        if not existing:
+            raise PermissionError("Lesson does not belong to tutor")
+        text = (comment or "").strip()
+        return await self.repo.update_lesson_fields(lesson_id, {"public_comment": text or None})
+
     async def reschedule_lesson(self, tutor_user_id: str, lesson_id: str, new_starts_at: datetime) -> dict | None:
         existing = await self.repo.get_lesson_for_tutor(tutor_user_id, lesson_id)
         if not existing:

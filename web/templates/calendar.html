@@ -36,9 +36,18 @@
       <div class="day-lesson-body">
         <strong>{{ lesson.student }}</strong>
         {{ ui.status_badge(lesson.status) }}
+        {% if lesson.comment %}<div class="lesson-topic">📝 {{ lesson.comment }}</div>{% endif %}
       </div>
       {% if user.role == "tutor" %}
       <div class="day-lesson-actions">
+        <details class="resched lesson-topic-edit">
+          <summary class="btn btn-ghost btn-sm">📝 {{ 'Изменить тему' if lesson.comment else 'Тема урока' }}</summary>
+          <form method="post" action="/tutor/lessons/{{ lesson.id }}/comment" class="resched-form">
+            <input type="hidden" name="date" value="{{ day.date }}">
+            <textarea class="input" name="comment" rows="2" placeholder="Что будет на уроке (необязательно)">{{ lesson.comment }}</textarea>
+            <button class="btn btn-secondary btn-sm">Сохранить тему</button>
+          </form>
+        </details>
         {% if lesson.status in ("scheduled", "confirmed", "reschedule_requested") %}
         <form method="post" action="/tutor/lessons/{{ lesson.id }}/complete"><button class="btn btn-primary btn-sm">🔵 Провести</button></form>
         <form method="post" action="/tutor/lessons/{{ lesson.id }}/cancel" onsubmit="return confirm('Отменить это занятие?')"><button class="btn btn-ghost btn-sm">🔴 Отменить</button></form>
