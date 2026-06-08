@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from application.services import (
     AccountService,
+    AdminService,
     AnalyticsService,
     BillingService,
     HomeworkService,
@@ -26,6 +27,7 @@ class Services:
         self.analytics = AnalyticsService(self.repo)
         self.public = PublicService(self.repo)
         self.billing = BillingService(self.repo)
+        self.admin = AdminService(self.repo)
         self.web_auth = WebAuthService(self.repo, WEB_BASE_URL, BOT_TOKEN)
 
 

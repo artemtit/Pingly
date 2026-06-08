@@ -1,0 +1,78 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Админка</div>
+    <h1>Репетиторы</h1>
+  </div>
+</div>
+
+<div class="view-switch" style="margin-bottom:18px;">
+  <a href="/admin">Обзор</a>
+  <a href="/admin/tutors" class="active">Репетиторы</a>
+  <a href="/admin/broadcast">Рассылка</a>
+</div>
+
+{% if saved %}
+<div class="card" style="border-color: var(--color-success); background: var(--color-success-light); margin-bottom: 16px;">
+  <strong style="color: var(--success-text);">✅ Изменения применены</strong>
+</div>
+{% endif %}
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Репетитор</th><th>Регистрация</th><th>Доступ</th><th>Тариф</th><th>Учеников</th><th>Управление</th></tr>
+    </thead>
+    <tbody>
+    {% for t in tutors %}
+      <tr>
+        <td>
+          <strong>{{ t.full_name or "—" }}</strong>
+          <div class="muted" style="font-size:12px;">
+            {% if t.tg_username %}@{{ t.tg_username }}{% elif t.email %}{{ t.email }}{% else %}id {{ t.id[:8] }}{% endif %}
+          </div>
+        </td>
+        <td class="muted">{{ (t.created_at or "")[:10] }}</td>
+        <td>
+          {% if t.subscription_status == 'active' %}
+            <span class="badge reviewed">Подписка</span>
+          {% elif t.access_active %}
+            <span class="badge submitted">Триал</span><div class="muted" style="font-size:12px;">до {{ (t.trial_ends_at or "")[:10] }}</div>
+          {% else %}
+            <span class="badge">Истёк</span>
+          {% endif %}
+        </td>
+        <td>{{ user_plan(t) | upper }}</td>
+        <td>{{ t.student_count }}</td>
+        <td>
+          <details class="resched">
+            <summary class="btn btn-ghost btn-sm">⚙ Управлять</summary>
+            <div class="admin-manage">
+              <form method="post" action="/admin/tutors/{{ t.id }}/subscription" class="admin-row">
+                <input type="hidden" name="action" value="grant">
+                <select name="plan" class="input"><option value="max">Max</option><option value="pro">Pro</option></select>
+                <input class="input" type="number" name="days" value="30" min="1" style="width:72px;">
+                <button class="btn btn-primary btn-sm">Выдать подписку</button>
+              </form>
+              <form method="post" action="/admin/tutors/{{ t.id }}/subscription" class="admin-row">
+                <input type="hidden" name="action" value="extend_trial">
+                <input class="input" type="number" name="days" value="14" min="1" style="width:72px;">
+                <button class="btn btn-secondary btn-sm">Продлить триал, дней</button>
+              </form>
+              <form method="post" action="/admin/tutors/{{ t.id }}/subscription" class="admin-row">
+                <input type="hidden" name="action" value="set_plan">
+                <select name="plan" class="input"><option value="max">Max</option><option value="pro">Pro</option></select>
+                <button class="btn btn-ghost btn-sm">Сменить тариф</button>
+              </form>
+            </div>
+          </details>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6"><div class="empty"><div class="empty-emoji">🪹</div><p>Репетиторов пока нет.</p></div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

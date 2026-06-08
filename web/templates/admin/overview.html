@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% import "macros.html" as ui %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Админка</div>
+    <h1>Обзор</h1>
+  </div>
+</div>
+
+<div class="view-switch" style="margin-bottom:18px;">
+  <a href="/admin" class="active">Обзор</a>
+  <a href="/admin/tutors">Репетиторы</a>
+  <a href="/admin/broadcast">Рассылка</a>
+</div>
+
+<section class="grid stats">
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('users') }}</span><div><div class="value">{{ stats.tutors_total }}</div><div class="label">Репетиторов</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('graduation-cap') }}</span><div><div class="value">{{ stats.students_total }}</div><div class="label">Учеников</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('book-open') }}</span><div><div class="value">{{ stats.lessons_total }}</div><div class="label">Занятий всего</div></div></div>
+  <div class="card stat"><span class="stat-icon accent">{{ ui.icon('star') }}</span><div><div class="value">{{ stats.active_subscriptions }}</div><div class="label">Активных подписок</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('trending-up') }}</span><div><div class="value">+{{ stats.new_tutors_week }}</div><div class="label">Новых за 7 дней</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('circle-check') }}</span><div><div class="value">{{ stats.active_access }}</div><div class="label">С активным доступом</div></div></div>
+</section>
+
+<section class="card" style="margin-top:18px;">
+  <div class="card-head"><h2>💰 Выручка</h2></div>
+  <p class="big-date">{{ "{:,}".format(stats.revenue_total).replace(",", " ") }} ₽</p>
+  <p class="muted" style="margin-top:6px;">Подтверждённых платежей: {{ stats.payments_count }}.</p>
+</section>
+{% endblock %}

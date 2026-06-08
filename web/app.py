@@ -212,6 +212,12 @@ def _require(user: dict, role: str) -> None:
         raise HTTPException(status_code=403)
 
 
+def _require_admin(user: dict) -> None:
+    # 404 (not 403) so the admin panel doesn't reveal its existence to non-admins.
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=404)
+
+
 def _parse_local(raw: str) -> datetime | None:
     """Parse an <input type=datetime-local> value as Moscow time, return UTC."""
     raw = (raw or "").strip()
@@ -237,6 +243,29 @@ async def _send_telegram(tg_id: int, text: str) -> None:
         pass
     finally:
         await bot.session.close()
+
+
+async def _broadcast_telegram(tg_ids: list[int], text: str) -> dict:
+    """Send the same message to many tutors via one short-lived Bot instance.
+    Returns {sent, failed}. Throttled lightly to respect Telegram limits."""
+    from aiogram import Bot
+
+    import asyncio
+
+    bot = Bot(_config.BOT_TOKEN)
+    sent = failed = 0
+    try:
+        for i, tg_id in enumerate(tg_ids):
+            try:
+                await bot.send_message(tg_id, text)
+                sent += 1
+            except Exception:
+                failed += 1
+            if (i + 1) % 20 == 0:  # ~20 msgs/sec ceiling on Telegram
+                await asyncio.sleep(1)
+    finally:
+        await bot.session.close()
+    return {"sent": sent, "failed": failed}
 
 
 async def _notify_removed_student(tg_id: int, tutor_name: str) -> None:
@@ -909,3 +938,61 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     async def student_settings(request: Request, saved: str | None = None, error: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "student")
         return templates.TemplateResponse("settings.html", _ctx(request, user, "settings", bot_username=_config.BOT_USERNAME, saved=saved, error=error))
+
+    # ---------------- Admin panel (users.is_admin only) ----------------
+    @app.get("/admin", response_class=HTMLResponse)
+    async def admin_home(request: Request, user: dict = Depends(current_user)) -> Response:
+        _require_admin(user)
+        stats = await services.admin.overview()
+        return templates.TemplateResponse(
+            "admin/overview.html", _ctx(request, user, "admin", stats=stats),
+        )
+
+    @app.get("/admin/tutors", response_class=HTMLResponse)
+    async def admin_tutors(request: Request, saved: str | None = None, user: dict = Depends(current_user)) -> Response:
+        _require_admin(user)
+        tutors = await services.admin.list_tutors()
+        return templates.TemplateResponse(
+            "admin/tutors.html", _ctx(request, user, "admin", tutors=tutors, saved=saved),
+        )
+
+    @app.post("/admin/tutors/{tutor_id}/subscription")
+    async def admin_set_subscription(
+        tutor_id: str,
+        action: str = Form(...),
+        plan: str = Form("max"),
+        days: int = Form(30),
+        user: dict = Depends(current_user),
+    ) -> Response:
+        _require_admin(user)
+        target = await services.admin.get_tutor(tutor_id)
+        if not target:
+            raise HTTPException(status_code=404)
+        if action == "grant":
+            await services.admin.grant_subscription(tutor_id, plan, max(1, int(days)))
+        elif action == "set_plan":
+            await services.admin.set_plan(tutor_id, plan)
+        elif action == "extend_trial":
+            await services.admin.extend_trial(tutor_id, max(1, int(days)))
+        return RedirectResponse("/admin/tutors?saved=1", status_code=303)
+
+    @app.get("/admin/broadcast", response_class=HTMLResponse)
+    async def admin_broadcast_form(request: Request, result: str | None = None, user: dict = Depends(current_user)) -> Response:
+        _require_admin(user)
+        targets = await services.admin.broadcast_targets()
+        return templates.TemplateResponse(
+            "admin/broadcast.html",
+            _ctx(request, user, "admin", target_count=len(targets), result=result),
+        )
+
+    @app.post("/admin/broadcast")
+    async def admin_broadcast_send(message: str = Form(...), user: dict = Depends(current_user)) -> Response:
+        _require_admin(user)
+        text = message.strip()
+        if not text:
+            return RedirectResponse("/admin/broadcast?result=empty", status_code=303)
+        targets = await services.admin.broadcast_targets()
+        stats = await _broadcast_telegram(targets, text)
+        return RedirectResponse(
+            f"/admin/broadcast?result={stats['sent']}-{stats['failed']}", status_code=303,
+        )

@@ -766,6 +766,31 @@ class SupabasePinglyRepository:
         new_end = (base + timedelta(days=days)).isoformat()
         await self._db().table("users").update({"trial_ends_at": new_end}).eq("id", user_id).execute()
 
+    # ---------------- Admin panel ----------------
+    async def admin_list_users(self) -> list[dict[str, Any]]:
+        return (await self._db().table("users").select("*").execute()).data
+
+    async def admin_list_tutors(self) -> list[dict[str, Any]]:
+        return (
+            await self._db().table("users").select("*").eq("role", "tutor").execute()
+        ).data
+
+    async def admin_student_links(self) -> list[dict[str, Any]]:
+        """All tutor→student links, for counting students per tutor."""
+        return (await self._db().table("tutor_students").select("tutor_user_id").execute()).data
+
+    async def admin_lessons_min(self) -> list[dict[str, Any]]:
+        return (await self._db().table("lessons_v2").select("id, starts_at, status").execute()).data
+
+    async def admin_payments(self) -> list[dict[str, Any]]:
+        return (
+            await self._db().table("subscription_payments")
+            .select("amount_rub, status, created_at").execute()
+        ).data
+
+    async def admin_set_plan(self, user_id: str, plan: str) -> None:
+        await self._db().table("users").update({"plan": plan}).eq("id", user_id).execute()
+
     # ---------------- Subscription payments (Platega) ----------------
     async def create_subscription_payment(self, user_id: str, transaction_id: str, amount_rub: int) -> dict[str, Any]:
         result = await self._db().table("subscription_payments").insert({

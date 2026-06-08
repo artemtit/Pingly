@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Админка</div>
+    <h1>Рассылка</h1>
+  </div>
+</div>
+
+<div class="view-switch" style="margin-bottom:18px;">
+  <a href="/admin">Обзор</a>
+  <a href="/admin/tutors">Репетиторы</a>
+  <a href="/admin/broadcast" class="active">Рассылка</a>
+</div>
+
+{% if result and result != 'empty' %}
+<div class="card" style="border-color: var(--color-success); background: var(--color-success-light); margin-bottom: 16px;">
+  <strong style="color: var(--success-text);">✅ Отправлено: {{ result.split('-')[0] }}, не доставлено: {{ result.split('-')[1] }}</strong>
+</div>
+{% elif result == 'empty' %}
+<div class="card invite-banner" style="margin-bottom: 16px;"><strong>Пустое сообщение не отправлено.</strong></div>
+{% endif %}
+
+<div class="card">
+  <div class="card-head"><h2>📢 Сообщение всем репетиторам</h2></div>
+  <p class="muted" style="margin:0 0 12px;">Уйдёт в Telegram всем репетиторам, подключившим бота — сейчас это <strong>{{ target_count }}</strong>. Пиши как обычное сообщение: анонсы, новости, важные изменения.</p>
+  <form method="post" action="/admin/broadcast" onsubmit="return confirm('Отправить сообщение ' + {{ target_count }} + ' репетиторам?')">
+    <label class="field">
+      <span>Текст</span>
+      <textarea name="message" rows="6" placeholder="Например: Привет! Добавили оплату через СБП и новые тарифы — загляни в Настройки." required></textarea>
+    </label>
+    <button class="btn btn-primary" type="submit">Отправить {{ target_count }} репетиторам</button>
+  </form>
+</div>
+{% endblock %}

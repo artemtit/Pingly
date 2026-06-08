@@ -1,3 +1,4 @@
+from .admin import AdminService
 from .analytics import AnalyticsService
 from .accounts import AccountService
 from .billing import BillingService
@@ -9,6 +10,7 @@ from .students import StudentService
 from .web_auth import WebAuthService
 
 __all__ = [
+    "AdminService",
     "AnalyticsService",
     "AccountService",
     "BillingService",
