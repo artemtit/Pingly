@@ -179,9 +179,20 @@ async def _forbidden(request: Request, exc: Exception) -> Response:
     return RedirectResponse("/", status_code=303)
 
 
+class CachedStaticFiles(StaticFiles):
+    """Static files with a long Cache-Control so Cloudflare/browsers serve them
+    from cache instead of hitting the origin on every page load. CSS/JS are
+    versioned with ?v=, so a long TTL is safe — bump the version to bust it."""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "public, max-age=604800"
+        return response
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Pingly")
-    app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+    app.mount("/static", CachedStaticFiles(directory=str(BASE_DIR / "static")), name="static")
     register_routes(app)
     app.add_exception_handler(404, _not_found)
     app.add_exception_handler(401, _unauthorized)
