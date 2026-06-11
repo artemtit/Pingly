@@ -8,7 +8,8 @@
   <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
   <link rel="apple-touch-icon" href="/static/logo-mark.svg">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/landing.css?v=8">
+  <link rel="stylesheet" href="/static/landing.css?v=9">
+  <script src="/static/landing.js?v=1" defer></script>
 </head>
 <body>
 
@@ -28,11 +29,14 @@
   'repeat': '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
   'calendar': '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
   'file-text': '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
-  'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+  'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  'refresh': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'
 } -%}
 {%- macro ic(name, size=22, sw=2) -%}
-<svg class="ic" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ sw }}" stroke-linecap="round" stroke-linejoin="round">{{ I.get(name, '') | safe }}</svg>
+<svg class="ic" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ sw }}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ I.get(name, '') | safe }}</svg>
 {%- endmacro -%}
+
+<div class="scroll-progress" aria-hidden="true"><div class="scroll-progress-fill" id="scrollProgress"></div></div>
 
 <header class="nav">
   <div class="nav-inner">
@@ -50,13 +54,15 @@
 
 <section class="hero">
   <div class="hero-halo"></div>
+  <div class="hero-blob hero-blob-1"></div>
+  <div class="hero-blob hero-blob-2"></div>
   <div class="wrap hero-grid">
-    <div>
+    <div class="hero-copy">
       <span class="pill">👋 Для репетиторов</span>
       <h1>Никогда не напоминай ученикам вручную</h1>
       <p class="hero-sub">Pingly сам напишет каждому за 2 часа до занятия — а ты увидишь, кто придёт. Настрой расписание один раз, и всё работает само.</p>
       <div class="hero-cta">
-        <a class="lbtn lbtn-primary lbtn-lg" href="/register">{{ ic('send', 19) }} Начать бесплатно</a>
+        <a class="lbtn lbtn-primary lbtn-lg magnetic" href="/register">{{ ic('send', 19) }} Начать бесплатно</a>
         <a class="lbtn lbtn-ghost lbtn-lg" href="#how">Как это работает</a>
       </div>
       <div class="hero-note">
@@ -66,22 +72,40 @@
       </div>
     </div>
     <div class="phone-wrap">
-      <div class="phone">
+      <div class="phone" id="chatDemo">
         <div class="phone-head">
           <img src="/static/logo-mark.svg" width="32" height="32" alt="">
           <div>
             <div class="pn">Pingly</div>
-            <div class="ps">бот</div>
+            <div class="ps">бот · онлайн</div>
           </div>
         </div>
-        <div class="phone-msg">
-          Привет! Репетитор Артём напоминает — занятие сегодня в 15:00 📚
-          <div class="q">Подтверди, пожалуйста:</div>
+        <div class="chat-feed" aria-live="polite">
+          <div class="chat-row" data-step="typing1">
+            <div class="chat-typing"><span></span><span></span><span></span></div>
+          </div>
+          <div class="chat-row" data-step="msg1">
+            <div class="chat-bubble bot">Привет, Маша! Репетитор Артём напоминает — занятие сегодня в 15:00 📚<div class="q">Подтверди, пожалуйста:</div></div>
+          </div>
+          <div class="chat-row chat-actions" data-step="actions">
+            <button type="button" class="chat-btn chat-yes" id="chatYes">✅ Буду</button>
+            <button type="button" class="chat-btn chat-no" id="chatNo">❌ Отменяю</button>
+          </div>
+          <div class="chat-row right" data-step="reply">
+            <div class="chat-bubble me" id="chatReply">✅ Буду</div>
+          </div>
+          <div class="chat-row" data-step="typing2">
+            <div class="chat-typing"><span></span><span></span><span></span></div>
+          </div>
+          <div class="chat-row" data-step="final">
+            <div class="chat-bubble bot" id="chatFinal">Отлично! Жду тебя в 15:00 👋</div>
+          </div>
         </div>
-        <div class="phone-actions">
-          <div class="phone-yes">✅ Буду</div>
-          <div class="phone-no">❌ Отменяю</div>
+        <div class="chat-notify" data-step="notify">
+          {{ ic('bell', 16) }}
+          <div><b>Репетитору:</b> <span id="chatNoteText">Маша подтвердила занятие в 15:00 ✅</span></div>
         </div>
+        <button type="button" class="chat-replay" id="chatReplay">{{ ic('refresh', 14) }} Показать ещё раз</button>
       </div>
     </div>
   </div>
@@ -89,23 +113,24 @@
 
 <section id="how" class="section">
   <div class="wrap">
-    <div class="sechead">
+    <div class="sechead" data-reveal>
       <span class="over">Как это работает</span>
       <h2>Три шага — и напоминания на автопилоте</h2>
     </div>
-    <div class="grid-3">
-      <div class="lcard">
-        <div class="step-top"><span class="step-ic">{{ ic('user-plus', 24) }}</span><span class="step-n">01</span></div>
+    <div class="grid-3 steps">
+      <div class="steps-line" aria-hidden="true"><div class="steps-line-fill"></div></div>
+      <div class="lcard step" data-reveal data-tilt>
+        <div class="step-top"><span class="step-ic">{{ ic('user-plus', 24) }}</span><span class="step-n" data-target="1">00</span></div>
         <h3>Добавь учеников</h3>
         <p>Имя и Telegram ученика. Бот выдаст ссылку-приглашение — ученик нажимает, и готово.</p>
       </div>
-      <div class="lcard">
-        <div class="step-top"><span class="step-ic">{{ ic('cal-clock', 24) }}</span><span class="step-n">02</span></div>
+      <div class="lcard step" data-reveal data-tilt style="--d:.12s">
+        <div class="step-top"><span class="step-ic">{{ ic('cal-clock', 24) }}</span><span class="step-n" data-target="2">00</span></div>
         <h3>Поставь расписание</h3>
         <p>Дни и время занятий. Один раз — дальше ничего трогать не нужно.</p>
       </div>
-      <div class="lcard">
-        <div class="step-top"><span class="step-ic">{{ ic('bell', 24) }}</span><span class="step-n">03</span></div>
+      <div class="lcard step" data-reveal data-tilt style="--d:.24s">
+        <div class="step-top"><span class="step-ic">{{ ic('bell', 24) }}</span><span class="step-n" data-target="3">00</span></div>
         <h3>Бот напомнит сам</h3>
         <p>За 2 часа ученик получит напоминание с кнопками «Буду» и «Отменяю».</p>
       </div>
@@ -115,57 +140,172 @@
 
 <section class="section section-alt">
   <div class="wrap">
-    <div class="sechead">
+    <div class="sechead" data-reveal>
       <span class="over">Почему Pingly</span>
       <h2>Меньше рутины — больше занятий</h2>
     </div>
     <div class="grid-2">
-      <div class="lcard feat"><span class="feat-ic">{{ ic('zap', 22) }}</span><div><h3>Автонапоминания за 2 часа</h3><p>Бот пишет каждому ученику сам, по расписанию. Ты больше не печатаешь одно и то же.</p></div></div>
-      <div class="lcard feat"><span class="feat-ic">{{ ic('click', 22) }}</span><div><h3>Ответ в один тап</h3><p>«Буду» или «Отменяю» — и ты сразу видишь статус. Без переписок.</p></div></div>
-      <div class="lcard feat"><span class="feat-ic">{{ ic('message', 22) }}</span><div><h3>Всё в Telegram</h3><p>Никаких приложений и VPN. Работает там, где уже сидят твои ученики.</p></div></div>
-      <div class="lcard feat"><span class="feat-ic">{{ ic('shield', 22) }}</span><div><h3>Сделано для репетиторов</h3><p>На русском, по-человечески, под реальные занятия. Не безликий конструктор ботов.</p></div></div>
+      <div class="lcard feat why" data-reveal data-anim="zap"><span class="feat-ic">{{ ic('zap', 22) }}</span><div><h3>Автонапоминания за 2 часа</h3><p>Бот пишет каждому ученику сам, по расписанию. Ты больше не печатаешь одно и то же.</p></div></div>
+      <div class="lcard feat why" data-reveal data-anim="tap" style="--d:.1s"><span class="feat-ic">{{ ic('click', 22) }}</span><div><h3>Ответ в один тап</h3><p>«Буду» или «Отменяю» — и ты сразу видишь статус. Без переписок.</p></div></div>
+      <div class="lcard feat why" data-reveal data-anim="wobble" style="--d:.2s"><span class="feat-ic">{{ ic('message', 22) }}</span><div><h3>Всё в Telegram</h3><p>Никаких приложений и VPN. Работает там, где уже сидят твои ученики.</p></div></div>
+      <div class="lcard feat why" data-reveal data-anim="pop" style="--d:.3s"><span class="feat-ic">{{ ic('shield', 22) }}</span><div><h3>Сделано для репетиторов</h3><p>На русском, по-человечески, под реальные занятия. Не безликий конструктор ботов.</p></div></div>
     </div>
   </div>
 </section>
 
 <section id="features" class="section">
   <div class="wrap">
-    <div class="sechead">
+    <div class="sechead" data-reveal>
       <span class="over">Возможности</span>
       <h2>Не только напоминания — весь учёт занятий</h2>
     </div>
-    <div class="grid-3">
-      <div class="lcard feat"><span class="feat-ic">{{ ic('wallet', 22) }}</span><div><h3>Финансы</h3><p>Цена за занятие, кто и сколько должен, отметка «оплачено» и доход за месяц — вместо тетрадки и Excel.</p></div></div>
-      <div class="lcard feat"><span class="feat-ic">{{ ic('globe', 22) }}</span><div><h3>Заявки</h3><p>Личная страница-визитка для записи: новые ученики оставляют заявку сами, тебе приходит уведомление, а все заявки копятся в разделе «Заявки».</p></div></div>
-      <div class="lcard feat"><span class="feat-ic">{{ ic('repeat', 22) }}</span><div><h3>Перенос от ученика</h3><p>Ученик просит перенести в один тап — ты сразу получаешь сообщение и ставишь новое время.</p></div></div>
-      <div class="lcard feat"><span class="feat-ic">{{ ic('calendar', 22) }}</span><div><h3>Календарь и история</h3><p>Расписание по дням/неделям/месяцам, проведённые и отменённые занятия — всё на виду.</p></div></div>
-      <div class="lcard feat"><span class="feat-ic">{{ ic('file-text', 22) }}</span><div><h3>Домашние задания</h3><p>Выдавай ДЗ, проверяй сдачи, сохраняй шаблоны и выдавай их повторно в один клик.</p></div></div>
-      <div class="lcard feat"><span class="feat-ic">{{ ic('users', 22) }}</span><div><h3>Карточки учеников</h3><p>Предмет, цель, цена занятия, заметки и прогресс — вся история по каждому ученику.</p></div></div>
+    <div class="ftabs-wrap" data-reveal>
+      <div class="ftabs" id="ftabs" role="tablist" aria-label="Возможности Pingly">
+        <button class="ftab active" role="tab" aria-selected="true" aria-controls="fpanel-0" id="ftab-0">{{ ic('wallet', 16) }} Финансы</button>
+        <button class="ftab" role="tab" aria-selected="false" aria-controls="fpanel-1" id="ftab-1" tabindex="-1">{{ ic('globe', 16) }} Заявки</button>
+        <button class="ftab" role="tab" aria-selected="false" aria-controls="fpanel-2" id="ftab-2" tabindex="-1">{{ ic('repeat', 16) }} Перенос</button>
+        <button class="ftab" role="tab" aria-selected="false" aria-controls="fpanel-3" id="ftab-3" tabindex="-1">{{ ic('calendar', 16) }} Календарь</button>
+        <button class="ftab" role="tab" aria-selected="false" aria-controls="fpanel-4" id="ftab-4" tabindex="-1">{{ ic('file-text', 16) }} ДЗ</button>
+        <button class="ftab" role="tab" aria-selected="false" aria-controls="fpanel-5" id="ftab-5" tabindex="-1">{{ ic('users', 16) }} Карточки</button>
+        <span class="ftab-ind" id="ftabInd" aria-hidden="true"></span>
+      </div>
+      <div class="fpanels">
+        <div class="fpanel active" role="tabpanel" id="fpanel-0" aria-labelledby="ftab-0">
+          <div class="fpanel-text">
+            <h3>Финансы без тетрадки</h3>
+            <p>Цена за занятие, кто и сколько должен, отметка «оплачено» и доход за месяц — вместо тетрадки и Excel.</p>
+          </div>
+          <div class="fpanel-art">
+            <div class="mini">
+              <div class="mini-row"><span class="mini-av">М</span><span class="mini-name">Маша</span><span class="mini-val">3 600 ₽</span><span class="mini-badge ok">оплачено</span></div>
+              <div class="mini-row"><span class="mini-av">Д</span><span class="mini-name">Дима</span><span class="mini-val">1 800 ₽</span><span class="mini-badge due">долг</span></div>
+              <div class="mini-row"><span class="mini-av">К</span><span class="mini-name">Кирилл</span><span class="mini-val">2 400 ₽</span><span class="mini-badge ok">оплачено</span></div>
+              <div class="mini-total">Доход за месяц <b>24 300 ₽</b></div>
+            </div>
+          </div>
+        </div>
+        <div class="fpanel" role="tabpanel" id="fpanel-1" aria-labelledby="ftab-1">
+          <div class="fpanel-text">
+            <h3>Новые ученики записываются сами</h3>
+            <p>Личная страница-визитка для записи: ученик оставляет заявку, тебе приходит уведомление, все заявки копятся в одном разделе.</p>
+          </div>
+          <div class="fpanel-art">
+            <div class="mini">
+              <div class="mini-visit">
+                <span class="mini-av big">А</span>
+                <div class="mini-visit-name">Артём · математика</div>
+                <div class="mini-btn">Записаться</div>
+              </div>
+              <div class="mini-ping">{{ ic('bell', 14) }} Новая заявка: Кирилл, подготовка к ОГЭ</div>
+            </div>
+          </div>
+        </div>
+        <div class="fpanel" role="tabpanel" id="fpanel-2" aria-labelledby="ftab-2">
+          <div class="fpanel-text">
+            <h3>Перенос от ученика — в один тап</h3>
+            <p>Ученик просит перенести прямо из напоминания — ты сразу получаешь сообщение и ставишь новое время.</p>
+          </div>
+          <div class="fpanel-art">
+            <div class="mini">
+              <div class="mini-chat me">Можно перенести на четверг? 🙏</div>
+              <div class="mini-chat bot">Передал репетитору — он предложит новое время ✅</div>
+              <div class="mini-ping">{{ ic('repeat', 14) }} Маша просит перенос: чт, после 16:00</div>
+            </div>
+          </div>
+        </div>
+        <div class="fpanel" role="tabpanel" id="fpanel-3" aria-labelledby="ftab-3">
+          <div class="fpanel-text">
+            <h3>Календарь и история занятий</h3>
+            <p>Расписание по дням, неделям и месяцам. Проведённые и отменённые занятия — всё на виду.</p>
+          </div>
+          <div class="fpanel-art">
+            <div class="mini">
+              <div class="mini-week">
+                <div class="mini-day"><span>пн</span><i class="on"></i></div>
+                <div class="mini-day"><span>вт</span></div>
+                <div class="mini-day"><span>ср</span><i class="on"></i><i class="on"></i></div>
+                <div class="mini-day today"><span>чт</span><i class="on"></i></div>
+                <div class="mini-day"><span>пт</span></div>
+                <div class="mini-day"><span>сб</span><i class="on"></i></div>
+                <div class="mini-day"><span>вс</span></div>
+              </div>
+              <div class="mini-total">На этой неделе <b>5 занятий</b></div>
+            </div>
+          </div>
+        </div>
+        <div class="fpanel" role="tabpanel" id="fpanel-4" aria-labelledby="ftab-4">
+          <div class="fpanel-text">
+            <h3>Домашние задания</h3>
+            <p>Выдавай ДЗ, проверяй сдачи, сохраняй шаблоны и выдавай их повторно в один клик.</p>
+          </div>
+          <div class="fpanel-art">
+            <div class="mini">
+              <div class="mini-row"><span class="mini-check done">{{ ic('check', 12) }}</span><span class="mini-name">№12 · Тригонометрия</span><span class="mini-badge ok">сдано</span></div>
+              <div class="mini-row"><span class="mini-check"></span><span class="mini-name">№13 · Производные</span><span class="mini-badge wait">ждёт проверки</span></div>
+              <div class="mini-row"><span class="mini-check"></span><span class="mini-name">№14 · Логарифмы</span><span class="mini-badge">выдано</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="fpanel" role="tabpanel" id="fpanel-5" aria-labelledby="ftab-5">
+          <div class="fpanel-text">
+            <h3>Карточки учеников</h3>
+            <p>Предмет, цель, цена занятия, заметки и прогресс — вся история по каждому ученику в одном месте.</p>
+          </div>
+          <div class="fpanel-art">
+            <div class="mini">
+              <div class="mini-profile">
+                <span class="mini-av big">М</span>
+                <div>
+                  <div class="mini-visit-name">Маша · ОГЭ математика</div>
+                  <div class="mini-sub">1 200 ₽ / занятие · цель: 5 на ОГЭ</div>
+                </div>
+              </div>
+              <div class="mini-progress"><i style="width:72%"></i></div>
+              <div class="mini-sub">Прогресс программы · 72%</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
 <section id="reviews" class="section section-alt">
   <div class="wrap">
-    <div class="sechead">
+    <div class="sechead" data-reveal>
       <span class="over">Отзывы</span>
       <h2>Это нужно реальным репетиторам</h2>
     </div>
-    <div class="grid-3">
-      <div class="lcard review">
-        <div class="stars">{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}</div>
-        <p>«Главная боль — напомнить и уточнить за пару часов до занятия. Pingly делает это за меня.»</p>
-        <div class="review-id"><span class="review-av">А</span><div><div class="review-name">Анна Олеговна</div><div class="review-role">репетитор по математике</div></div></div>
+    <div class="carousel" data-reveal>
+      <div class="car-viewport">
+        <div class="car-track" id="carTrack">
+          <article class="car-slide active">
+            <div class="lcard review">
+              <div class="stars">{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}</div>
+              <p>«Главная боль — напомнить и уточнить за пару часов до занятия. Pingly делает это за меня.»</p>
+              <div class="review-id"><span class="review-av">А</span><div><div class="review-name">Анна Олеговна</div><div class="review-role">репетитор по математике</div></div></div>
+            </div>
+          </article>
+          <article class="car-slide">
+            <div class="lcard review">
+              <div class="stars">{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}</div>
+              <p>«Раньше каждому писала вручную "у нас сегодня урок?". Теперь бот спрашивает сам.»</p>
+              <div class="review-id"><span class="review-av">Е</span><div><div class="review-name">Екатерина Алексеевна</div><div class="review-role">репетитор по английскому</div></div></div>
+            </div>
+          </article>
+          <article class="car-slide">
+            <div class="lcard review">
+              <div class="stars">{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}</div>
+              <p>«Ученики отменяли за 15 минут. Ввела правило 2 часов — а бот его сам напоминает.»</p>
+              <div class="review-id"><span class="review-av">Э</span><div><div class="review-name">Эля</div><div class="review-role">репетитор по языкам</div></div></div>
+            </div>
+          </article>
+        </div>
       </div>
-      <div class="lcard review">
-        <div class="stars">{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}</div>
-        <p>«Раньше каждому писала вручную "у нас сегодня урок?". Теперь бот спрашивает сам.»</p>
-        <div class="review-id"><span class="review-av">Е</span><div><div class="review-name">Екатерина Алексеевна</div><div class="review-role">репетитор по английскому</div></div></div>
-      </div>
-      <div class="lcard review">
-        <div class="stars">{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}{{ ic('star',16) }}</div>
-        <p>«Ученики отменяли за 15 минут. Ввела правило 2 часов — а бот его сам напоминает.»</p>
-        <div class="review-id"><span class="review-av">Э</span><div><div class="review-name">Эля</div><div class="review-role">репетитор по языкам</div></div></div>
+      <div class="car-dots">
+        <button type="button" class="car-dot active" aria-label="Отзыв 1"></button>
+        <button type="button" class="car-dot" aria-label="Отзыв 2"></button>
+        <button type="button" class="car-dot" aria-label="Отзыв 3"></button>
       </div>
     </div>
   </div>
@@ -173,11 +313,11 @@
 
 <section id="price" class="section">
   <div class="wrap">
-    <div class="sechead">
+    <div class="sechead" data-reveal>
       <span class="over">Цена</span>
       <h2>Одна подписка. Всё включено.</h2>
     </div>
-    <div class="price-wrap">
+    <div class="price-wrap" data-reveal>
       <div class="lcard price-card">
         <span class="pill price-badge">14 дней бесплатно</span>
         <div class="price-title">Pingly Pro</div>
@@ -190,17 +330,17 @@
           <div>{{ ic('check', 18) }} <span>Домашние задания и карточки учеников</span></div>
           <div>{{ ic('check', 18) }} <span>Поддержка в Telegram</span></div>
         </div>
-        <a class="lbtn lbtn-primary lbtn-lg" href="/register" style="width:100%;">{{ ic('send', 18) }} Попробовать бесплатно</a>
+        <a class="lbtn lbtn-primary lbtn-lg magnetic" href="/register" style="width:100%;">{{ ic('send', 18) }} Попробовать бесплатно</a>
       </div>
     </div>
   </div>
 </section>
 
 <section class="cta-band">
-  <div class="wrap">
+  <div class="wrap" data-reveal>
     <h2>Перестань напоминать вручную уже сегодня</h2>
     <p>Настройка занимает 5 минут. Первые 14 дней — бесплатно.</p>
-    <a class="lbtn lbtn-light lbtn-lg" href="/register">{{ ic('send', 19) }} Начать бесплатно</a>
+    <a class="lbtn lbtn-light lbtn-lg magnetic" href="/register">{{ ic('send', 19) }} Начать бесплатно</a>
   </div>
 </section>
 
