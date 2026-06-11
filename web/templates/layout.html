@@ -42,22 +42,26 @@
 
     <nav class="nav">
       {% if user.role == "tutor" %}
-      <a href="/tutor" class="{{ 'active' if active == 'overview' }}">{{ icon('zap') }} Обзор</a>
-      <a href="/tutor/students" class="{{ 'active' if active == 'students' }}">{{ icon('users') }} Ученики</a>
-      <a href="/tutor/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }} Календарь</a>
-      <a href="/tutor/schedule" class="{{ 'active' if active == 'schedule' }}">{{ icon('calendar-clock') }} Расписание</a>
-      <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }} Задания{% if plan_locked(user, 'homework') %} <span class="lock-badge">🔒</span>{% endif %}</a>
-      <a href="/tutor/finance" class="{{ 'active' if active == 'finance' }}">{{ icon('russian-ruble') }} Финансы{% if plan_locked(user, 'finance') %} <span class="lock-badge">🔒</span>{% endif %}</a>
-      <a href="/tutor/requests" class="{{ 'active' if active == 'requests' }}">{{ icon('inbox') }} Заявки{% if plan_locked(user, 'requests') %} <span class="lock-badge">🔒</span>{% endif %}</a>
-      <a href="/tutor/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} Настройки</a>
-      {% if user.is_admin %}<a href="/admin" class="{{ 'active' if active == 'admin' }}">{{ icon('zap') }} Админка</a>{% endif %}
+      <a href="/tutor" title="Обзор" class="{{ 'active' if active == 'overview' }}">{{ icon('zap') }} <span class="nav-label">Обзор</span></a>
+      <a href="/tutor/students" title="Ученики" class="{{ 'active' if active == 'students' }}">{{ icon('users') }} <span class="nav-label">Ученики</span></a>
+      <a href="/tutor/calendar" title="Календарь" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }} <span class="nav-label">Календарь</span></a>
+      <a href="/tutor/schedule" title="Расписание" class="{{ 'active' if active == 'schedule' }}">{{ icon('calendar-clock') }} <span class="nav-label">Расписание</span></a>
+      <a href="/tutor/homework" title="Задания" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }} <span class="nav-label">Задания{% if plan_locked(user, 'homework') %} <span class="lock-badge">🔒</span>{% endif %}</span></a>
+      <a href="/tutor/finance" title="Финансы" class="{{ 'active' if active == 'finance' }}">{{ icon('russian-ruble') }} <span class="nav-label">Финансы{% if plan_locked(user, 'finance') %} <span class="lock-badge">🔒</span>{% endif %}</span></a>
+      <a href="/tutor/requests" title="Заявки" class="{{ 'active' if active == 'requests' }}">{{ icon('inbox') }} <span class="nav-label">Заявки{% if plan_locked(user, 'requests') %} <span class="lock-badge">🔒</span>{% endif %}</span></a>
+      <a href="/tutor/settings" title="Настройки" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} <span class="nav-label">Настройки</span></a>
+      {% if user.is_admin %}<a href="/admin" title="Админка" class="{{ 'active' if active == 'admin' }}">{{ icon('zap') }} <span class="nav-label">Админка</span></a>{% endif %}
       {% else %}
-      <a href="/student" class="{{ 'active' if active == 'overview' }}">{{ icon('graduation-cap') }} Главная</a>
-      <a href="/student/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }} Календарь</a>
-      <a href="/student/history" class="{{ 'active' if active == 'history' }}">{{ icon('calendar-clock') }} История</a>
-      <a href="/student/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }} Задания</a>
-      <a href="/student/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} Настройки</a>
+      <a href="/student" title="Главная" class="{{ 'active' if active == 'overview' }}">{{ icon('graduation-cap') }} <span class="nav-label">Главная</span></a>
+      <a href="/student/calendar" title="Календарь" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }} <span class="nav-label">Календарь</span></a>
+      <a href="/student/history" title="История" class="{{ 'active' if active == 'history' }}">{{ icon('calendar-clock') }} <span class="nav-label">История</span></a>
+      <a href="/student/homework" title="Задания" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }} <span class="nav-label">Задания</span></a>
+      <a href="/student/settings" title="Настройки" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} <span class="nav-label">Настройки</span></a>
       {% endif %}
+      <button type="button" class="sb-toggle" id="sb-toggle" aria-expanded="true" title="Свернуть меню">
+        <svg class="ic" aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg>
+        <span>Свернуть</span>
+      </button>
     </nav>
 
     <div class="userbox">

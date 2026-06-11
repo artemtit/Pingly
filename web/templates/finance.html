@@ -10,15 +10,25 @@
 </div>
 
 <section class="stat-grid" style="margin-bottom:18px;">
-  <div class="stat-card">
-    <span class="stat-ico">{{ ui.icon('wallet', 22) }}</span>
-    <div class="stat-num">{{ overview.month_earned }} ₽</div>
-    <div class="stat-label">Заработано в этом месяце</div>
+  <div class="stat-card" style="grid-column: span 2;">
+    <div class="fin-hero">
+      <div>
+        <span class="stat-ico">{{ ui.icon('wallet', 22) }}</span>
+        <div class="fin-hero-num" id="fin-earned" data-count="{{ overview.month_earned }}" data-suffix=" ₽">{{ overview.month_earned }} ₽</div>
+        <div class="stat-label" id="fin-earned-label">заработано в этом месяце</div>
+        <div class="fin-period pills" role="group" aria-label="Период">
+          <button type="button" class="pill-btn active" data-period="month">Месяц</button>
+          <button type="button" class="pill-btn" data-period="quarter">Квартал</button>
+          <button type="button" class="pill-btn" data-period="all">Всё время</button>
+        </div>
+      </div>
+      <svg class="fin-spark" id="fin-spark" width="190" height="84" viewBox="0 0 190 84" role="img" aria-label="Доход за последние 6 месяцев"></svg>
+    </div>
   </div>
-  <div class="stat-card {{ 'stat-warn' if overview.total_unpaid }}">
+  <div class="stat-card {{ 'stat-due' if overview.total_unpaid }}">
     <span class="stat-ico {{ 'stat-ico-warn' if overview.total_unpaid }}">{{ ui.icon('clock', 22) }}</span>
-    <div class="stat-num">{{ overview.total_unpaid }} ₽</div>
-    <div class="stat-label">Ждут оплаты</div>
+    <div class="stat-num" data-count="{{ overview.total_unpaid }}" data-suffix=" ₽">{{ overview.total_unpaid }} ₽</div>
+    <div class="stat-label">ждут оплаты</div>
   </div>
 </section>
 
@@ -28,14 +38,22 @@
     {% if overview.students %}
     <div class="fin-list">
       {% for s in overview.students %}
-      <div class="fin-row">
-        <div class="fin-name">
-          <strong>{{ s.name }}</strong>
-          <span class="muted">{{ s.lessons }} провед.</span>
+      <div class="fin-exp" data-student="{{ s.student_id }}">
+        <div class="fin-row fin-exp-toggle" role="button" tabindex="0" aria-expanded="false"
+             title="Показать историю платежей">
+          <div class="fin-name">
+            <strong>{{ s.name }}</strong>
+            <span class="muted">{{ s.lessons }} провед.</span>
+          </div>
+          <div class="fin-sums">
+            {% if s.unpaid_sum %}<span class="badge cancelled">долг {{ s.unpaid_sum }} ₽</span>{% endif %}
+            <span class="badge completed">оплачено {{ s.paid_sum }} ₽</span>
+            <svg class="fin-exp-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
         </div>
-        <div class="fin-sums">
-          {% if s.unpaid_sum %}<span class="badge cancelled">долг {{ s.unpaid_sum }} ₽</span>{% endif %}
-          <span class="badge completed">оплачено {{ s.paid_sum }} ₽</span>
+        <div class="fin-exp-body">
+          <div class="muted" style="font-size:12.5px;">Последние занятия</div>
+          <div class="fin-tl" data-tl></div>
         </div>
       </div>
       {% endfor %}
@@ -47,15 +65,26 @@
   </div>
 
   <div class="card">
-    <h2>Неоплаченные занятия</h2>
+    <div class="card-head">
+      <h2 style="margin:0;">Неоплаченные занятия</h2>
+      {% if unpaid|length > 1 %}
+      <label class="check-row" style="font-size:13px;">
+        <input type="checkbox" class="fin-check" id="fin-check-all"> выбрать все
+      </label>
+      {% endif %}
+    </div>
     {% if unpaid %}
-    <div class="fin-list">
+    <p class="muted" style="margin:-6px 0 12px;font-size:13px;">Старые долги — сверху. Выбери несколько и отметь оплату одним действием.</p>
+    <div class="fin-list" id="unpaid-list">
       {% for l in unpaid %}
-      <div class="fin-row">
-        <div class="fin-name">
-          <strong>{{ l.student_profiles.name if l.student_profiles else "Ученик" }}</strong>
+      <div class="fin-row unpaid-row" data-id="{{ l.id }}" data-ts="{{ l.starts_at }}" data-price="{{ l.price or 0 }}"
+           data-student="{{ l.student_profiles.name if l.student_profiles else 'Ученик' }}" data-date="{{ l.starts_at | msk('%d.%m') }}">
+        <input type="checkbox" class="fin-check" aria-label="Выбрать занятие">
+        <div class="fin-name" style="flex:1;">
+          <strong>{{ l.student_profiles.name if l.student_profiles else "Ученик" }} <span class="badge badge-overdue overdue-tag" style="display:none;"></span></strong>
           <span class="muted">{{ l.starts_at | msk('%d.%m %H:%M') }} · {{ l.price or 0 }} ₽</span>
         </div>
+        <button type="button" class="fin-remind" title="Скопировать текст напоминания об оплате">Напомнить</button>
         <form method="post" action="/tutor/lessons/{{ l.id }}/paid">
           <input type="hidden" name="paid" value="1">
           <button class="btn btn-primary btn-sm">✅ Оплачено</button>
@@ -68,4 +97,180 @@
     {% endif %}
   </div>
 </section>
+
+<div class="massbar" id="massbar" aria-live="polite">
+  <span id="massbar-text">Выбрано 0</span>
+  <button type="button" class="btn btn-primary btn-sm" id="massbar-pay">✅ Отметить оплачено</button>
+  <button type="button" class="massbar-cancel" id="massbar-cancel">Отменить</button>
+</div>
+
+<script id="fin-data" type="application/json">{{ {"months": fin_months, "history": fin_history} | tojson }}</script>
+<script>
+(function(){
+  var data = JSON.parse(document.getElementById('fin-data').textContent);
+
+  /* ---- sparkline: last 6 months of income ---- */
+  (function(){
+    var svg = document.getElementById('fin-spark');
+    var m = data.months || [];
+    if (!svg || m.length < 2) { if (svg) svg.style.display = 'none'; return; }
+    var W = 190, H = 84, padX = 12, top = 10, bottom = 22;
+    var max = Math.max.apply(null, m.map(function(x){ return x.sum; })) || 1;
+    var stepX = (W - padX * 2) / (m.length - 1);
+    var pts = m.map(function(x, i){
+      return [padX + i * stepX, top + (H - top - bottom) * (1 - x.sum / max)];
+    });
+    var ns = 'http://www.w3.org/2000/svg';
+    var defs = document.createElementNS(ns, 'defs');
+    defs.innerHTML = '<linearGradient id="sparkfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F97316" stop-opacity=".22"/><stop offset="1" stop-color="#F97316" stop-opacity="0"/></linearGradient>';
+    svg.appendChild(defs);
+    var area = document.createElementNS(ns, 'polygon');
+    area.setAttribute('class', 'area');
+    area.setAttribute('points', pts.map(function(p){ return p.join(','); }).join(' ') + ' ' + pts[pts.length-1][0] + ',' + (H - bottom) + ' ' + pts[0][0] + ',' + (H - bottom));
+    svg.appendChild(area);
+    var line = document.createElementNS(ns, 'polyline');
+    line.setAttribute('points', pts.map(function(p){ return p.join(','); }).join(' '));
+    svg.appendChild(line);
+    if (!pingly.reduceMotion) {
+      var len = 400;
+      line.style.strokeDasharray = len;
+      line.style.strokeDashoffset = len;
+      line.style.transition = 'stroke-dashoffset 1s cubic-bezier(0,0,.2,1) .2s';
+      requestAnimationFrame(function(){ line.style.strokeDashoffset = '0'; });
+    }
+    var last = document.createElementNS(ns, 'circle');
+    last.setAttribute('cx', pts[pts.length-1][0]); last.setAttribute('cy', pts[pts.length-1][1]); last.setAttribute('r', 3.2);
+    svg.appendChild(last);
+    m.forEach(function(x, i){
+      var t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', pts[i][0]); t.setAttribute('y', H - 8); t.setAttribute('text-anchor', 'middle');
+      t.textContent = x.label;
+      svg.appendChild(t);
+    });
+  }());
+
+  /* ---- period switch: месяц / квартал / всё время ---- */
+  (function(){
+    var m = data.months || [];
+    var labelEl = document.getElementById('fin-earned-label');
+    var numEl = document.getElementById('fin-earned');
+    var totalAll = (data.history || []).reduce(function(acc, r){ return acc + (r.price || 0); }, 0);
+    var labels = { month: 'заработано в этом месяце', quarter: 'заработано за 3 месяца', all: 'заработано за всё время' };
+    function sumLast(n){ return m.slice(-n).reduce(function(acc, x){ return acc + x.sum; }, 0); }
+    document.querySelectorAll('[data-period]').forEach(function(b){
+      b.addEventListener('click', function(){
+        document.querySelectorAll('[data-period]').forEach(function(x){ x.classList.remove('active'); });
+        b.classList.add('active');
+        var p = b.dataset.period;
+        var val = p === 'month' ? sumLast(1) : p === 'quarter' ? sumLast(3) : totalAll;
+        numEl.textContent = pingly.fmt(val) + ' ₽';
+        labelEl.textContent = labels[p];
+      });
+    });
+  }());
+
+  /* ---- per-student payment history (expand) ---- */
+  document.querySelectorAll('.fin-exp').forEach(function(exp){
+    var toggle = exp.querySelector('.fin-exp-toggle');
+    function flip(){
+      var open = exp.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open && !exp.dataset.filled) {
+        exp.dataset.filled = '1';
+        var tl = exp.querySelector('[data-tl]');
+        var rows = (data.history || []).filter(function(r){ return r.student_id === exp.dataset.student; }).slice(0, 6);
+        if (!rows.length) { tl.innerHTML = '<span class="muted" style="font-size:13px;">Занятий не найдено</span>'; return; }
+        rows.forEach(function(r){
+          var div = document.createElement('div');
+          div.className = 'fin-tl-row';
+          div.innerHTML = '<span class="d"></span><span class="s"></span><span class="badge ' + (r.paid ? 'completed' : 'cancelled') + '"></span>';
+          div.querySelector('.d').textContent = r.date;
+          div.querySelector('.s').textContent = pingly.fmt(r.price) + ' ₽';
+          div.querySelector('.badge').textContent = r.paid ? 'оплачено' : 'долг';
+          tl.appendChild(div);
+        });
+      }
+    }
+    toggle.addEventListener('click', flip);
+    toggle.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+  });
+
+  /* ---- overdue badges (> 7 days unpaid) ---- */
+  document.querySelectorAll('.unpaid-row').forEach(function(row){
+    var ts = new Date(row.dataset.ts);
+    if (isNaN(ts)) return;
+    var days = Math.floor((Date.now() - ts) / 86400000);
+    if (days > 7) {
+      var tag = row.querySelector('.overdue-tag');
+      tag.textContent = 'просрочено ' + days + ' дн.';
+      tag.style.display = '';
+    }
+  });
+
+  /* ---- «Напомнить»: copy a ready-to-send message ---- */
+  document.querySelectorAll('.fin-remind').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var row = btn.closest('.unpaid-row');
+      var msg = 'Привет! Напоминаю про оплату занятия ' + row.dataset.date + ' — ' + pingly.fmt(row.dataset.price) + ' ₽ 🙂';
+      pingly.copy(msg, 'Текст напоминания скопирован — отправь ученику в Telegram', 'action');
+    });
+  });
+
+  /* ---- mass payment: checkboxes + action bar ---- */
+  (function(){
+    var rows = Array.prototype.slice.call(document.querySelectorAll('.unpaid-row'));
+    if (!rows.length) return;
+    var bar = document.getElementById('massbar');
+    var text = document.getElementById('massbar-text');
+    var all = document.getElementById('fin-check-all');
+    function selected(){ return rows.filter(function(r){ return r.querySelector('.fin-check').checked; }); }
+    function refresh(){
+      var sel = selected();
+      rows.forEach(function(r){ r.classList.toggle('checked', r.querySelector('.fin-check').checked); });
+      var sum = sel.reduce(function(acc, r){ return acc + (parseInt(r.dataset.price, 10) || 0); }, 0);
+      text.textContent = 'Выбрано ' + sel.length + ' · ' + pingly.fmt(sum) + ' ₽';
+      bar.classList.toggle('show', sel.length > 0);
+      if (all) { all.checked = sel.length === rows.length; }
+    }
+    rows.forEach(function(r){
+      r.querySelector('.fin-check').addEventListener('change', refresh);
+    });
+    if (all) all.addEventListener('change', function(){
+      rows.forEach(function(r){ r.querySelector('.fin-check').checked = all.checked; });
+      refresh();
+    });
+    document.getElementById('massbar-cancel').addEventListener('click', function(){
+      rows.forEach(function(r){ r.querySelector('.fin-check').checked = false; });
+      refresh();
+    });
+    document.getElementById('massbar-pay').addEventListener('click', function(){
+      var sel = selected();
+      if (!sel.length) return;
+      var payBtn = this;
+      payBtn.classList.add('btn-loading'); payBtn.disabled = true;
+      var sum = sel.reduce(function(acc, r){ return acc + (parseInt(r.dataset.price, 10) || 0); }, 0);
+      var done = 0;
+      function next(){
+        if (done >= sel.length) {
+          var r = payBtn.getBoundingClientRect();
+          pingly.confetti(r.left + r.width / 2, r.top);
+          var word = sel.length === 1 ? 'занятие отмечено' : (sel.length < 5 ? 'занятия отмечены' : 'занятий отмечено');
+          pingly.toast(sel.length + ' ' + word + ' как оплачено · +' + pingly.fmt(sum) + ' ₽', 'success');
+          sel.forEach(function(row, i){ setTimeout(function(){ row.classList.add('paying'); }, i * 60); });
+          setTimeout(function(){ location.reload(); }, 1100);
+          return;
+        }
+        var row = sel[done++];
+        fetch('/tutor/lessons/' + row.dataset.id + '/paid', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'paid=1',
+          credentials: 'same-origin'
+        }).then(next, next);
+      }
+      next();
+    });
+  }());
+}());
+</script>
 {% endblock %}

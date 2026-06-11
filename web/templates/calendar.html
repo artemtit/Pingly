@@ -1,12 +1,13 @@
 {% extends "layout.html" %}
 {% import "macros.html" as ui %}
 {% block content %}
+{% set is_tutor = user.role == "tutor" %}
 <div class="topbar">
   <div>
     <div class="eyebrow">Календарь</div>
     <h1>{{ cal.title }}</h1>
   </div>
-  <div class="view-switch">
+  <div class="view-switch" id="view-switch">
     <a href="{{ base }}?view=day&date={{ cal.anchor }}" class="{{ 'active' if cal.view == 'day' }}">День</a>
     <a href="{{ base }}?view=week&date={{ cal.anchor }}" class="{{ 'active' if cal.view == 'week' }}">Неделя</a>
     <a href="{{ base }}?view=month&date={{ cal.anchor }}" class="view-month {{ 'active' if cal.view == 'month' }}">Месяц</a>
@@ -14,21 +15,26 @@
 </div>
 
 <div class="cal-nav">
-  <a class="btn btn-ghost btn-sm" href="{{ base }}?view={{ cal.view }}&date={{ cal.prev }}">‹ Назад</a>
+  <a class="btn btn-ghost btn-sm" data-caldir="-1" href="{{ base }}?view={{ cal.view }}&date={{ cal.prev }}">‹ Назад</a>
   <a class="btn btn-secondary btn-sm" href="{{ base }}?view={{ cal.view }}&date={{ cal.today }}">Сегодня</a>
-  <a class="btn btn-ghost btn-sm" href="{{ base }}?view={{ cal.view }}&date={{ cal.next }}">Вперёд ›</a>
-  <div class="legend">
-    <span><i class="dot scheduled"></i>Запланировано</span>
-    <span><i class="dot completed"></i>Проведено</span>
-    <span><i class="dot rescheduled"></i>Перенесено</span>
-    <span><i class="dot cancelled"></i>Отменено</span>
+  <a class="btn btn-ghost btn-sm" data-caldir="1" href="{{ base }}?view={{ cal.view }}&date={{ cal.next }}">Вперёд ›</a>
+  <div class="legend" id="cal-legend">
+    <button type="button" data-status="scheduled" title="Показать/скрыть"><i class="dot scheduled"></i>Запланировано</button>
+    <button type="button" data-status="completed" title="Показать/скрыть"><i class="dot completed"></i>Проведено</button>
+    <button type="button" data-status="rescheduled" title="Показать/скрыть"><i class="dot rescheduled"></i>Перенесено</button>
+    <button type="button" data-status="cancelled" title="Показать/скрыть"><i class="dot cancelled"></i>Отменено</button>
   </div>
 </div>
 
 {% if cal.view == "day" %}
-<div class="card">
+<div class="card" id="cal-card">
   {% set day = cal.days[0] %}
-  <h2>{{ day.weekday }}, {{ day.day }}</h2>
+  <div class="card-head">
+    <h2 style="margin:0;">{{ day.weekday }}, {{ day.day }} {% if day.is_today %}<span class="today-tag" style="position:static;">Сегодня</span>{% endif %}</h2>
+    {% if is_tutor %}
+    <button type="button" class="btn btn-secondary btn-sm" onclick="openQuickAdd('{{ day.date }}')">{{ ui.icon('plus', 15) }} Занятие на этот день</button>
+    {% endif %}
+  </div>
   <div class="day-list">
     {% for lesson in day.lessons %}
     <div class="day-lesson {{ lesson.status }}">
@@ -38,7 +44,7 @@
         {{ ui.status_badge(lesson.status) }}
         {% if lesson.comment %}<div class="lesson-topic">📝 {{ lesson.comment }}</div>{% endif %}
       </div>
-      {% if user.role == "tutor" %}
+      {% if is_tutor %}
       <div class="day-lesson-actions">
         <details class="resched lesson-topic-edit">
           <summary class="btn btn-ghost btn-sm">📝 {{ 'Изменить тему' if lesson.comment else 'Тема урока' }}</summary>
@@ -66,24 +72,41 @@
       {% endif %}
     </div>
     {% else %}
-    <div class="empty"><div class="empty-emoji">☀️</div><p>На этот день занятий нет.</p></div>
+    <div class="empty">
+      <div class="empty-emoji">☀️</div>
+      <p>На этот день занятий нет.</p>
+      {% if is_tutor %}
+      <button type="button" class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="openQuickAdd('{{ day.date }}')">{{ ui.icon('plus', 15) }} Добавить занятие</button>
+      {% endif %}
+    </div>
     {% endfor %}
   </div>
 </div>
 
 {% else %}
-<div class="card">
+<div class="card" id="cal-card">
   <div class="cal-grid {{ 'cal-week' if cal.view == 'week' else 'cal-month' }}">
     {% for wd in cal.weekday_names %}<div class="cal-weekday">{{ wd }}</div>{% endfor %}
+    {% set pill_limit = 3 if cal.view == 'week' else 2 %}
     {% for day in cal.days %}
     <a class="cal-cell {{ 'out' if not day.in_month }} {{ 'today' if day.is_today }}" href="{{ base }}?view=day&date={{ day.date }}">
       <div class="cal-daynum">{{ day.day }}</div>
+      {% if day.is_today %}<span class="today-tag">Сегодня</span>{% endif %}
       <div class="cal-cell-lessons">
-        {% for lesson in day.lessons[:4] %}
+        {% for lesson in day.lessons[:pill_limit] %}
         <div class="cal-pill {{ lesson.status }}"><i class="dot {{ lesson.status }}"></i><span class="cp-time">{{ lesson.time }}</span> <span class="cp-name">{{ lesson.student }}</span></div>
         {% endfor %}
-        {% if day.lessons|length > 4 %}<div class="cal-more">+{{ day.lessons|length - 4 }}</div>{% endif %}
+        {% if day.lessons|length > pill_limit %}
+        {% set pop_rows = [] %}
+        {% for l in day.lessons %}{% set _ = pop_rows.append([l.time, l.student, l.status]) %}{% endfor %}
+        <button type="button" class="cal-more" data-date="{{ base }}?view=day&date={{ day.date }}"
+          data-title="{{ day.weekday }}, {{ day.day }}"
+          data-lessons='{{ pop_rows | tojson }}'>+{{ day.lessons|length - pill_limit }} ещё</button>
+        {% endif %}
       </div>
+      {% if is_tutor %}
+      <button type="button" class="cal-add" data-date="{{ day.date }}" title="Добавить занятие" aria-label="Добавить занятие на {{ day.day }}">+</button>
+      {% endif %}
     </a>
     {% endfor %}
   </div>
@@ -94,7 +117,7 @@
     {% if day.lessons %}
     {% set ns.any = true %}
     <div class="agenda-day {{ 'today' if day.is_today }}">
-      <div class="agenda-date">{{ day.weekday }}, {{ day.day }}</div>
+      <div class="agenda-date">{{ day.weekday }}, {{ day.day }} {% if day.is_today %}<span class="today-tag" style="position:static;">Сегодня</span>{% endif %}</div>
       <div class="agenda-lessons">
         {% for lesson in day.lessons %}
         <a class="agenda-row {{ lesson.status }}" href="{{ base }}?view=day&date={{ day.date }}">
@@ -107,8 +130,150 @@
     </div>
     {% endif %}
     {% endfor %}
-    {% if not ns.any %}<div class="empty"><div class="empty-emoji">🗓️</div><p>В этом периоде занятий нет.</p></div>{% endif %}
+    {% if not ns.any %}
+    <div class="empty">
+      <div class="empty-emoji">🗓️</div>
+      <p>В этом периоде занятий нет.</p>
+      {% if is_tutor %}
+      <button type="button" class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="openQuickAdd('{{ cal.today }}')">{{ ui.icon('plus', 15) }} Добавить занятие</button>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endif %}
+
+{% if is_tutor %}
+<div class="modal-backdrop" id="quick-add-modal" role="dialog" aria-modal="true" aria-label="Новое занятие">
+  <div class="modal">
+    <div class="modal-emoji">📅</div>
+    <h2 id="qa-title">Новое занятие</h2>
+    {% if students %}
+    <form method="post" action="/tutor/schedule" class="form" style="margin-top:16px;text-align:left;">
+      <input type="hidden" name="recurrence" value="once">
+      <input type="hidden" name="lesson_date" id="qa-date">
+      <input type="hidden" name="back" id="qa-back">
+      <label class="field"><span>Ученик</span>
+        <select class="input" name="student_id" required>
+          {% for s in students %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select></label>
+      <label class="field"><span>Время</span>
+        <input class="input" type="time" name="lesson_time" value="15:00" required></label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="pingly.closeModal('quick-add-modal')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Добавить</button>
+      </div>
+    </form>
+    {% else %}
+    <p class="muted" style="margin-top:10px;">Сначала добавь ученика — занятия привязываются к ученикам.</p>
+    <div class="modal-actions">
+      <a class="btn btn-primary" href="/tutor/students">К ученикам</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+/* slide between periods: prev/next stores direction, next load animates */
+(function(){
+  var card = document.getElementById('cal-card');
+  try {
+    var dir = sessionStorage.getItem('pingly_caldir');
+    sessionStorage.removeItem('pingly_caldir');
+    if (card && dir) card.classList.add(dir === '1' ? 'cal-slide-left' : 'cal-slide-right');
+  } catch (e) {}
+  document.querySelectorAll('[data-caldir]').forEach(function(a){
+    a.addEventListener('click', function(){
+      try { sessionStorage.setItem('pingly_caldir', a.dataset.caldir); } catch (e) {}
+    });
+  });
+}());
+
+/* segmented control: thumb slides under the active view */
+(function(){
+  var sw = document.getElementById('view-switch');
+  if (!sw) return;
+  var active = sw.querySelector('a.active');
+  if (!active || getComputedStyle(active).display === 'none') return;
+  var thumb = document.createElement('span');
+  thumb.className = 'vs-thumb';
+  sw.prepend(thumb);
+  function place(el, animate){
+    thumb.style.width = el.offsetWidth + 'px';
+    thumb.style.transform = 'translateX(' + (el.offsetLeft - 4) + 'px)';
+  }
+  if (!pingly.reduceMotion) {
+    var first = sw.querySelector('a');
+    place(first);
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ place(active); }); });
+  } else place(active);
+  sw.classList.add('vs-ready');
+  window.addEventListener('resize', function(){ place(sw.querySelector('a.active')); });
+}());
+
+/* legend toggles: show/hide statuses */
+(function(){
+  var card = document.getElementById('cal-card');
+  document.querySelectorAll('#cal-legend button').forEach(function(b){
+    b.addEventListener('click', function(){
+      var off = b.classList.toggle('off');
+      card.classList.toggle('cal-hide-' + b.dataset.status, off);
+    });
+  });
+}());
+
+/* «+N ещё» popover with the full day list */
+(function(){
+  var pop = null;
+  function close(){ if (pop) { pop.remove(); pop = null; } }
+  document.addEventListener('click', function(e){ if (pop && !e.target.closest('.cal-pop') && !e.target.closest('.cal-more')) close(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+  document.querySelectorAll('.cal-more').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      if (pop) { close(); return; }
+      var lessons = JSON.parse(btn.dataset.lessons || '[]');
+      pop = document.createElement('div');
+      pop.className = 'cal-pop';
+      var head = document.createElement('div'); head.className = 'cal-pop-date'; head.textContent = btn.dataset.title;
+      pop.appendChild(head);
+      lessons.forEach(function(l){
+        var row = document.createElement('div'); row.className = 'cal-pop-row';
+        row.innerHTML = '<i class="dot ' + l[2] + '"></i><span class="cal-pop-time"></span><span class="cal-pop-name"></span>';
+        row.querySelector('.cal-pop-time').textContent = l[0];
+        row.querySelector('.cal-pop-name').textContent = l[1];
+        pop.appendChild(row);
+      });
+      var open = document.createElement('a'); open.className = 'cal-pop-open'; open.href = btn.dataset.date; open.textContent = 'Открыть день →';
+      pop.appendChild(open);
+      document.body.appendChild(pop);
+      var r = btn.getBoundingClientRect();
+      pop.style.position = 'fixed';
+      var left = Math.min(r.left, window.innerWidth - pop.offsetWidth - 12);
+      var top = r.bottom + 6;
+      if (top + pop.offsetHeight > window.innerHeight - 12) top = r.top - pop.offsetHeight - 6;
+      pop.style.left = Math.max(8, left) + 'px';
+      pop.style.top = Math.max(8, top) + 'px';
+    });
+  });
+}());
+
+/* quick add from a cell */
+function openQuickAdd(date){
+  var d = document.getElementById('qa-date');
+  if (!d) return;
+  d.value = date;
+  document.getElementById('qa-back').value = location.pathname + location.search;
+  var parts = date.split('-');
+  document.getElementById('qa-title').textContent = 'Занятие на ' + parts[2] + '.' + parts[1];
+  pingly.openModal('quick-add-modal');
+}
+document.querySelectorAll('.cal-add').forEach(function(btn){
+  btn.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    openQuickAdd(btn.dataset.date);
+  });
+});
+</script>
 {% endblock %}

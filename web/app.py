@@ -612,7 +612,9 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         _require(user, "tutor")
         lessons = await services.lessons.list_tutor_calendar(user["id"])
         cal = build_calendar(lessons, view if view in {"day", "week", "month"} else "month", parse_anchor(date))
-        return templates.TemplateResponse("calendar.html", _ctx(request, user, "calendar", cal=cal, base="/tutor/calendar"))
+        # students feed the quick-add ("+" on an empty cell) modal
+        students = await services.students.list_students_by_user(user["id"])
+        return templates.TemplateResponse("calendar.html", _ctx(request, user, "calendar", cal=cal, base="/tutor/calendar", students=students))
 
     @app.get("/tutor/schedule", response_class=HTMLResponse)
     async def tutor_schedule(request: Request, user: dict = Depends(current_user)) -> Response:
@@ -631,6 +633,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         lesson_date: str = Form(""),
         interval_n: int = Form(1),
         weekdays: list[int] = Form(default=[]),
+        back: str = Form(""),
         user: dict = Depends(current_user),
     ) -> Response:
         _require(user, "tutor")
@@ -645,6 +648,9 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
                 user["id"], student_id, recurrence, f"{time_norm}:00",
                 weekdays=wd, interval_n=interval_n,
             )
+        # quick-add from the calendar returns to the same view, not to month
+        if back.startswith("/tutor/"):
+            return RedirectResponse(back, status_code=303)
         return RedirectResponse("/tutor/calendar?view=month", status_code=303)
 
     @app.get("/tutor/homework", response_class=HTMLResponse)
@@ -720,9 +726,45 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         overview = await services.lessons.finance_overview(user["id"])
         lessons = await services.lessons.list_tutor_calendar(user["id"])
         unpaid = [l for l in lessons if l.get("status") == "completed" and not l.get("paid")]
-        unpaid.sort(key=lambda l: l.get("starts_at") or "", reverse=True)
+        # oldest debts first: the longer it hangs, the more urgent it is
+        unpaid.sort(key=lambda l: l.get("starts_at") or "")
+        # last 6 calendar months of completed-lesson income for the sparkline,
+        # plus a flat payment history for the per-student expandable timeline —
+        # all derived from lessons already fetched, no extra queries
+        ru_months = ["", "янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+        now_msk = datetime.now(_MSK)
+        month_keys = []
+        y, m = now_msk.year, now_msk.month
+        for _ in range(6):
+            month_keys.append((y, m))
+            m -= 1
+            if m == 0:
+                y, m = y - 1, 12
+        month_keys.reverse()
+        sums = {key: 0 for key in month_keys}
+        fin_history: list[dict] = []
+        for l in lessons:
+            if l.get("status") != "completed":
+                continue
+            try:
+                dt = datetime.fromisoformat(str(l["starts_at"]).replace("Z", "+00:00")).astimezone(_MSK)
+            except (ValueError, KeyError):
+                continue
+            price = l.get("price") or 0
+            if (dt.year, dt.month) in sums:
+                sums[(dt.year, dt.month)] += price
+            fin_history.append({
+                "student_id": l.get("student_id") or "",
+                "date": dt.strftime("%d.%m"),
+                "ts": dt.isoformat(),
+                "price": price,
+                "paid": bool(l.get("paid")),
+            })
+        fin_history.sort(key=lambda r: r["ts"], reverse=True)
+        fin_months = [{"label": ru_months[k[1]], "sum": sums[k]} for k in month_keys]
         return templates.TemplateResponse("finance.html", _ctx(
             request, user, "finance", overview=overview, unpaid=unpaid,
+            fin_months=fin_months, fin_history=fin_history,
         ))
 
     @app.get("/tutor/requests", response_class=HTMLResponse)

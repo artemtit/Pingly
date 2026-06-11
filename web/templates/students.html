@@ -7,20 +7,38 @@
     <h1>Ученики</h1>
     <p class="muted">{{ students|length }} {% if students|length == 1 %}ученик{% else %}учеников{% endif %} в твоём кабинете</p>
   </div>
-  <button class="btn btn-primary" onclick="document.getElementById('add-student-modal').classList.add('open')">{{ ui.icon('plus', 16) }} Добавить ученика</button>
+  <button class="btn btn-primary" onclick="pingly.openModal('add-student-modal')">{{ ui.icon('plus', 16) }} Добавить ученика</button>
 </div>
 
 {% include "partials/add_student_modal.html" %}
 
-<form class="search" method="get">
-  <input class="input" name="q" value="{{ q }}" placeholder="Поиск по имени или Telegram">
-  <button class="btn btn-primary">Найти</button>
-</form>
-
 {% if students %}
-<div class="stlist">
+<div class="st-toolbar">
+  <form class="search" method="get" id="st-search-form">
+    <input class="input" name="q" id="st-search" value="{{ q }}" placeholder="Поиск по имени или Telegram" autocomplete="off" aria-label="Поиск учеников">
+  </form>
+</div>
+<div class="st-toolbar" id="st-filters">
+  <div class="pills" role="group" aria-label="Фильтр по статусу">
+    <button type="button" class="pill-btn active" data-filter="all">Все · {{ students|length }}</button>
+    {% set connected = students | selectattr('user_id') | list %}
+    <button type="button" class="pill-btn" data-filter="connected">В Telegram · {{ connected|length }}</button>
+    <button type="button" class="pill-btn" data-filter="pending">Не подключены · {{ students|length - connected|length }}</button>
+  </div>
+  {% set subjects = students | map(attribute='subject_summary') | select | unique | list %}
+  {% if subjects|length > 1 %}
+  <div class="pills" role="group" aria-label="Фильтр по предмету">
+    {% for subj in subjects[:5] %}
+    <button type="button" class="pill-btn" data-subject="{{ subj }}">{{ subj }}</button>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="stlist" id="stlist">
   {% for student in students %}
-  <div class="strow">
+  <div class="strow" data-name="{{ student.name | lower }}" data-tg="{{ (student.tg_username or '') | lower }}"
+       data-connected="{{ '1' if student.user_id else '0' }}" data-subject="{{ student.subject_summary or '' }}">
     <a class="strow-main" href="/tutor/students/{{ student.id }}">
       <span class="avatar">{{ student.name[:1]|upper }}</span>
       <span class="strow-info">
@@ -36,24 +54,41 @@
         title="Написать @{{ student.tg_username }} в Telegram">{{ ui.icon('send', 15) }}<span class="tg-handle">@{{ student.tg_username }}</span></a>
       {% endif %}
       {% if not student.user_id %}
-      <span class="badge badge-muted" title="Ученик ещё не открыл бота">не подключён</span>
-      <button type="button" class="icon-btn" title="Скопировать ссылку-приглашение" aria-label="Скопировать ссылку-приглашение"
+      <button type="button" class="btn-invite" title="Скопировать ссылку-приглашение для Telegram"
         data-invite="https://t.me/{{ bot_username }}?start=inv_{{ student.invite_token }}"
-        onclick="copyInvite(this)">{{ ui.icon('link', 16) }}</button>
+        onclick="copyInvite(this)">{{ ui.icon('send', 14) }} Отправить ссылку</button>
       {% else %}
-      <span class="badge badge-ok" title="Telegram подключён">✓ в Telegram</span>
+      <span class="badge badge-ok" title="Telegram подключён — напоминания приходят">✓ в Telegram</span>
       {% endif %}
       <div class="strow-actions">
         <button type="button" class="icon-btn" title="Редактировать" aria-label="Редактировать"
           data-id="{{ student.id }}" data-name="{{ student.name }}" data-subject="{{ student.subject_summary or '' }}"
           onclick="openEdit(this)">{{ ui.icon('pencil', 16) }}</button>
-        <button type="button" class="icon-btn" title="Удалить" aria-label="Удалить"
-          data-id="{{ student.id }}" data-name="{{ student.name }}"
-          onclick="openDelete(this)">{{ ui.icon('trash', 16) }}</button>
+        <div class="kebab-wrap">
+          <button type="button" class="icon-btn" title="Ещё действия" aria-label="Ещё действия" aria-haspopup="true"
+            onclick="toggleKebab(this)">⋯</button>
+          <div class="kebab-menu" role="menu">
+            <a role="menuitem" href="/tutor/schedule">{{ ui.icon('calendar-plus', 16) }} Добавить занятие</a>
+            {% if student.tg_username %}
+            <a role="menuitem" href="https://t.me/{{ student.tg_username }}" target="_blank" rel="noopener">{{ ui.icon('send', 16) }} Написать в Telegram</a>
+            {% endif %}
+            <button type="button" role="menuitem" class="danger"
+              data-id="{{ student.id }}" data-name="{{ student.name }}"
+              onclick="openDelete(this)">{{ ui.icon('trash', 16) }} Удалить ученика</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
   {% endfor %}
+</div>
+
+<div class="card st-empty-search" id="st-empty">
+  <div class="empty">
+    <div class="empty-emoji">🔍</div>
+    <p>Никого не нашли по запросу «<span id="st-empty-q"></span>»</p>
+    <button class="btn btn-primary btn-sm" style="margin-top:12px;" id="st-empty-add">{{ ui.icon('plus', 15) }} Добавить ученика «<span id="st-empty-q2"></span>»</button>
+  </div>
 </div>
 
 <div class="modal-backdrop" id="edit-student-modal" role="dialog" aria-modal="true">
@@ -67,7 +102,7 @@
         <input class="input" id="edit-subject" name="subject_summary" placeholder="Математика" autocomplete="off"></label>
       <p class="muted" style="font-size:13px;">Класс, цель и заметки можно отредактировать в карточке ученика.</p>
       <div class="modal-actions">
-        <button type="button" class="btn btn-ghost" onclick="document.getElementById('edit-student-modal').classList.remove('open')">Отмена</button>
+        <button type="button" class="btn btn-ghost" onclick="pingly.closeModal('edit-student-modal')">Отмена</button>
         <button type="submit" class="btn btn-primary">Сохранить</button>
       </div>
     </form>
@@ -80,7 +115,7 @@
     <h2>Удалить ученика?</h2>
     <p class="muted" style="margin-top:8px;"><strong id="delete-name"></strong> будет удалён из твоего кабинета. История занятий и заданий сохранится.</p>
     <div class="modal-actions">
-      <button type="button" class="btn btn-ghost" onclick="document.getElementById('delete-student-modal').classList.remove('open')">Отмена</button>
+      <button type="button" class="btn btn-ghost" onclick="pingly.closeModal('delete-student-modal')">Отмена</button>
       <form method="post" id="delete-student-form" style="display:inline;">
         <button type="submit" class="btn btn-primary" style="background:var(--color-error);box-shadow:none;">Да, удалить</button>
       </form>
@@ -90,33 +125,120 @@
 
 <script>
 function copyInvite(btn){
-  navigator.clipboard.writeText(btn.getAttribute('data-invite')).then(function(){
-    var html = btn.innerHTML; btn.textContent = '✓'; setTimeout(function(){ btn.innerHTML = html; }, 1500);
-  });
+  pingly.copy(btn.getAttribute('data-invite'), 'Ссылка скопирована — отправь её ученику в Telegram', 'action');
+  var html = btn.innerHTML; btn.textContent = '✓ Скопировано';
+  setTimeout(function(){ btn.innerHTML = html; }, 1800);
 }
 function openEdit(btn){
   document.getElementById('edit-name').value = btn.getAttribute('data-name');
   document.getElementById('edit-subject').value = btn.getAttribute('data-subject');
   document.getElementById('edit-student-form').action = '/tutor/students/' + btn.getAttribute('data-id') + '/profile';
-  document.getElementById('edit-student-modal').classList.add('open');
+  pingly.openModal('edit-student-modal');
 }
 function openDelete(btn){
+  closeKebabs();
   document.getElementById('delete-name').textContent = btn.getAttribute('data-name');
   document.getElementById('delete-student-form').action = '/tutor/students/' + btn.getAttribute('data-id') + '/delete';
-  document.getElementById('delete-student-modal').classList.add('open');
+  pingly.openModal('delete-student-modal');
 }
-['edit-student-modal','delete-student-modal'].forEach(function(id){
-  var m = document.getElementById(id);
-  m.addEventListener('click', function(e){ if(e.target===m) m.classList.remove('open'); });
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape') m.classList.remove('open'); });
-});
+function closeKebabs(){ document.querySelectorAll('.kebab-menu.open').forEach(function(m){ m.classList.remove('open'); }); }
+function toggleKebab(btn){
+  var menu = btn.parentElement.querySelector('.kebab-menu');
+  var wasOpen = menu.classList.contains('open');
+  closeKebabs();
+  if (!wasOpen) menu.classList.add('open');
+}
+document.addEventListener('click', function(e){ if (!e.target.closest('.kebab-wrap')) closeKebabs(); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeKebabs(); });
+
+/* ---- live filtering: search (debounced) + status + subject pills ---- */
+(function(){
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#stlist .strow'));
+  var search = document.getElementById('st-search');
+  var emptyBox = document.getElementById('st-empty');
+  var statusFilter = 'all', subjectFilter = null, query = (search.value || '').trim().toLowerCase();
+
+  rows.forEach(function(r, i){
+    if (!pingly.reduceMotion) { r.style.animation = 'rise .3s ease both'; r.style.animationDelay = Math.min(i * 40, 320) + 'ms'; }
+  });
+
+  function highlight(row){
+    var nameEl = row.querySelector('.strow-name');
+    var raw = nameEl.textContent;
+    if (!query) { nameEl.textContent = raw; return; }
+    var idx = raw.toLowerCase().indexOf(query);
+    if (idx < 0) { nameEl.textContent = raw; return; }
+    nameEl.innerHTML = '';
+    nameEl.append(raw.slice(0, idx));
+    var m = document.createElement('mark'); m.textContent = raw.slice(idx, idx + query.length);
+    nameEl.append(m, raw.slice(idx + query.length));
+  }
+
+  function apply(){
+    var visible = 0;
+    rows.forEach(function(r){
+      var okQ = !query || r.dataset.name.indexOf(query) >= 0 || r.dataset.tg.indexOf(query) >= 0;
+      var okS = statusFilter === 'all' || (statusFilter === 'connected' ? r.dataset.connected === '1' : r.dataset.connected === '0');
+      var okSub = !subjectFilter || r.dataset.subject === subjectFilter;
+      var show = okQ && okS && okSub;
+      r.classList.toggle('hidden', !show);
+      if (show) { visible++; highlight(r); }
+    });
+    document.getElementById('stlist').style.display = visible ? '' : 'none';
+    emptyBox.classList.toggle('show', visible === 0);
+    if (visible === 0) {
+      var qText = search.value.trim();
+      document.getElementById('st-empty-q').textContent = qText;
+      document.getElementById('st-empty-q2').textContent = qText;
+    }
+  }
+
+  var deb;
+  search.addEventListener('input', function(){
+    clearTimeout(deb);
+    deb = setTimeout(function(){ query = search.value.trim().toLowerCase(); apply(); }, 300);
+  });
+  document.getElementById('st-search-form').addEventListener('submit', function(e){ e.preventDefault(); });
+
+  document.querySelectorAll('#st-filters [data-filter]').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('#st-filters [data-filter]').forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      statusFilter = b.dataset.filter;
+      apply();
+    });
+  });
+  document.querySelectorAll('#st-filters [data-subject]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var on = b.classList.contains('active');
+      document.querySelectorAll('#st-filters [data-subject]').forEach(function(x){ x.classList.remove('active'); });
+      if (!on) b.classList.add('active');
+      subjectFilter = on ? null : b.dataset.subject;
+      apply();
+    });
+  });
+
+  document.getElementById('st-empty-add').addEventListener('click', function(){
+    pingly.openModal('add-student-modal');
+    var nameInput = document.querySelector('#add-student-modal input[name="name"]');
+    if (nameInput) nameInput.value = search.value.trim();
+  });
+
+  if (query) apply();
+}());
 </script>
 {% else %}
-<div class="card empty-wide">
+<div class="card empty-wide onboarding-card">
   <div class="empty-emoji">👥</div>
   <h2>Учеников пока нет</h2>
-  <p class="muted">Нажми «➕ Добавить ученика» вверху — создашь ученика прямо здесь, без бота.</p>
-  <button class="btn btn-primary" style="margin-top:14px;" onclick="document.getElementById('add-student-modal').classList.add('open')">{{ ui.icon('plus', 16) }} Добавить ученика</button>
+  <p class="muted" style="margin-top:6px;">Три шага — и напоминания заработают:</p>
+  <div class="onb-progress" aria-hidden="true"><i style="width:6%"></i></div>
+  <div class="onboarding-steps" style="text-align:left;max-width:440px;margin:0 auto;">
+    <div class="onboarding-step"><span class="onboarding-num">1</span><div><strong>Добавь ученика</strong><div class="muted" style="font-size:13px;">Имя и предмет — займёт 20 секунд</div></div></div>
+    <div class="onboarding-step"><span class="onboarding-num">2</span><div><strong>Отправь ему ссылку</strong><div class="muted" style="font-size:13px;">Ученик нажмёт — и подключится к напоминаниям</div></div></div>
+    <div class="onboarding-step"><span class="onboarding-num">3</span><div><strong>Получи первое подтверждение</strong><div class="muted" style="font-size:13px;">Бот спросит «Будешь?» — ты увидишь ответ здесь</div></div></div>
+  </div>
+  <button class="btn btn-primary cta-pulse" style="margin-top:20px;" onclick="pingly.openModal('add-student-modal')">{{ ui.icon('plus', 16) }} Добавить первого ученика</button>
 </div>
 {% endif %}
 {% endblock %}

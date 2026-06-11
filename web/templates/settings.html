@@ -107,15 +107,25 @@
       💳 Онлайн-оплата скоро будет доступна. Сервис продолжает работать в полном объёме.
     </div>
     {% endif %}
-    {% if referral_code %}
-    <h3 style="font-size:15px;margin:6px 0 6px;">🎁 Приведи коллегу</h3>
-    <p class="muted" style="margin-bottom:8px;font-size:13px;">За каждого репетитора по твоей ссылке — +30 дней тебе и ему.</p>
+  </div>
+
+  {% if referral_code %}
+  <div class="card">
+    <h2>🎁 Приведи коллегу</h2>
+    <p class="muted" style="margin-bottom:8px;">За каждого репетитора, который зарегистрируется по твоей ссылке, — <strong>+30 дней бесплатно</strong> и тебе, и ему.</p>
     <div class="copy-row">
       <input class="input" id="ref-link" readonly value="{{ web_base }}/register?ref={{ referral_code }}">
       <button class="btn btn-secondary btn-sm" type="button" onclick="copyField('ref-link', this)">Копировать</button>
     </div>
-    {% endif %}
+    {% set ref_text = 'Я веду учеников в Pingly — бот сам напоминает им о занятиях. Попробуй, по моей ссылке 14 дней бесплатно:' %}
+    <div class="share-row">
+      <a class="share-btn share-tg" target="_blank" rel="noopener"
+         href="https://t.me/share/url?url={{ (web_base ~ '/register?ref=' ~ referral_code) | urlencode }}&text={{ ref_text | urlencode }}">✈️ Telegram</a>
+      <a class="share-btn share-wa" target="_blank" rel="noopener"
+         href="https://wa.me/?text={{ (ref_text ~ ' ' ~ web_base ~ '/register?ref=' ~ referral_code) | urlencode }}">💬 WhatsApp</a>
+    </div>
   </div>
+  {% endif %}
 
   {% if plans_enabled %}
   <div class="card">
@@ -129,9 +139,9 @@
           <li class="on">Ученики</li>
           <li class="on">Расписание и календарь</li>
           <li class="on">Напоминания в Telegram</li>
-          <li class="off">Задания</li>
-          <li class="off">Финансы</li>
-          <li class="off">Заявки</li>
+          <li class="off" title="Доступно на тарифе Max">Задания</li>
+          <li class="off" title="Доступно на тарифе Max">Финансы</li>
+          <li class="off" title="Доступно на тарифе Max">Заявки</li>
         </ul>
         {% if sub.status == 'active' and user_plan(user) == 'pro' %}<div class="plan-current-tag">Текущий</div>{% endif %}
         {% if payments_enabled %}

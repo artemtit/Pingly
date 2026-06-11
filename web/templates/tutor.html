@@ -8,7 +8,7 @@
     <p class="muted">Ученики, занятия и задания — в одном месте.</p>
   </div>
   <div class="topbar-actions">
-    <button class="btn btn-primary" onclick="document.getElementById('add-student-modal').classList.add('open')">{{ ui.icon('plus', 16) }} Добавить ученика</button>
+    <button class="btn btn-primary" onclick="pingly.openModal('add-student-modal')">{{ ui.icon('plus', 16) }} Добавить ученика</button>
     <a class="btn btn-secondary" href="/tutor/schedule">{{ ui.icon('calendar-plus', 16) }} Добавить занятие</a>
   </div>
 </div>
@@ -45,11 +45,31 @@
 </div>
 {% else %}
 <section class="grid stats" style="margin-top: 18px;">
-  <div class="card stat"><span class="stat-icon">{{ ui.icon('users') }}</span><div><div class="value">{{ analytics.students_count }}</div><div class="label">Учеников</div></div></div>
-  <div class="card stat"><span class="stat-icon">{{ ui.icon('calendar-check') }}</span><div><div class="value">{{ analytics.completed_lessons }}</div><div class="label">Проведено</div></div></div>
-  <div class="card stat"><span class="stat-icon">{{ ui.icon('circle-check') }}</span><div><div class="value">{{ analytics.active_homework }}</div><div class="label">Задания</div></div></div>
-  <div class="card stat"><span class="stat-icon accent">{{ ui.icon('star') }}</span><div><div class="value">{{ analytics.homework_completion_percent }}%</div><div class="label">Выполнено</div></div></div>
-  <div class="card stat"><span class="stat-icon">{{ ui.icon('trending-up') }}</span><div><div class="value">{{ analytics.attendance_percent }}%</div><div class="label">Явка</div></div></div>
+  <a class="card stat" href="/tutor/students" title="Открыть учеников">
+    <span class="stat-icon">{{ ui.icon('users') }}</span>
+    <div><div class="value" data-count="{{ analytics.students_count }}">{{ analytics.students_count }}</div><div class="label">Учеников</div></div>
+    <span class="stat-go">›</span>
+  </a>
+  <a class="card stat" href="/tutor/calendar" title="Открыть календарь">
+    <span class="stat-icon">{{ ui.icon('calendar-check') }}</span>
+    <div><div class="value" data-count="{{ analytics.completed_lessons }}">{{ analytics.completed_lessons }}</div><div class="label">Проведено</div></div>
+    <span class="stat-go">›</span>
+  </a>
+  <a class="card stat" href="/tutor/homework" title="Открыть задания">
+    <span class="stat-icon">{{ ui.icon('circle-check') }}</span>
+    <div><div class="value" data-count="{{ analytics.active_homework }}">{{ analytics.active_homework }}</div><div class="label">Задания</div></div>
+    <span class="stat-go">›</span>
+  </a>
+  <a class="card stat" href="/tutor/homework" title="Открыть задания">
+    <span class="stat-icon accent">{{ ui.icon('star') }}</span>
+    <div><div class="value" data-count="{{ analytics.homework_completion_percent }}" data-suffix="%">{{ analytics.homework_completion_percent }}%</div><div class="label">Выполнено</div></div>
+    <span class="stat-go">›</span>
+  </a>
+  <a class="card stat" href="/tutor/calendar" title="Открыть календарь">
+    <span class="stat-icon">{{ ui.icon('trending-up') }}</span>
+    <div><div class="value" data-count="{{ analytics.attendance_percent }}" data-suffix="%">{{ analytics.attendance_percent }}%</div><div class="label">Явка</div></div>
+    <span class="stat-go">›</span>
+  </a>
 </section>
 {% endif %}
 
@@ -58,16 +78,21 @@
     <div class="card-head"><h2>📅 Ближайшие занятия</h2><a class="link-btn" href="/tutor/calendar">Календарь →</a></div>
     <div class="timeline">
       {% for lesson in upcoming %}
-      <div class="timeline-row">
+      <div class="timeline-row" data-rel-row>
         <div class="timeline-dot {{ lesson.status }}"></div>
         <div class="timeline-body">
           <div class="timeline-when">{{ lesson.starts_at | msk }}</div>
           <div class="timeline-who">{{ lesson.student_profiles.name if lesson.student_profiles else "Ученик" }}</div>
         </div>
-        {{ ui.status_badge(lesson.status) }}
+        <a class="row-action" href="/tutor/calendar?view=day&date={{ lesson.starts_at | msk('%Y-%m-%d') }}">Перенести →</a>
+        <span class="rel-chip" data-reltime="{{ lesson.starts_at }}"></span>
       </div>
       {% else %}
-      <div class="empty"><div class="empty-emoji">🗓️</div><p>Занятий пока нет. <a href="/tutor/schedule">Добавь первое →</a></p></div>
+      <div class="empty">
+        <div class="empty-emoji">🗓️</div>
+        <p>Занятий пока нет — расписание пустое.</p>
+        <a class="btn btn-primary btn-sm cta-pulse" style="margin-top:12px;" href="/tutor/schedule">{{ ui.icon('calendar-plus', 15) }} Добавить первое занятие</a>
+      </div>
       {% endfor %}
     </div>
   </div>
@@ -86,7 +111,29 @@
       </div>
     </form>
     {% else %}
-    <div class="empty"><div class="empty-emoji">🎉</div><p>Нет заданий на проверку — всё разобрано!</p></div>
+    <div class="empty">
+      <div class="empty-emoji">🎉</div>
+      <p>Нет заданий на проверку — всё разобрано!</p>
+      {% if students and not plan_locked(user, 'homework') %}
+      <button class="btn btn-secondary btn-sm" style="margin-top:12px;" id="hw-quick-toggle"
+        onclick="var f=document.getElementById('hw-quick');f.style.display=f.style.display==='grid'?'none':'grid';if(f.style.display==='grid')f.querySelector('select').focus();">
+        {{ ui.icon('plus', 15) }} Выдать задание
+      </button>
+      {% endif %}
+    </div>
+    {% if students and not plan_locked(user, 'homework') %}
+    <form method="post" action="/tutor/homework" class="hw-quick" id="hw-quick" style="display:none;">
+      <div class="hw-quick-row">
+        <select class="input" name="student_id" required aria-label="Ученик">
+          <option value="" disabled selected>Кому выдать</option>
+          {% for s in students %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select>
+        <input class="input" name="title" required placeholder="Название задания" aria-label="Название">
+      </div>
+      <textarea class="input" name="description" rows="2" placeholder="Что сделать (необязательно)"></textarea>
+      <button class="btn btn-primary btn-sm" style="justify-self:start;">Выдать задание</button>
+    </form>
+    {% endif %}
     {% endfor %}
   </div>
 </section>
@@ -96,10 +143,16 @@
   {% if not plan_locked(user, 'finance') %}
   <div class="card">
     <div class="card-head"><h2>💰 Финансы</h2><a class="link-btn" href="/tutor/finance">Подробнее →</a></div>
-    <div class="settings-row"><span class="muted">Заработано в этом месяце</span><strong>{{ finance.month_earned }} ₽</strong></div>
-    <div class="settings-row"><span class="muted">Не оплачено</span>
-      <strong style="{{ 'color: var(--color-error);' if finance.total_unpaid else '' }}">{{ finance.total_unpaid }} ₽</strong>
+    <div class="fin-mini-num"><span data-count="{{ finance.month_earned }}" data-suffix=" ₽">{{ finance.month_earned }} ₽</span></div>
+    <div class="fin-mini-label">заработано в этом месяце</div>
+    {% if finance.total_unpaid %}
+    <div class="fin-due-box">
+      <div>Не оплачено: <span class="n">{{ finance.total_unpaid }} ₽</span></div>
+      <a href="/tutor/finance">Собрать оплату →</a>
     </div>
+    {% else %}
+    <div class="fin-ok-box">✓ Все проведённые занятия оплачены</div>
+    {% endif %}
   </div>
   {% endif %}
 
@@ -115,7 +168,11 @@
       <span class="muted">{{ r.created_at | msk('%d.%m') }}</span>
     </div>
     {% else %}
-    <div class="empty"><div class="empty-emoji">📭</div><p>Новых заявок нет.</p></div>
+    <div class="empty">
+      <div class="empty-emoji">📭</div>
+      <p>Новых заявок нет. Включи публичную страницу — новые ученики будут записываться сами.</p>
+      <a class="btn btn-secondary btn-sm cta-pulse" style="margin-top:12px;" href="/tutor/requests">🌐 Настроить страницу заявок</a>
+    </div>
     {% endfor %}
   </div>
   {% endif %}

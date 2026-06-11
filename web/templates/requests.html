@@ -11,86 +11,116 @@
 {% if saved %}<div class="trial-banner">✅ Сохранено</div>{% endif %}
 {% if error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
 
-<div class="card">
-  <div class="card-head">
-    <h2>🌐 Публичная страница</h2>
-    {% if profile and profile.public_enabled %}<span class="badge completed">включена</span>{% else %}<span class="badge cancelled">выключена</span>{% endif %}
-  </div>
-  <p class="muted" style="margin-bottom:12px;">Включи — и получишь ссылку, где новые ученики сами оставляют заявки. Делись ей в соцсетях, на Авито, в Telegram.</p>
-  <form method="post" action="/tutor/settings/public" class="form">
-    <label class="field"><span>Адрес страницы</span>
-      <div class="slug-row">
-        <span class="slug-prefix">{{ web_base }}/u/</span>
-        <input class="input" name="slug" value="{{ profile.slug if profile else '' }}" placeholder="ivan-math" pattern="[a-z0-9\-]+">
+<div class="req-split">
+  <div class="card">
+    <div class="card-head">
+      <h2 style="margin:0;">🌐 Публичная страница</h2>
+      {% if profile and profile.public_enabled %}<span class="badge completed">включена</span>{% else %}<span class="badge cancelled">выключена</span>{% endif %}
+    </div>
+    <p class="muted" style="margin-bottom:12px;">Заполняй слева — справа сразу видно, что получит ученик. Делись ссылкой в соцсетях, на Авито, в Telegram.</p>
+    <form method="post" action="/tutor/settings/public" class="form">
+      <label class="field"><span>Адрес страницы</span>
+        <div class="slug-row">
+          <span class="slug-prefix">{{ web_base }}/u/</span>
+          <input class="input" name="slug" id="pp-slug" value="{{ profile.slug if profile else '' }}" placeholder="ivan-math" pattern="[a-z0-9\-]+">
+        </div>
+      </label>
+      <label class="field"><span>Предметы <span class="muted" style="font-weight:400;" title="Например: «Математика, физика · 5–11 класс» — ученик видит это под именем">ⓘ</span></span>
+        <input class="input" name="subjects" id="pp-subjects" value="{{ profile.subjects if profile and profile.subjects else '' }}" placeholder="Математика, физика · 5–11 класс"></label>
+      <label class="field"><span>О себе</span>
+        <textarea name="bio" id="pp-bio" maxlength="600" placeholder="Короткий рассказ: опыт, формат, результаты">{{ profile.bio if profile and profile.bio else '' }}</textarea>
+        <span class="char-count" id="pp-bio-count"></span></label>
+      <div class="field"><span>Плашки под именем <span class="muted" style="font-weight:400;">— иконка + текст, до 4. Например: «🕐 Время — Отвечаю в течение дня»</span></span>
+        <div id="badge-rows">
+          {% for b in badge_list %}
+          <div class="badge-row">
+            <select name="badge_icon" class="input badge-icon">
+              {% for key, ic in badge_icons.items() %}<option value="{{ key }}" {{ 'selected' if b.icon == key }}>{{ ic.label }}</option>{% endfor %}
+            </select>
+            <input class="input" name="badge_text" value="{{ b.text }}" maxlength="40" placeholder="Например: Опыт 8 лет">
+            <button type="button" class="badge-del" onclick="removeBadgeRow(this)" aria-label="Удалить">✕</button>
+          </div>
+          {% endfor %}
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="badge-add" onclick="addBadgeRow()" style="margin-top:6px;">+ Добавить плашку</button>
+        <p class="muted" id="badge-max-hint" style="margin-top:6px;display:none;font-size:13px;">Максимум 4 плашки.</p>
       </div>
-    </label>
-    <label class="field"><span>Предметы</span>
-      <input class="input" name="subjects" value="{{ profile.subjects if profile and profile.subjects else '' }}" placeholder="Математика, физика · 5–11 класс"></label>
-    <label class="field"><span>О себе</span>
-      <textarea name="bio" placeholder="Короткий рассказ: опыт, формат, результаты">{{ profile.bio if profile and profile.bio else '' }}</textarea></label>
-    <div class="field"><span>Плашки под именем <span class="muted" style="font-weight:400;">— иконка + текст, до 4</span></span>
-      <div id="badge-rows">
-        {% for b in badge_list %}
+      <template id="badge-row-tpl">
         <div class="badge-row">
           <select name="badge_icon" class="input badge-icon">
-            {% for key, ic in badge_icons.items() %}<option value="{{ key }}" {{ 'selected' if b.icon == key }}>{{ ic.label }}</option>{% endfor %}
+            {% for key, ic in badge_icons.items() %}<option value="{{ key }}">{{ ic.label }}</option>{% endfor %}
           </select>
-          <input class="input" name="badge_text" value="{{ b.text }}" maxlength="40" placeholder="Например: Опыт 8 лет">
-          <button type="button" class="badge-del" onclick="this.closest('.badge-row').remove(); updateAddBtn();" aria-label="Удалить">✕</button>
+          <input class="input" name="badge_text" maxlength="40" placeholder="Например: Опыт 8 лет">
+          <button type="button" class="badge-del" onclick="removeBadgeRow(this)" aria-label="Удалить">✕</button>
         </div>
-        {% endfor %}
+      </template>
+      {% set pt = profile.page_theme if profile and profile.page_theme else 'auto' %}
+      <div class="field"><span>Тема страницы</span>
+        <div class="theme-thumbs" role="radiogroup" aria-label="Тема страницы">
+          <label class="theme-thumb tt-auto">
+            <input type="radio" name="page_theme" value="auto" {{ 'checked' if pt == 'auto' }}>
+            <span class="tt-box"><span class="tt-art"><i></i><i></i></span><span class="tt-label">Авто</span></span>
+          </label>
+          <label class="theme-thumb tt-light">
+            <input type="radio" name="page_theme" value="light" {{ 'checked' if pt == 'light' }}>
+            <span class="tt-box"><span class="tt-art"><i></i><i></i></span><span class="tt-label">Светлая</span></span>
+          </label>
+          <label class="theme-thumb tt-dark">
+            <input type="radio" name="page_theme" value="dark" {{ 'checked' if pt == 'dark' }}>
+            <span class="tt-box"><span class="tt-art"><i></i><i></i></span><span class="tt-label">Тёмная</span></span>
+          </label>
+        </div>
       </div>
-      <button type="button" class="btn btn-ghost btn-sm" id="badge-add" onclick="addBadgeRow()" style="margin-top:6px;">+ Добавить плашку</button>
-      <p class="muted" id="badge-max-hint" style="margin-top:6px;display:none;font-size:13px;">Максимум 4 плашки.</p>
-    </div>
-    <template id="badge-row-tpl">
-      <div class="badge-row">
-        <select name="badge_icon" class="input badge-icon">
-          {% for key, ic in badge_icons.items() %}<option value="{{ key }}">{{ ic.label }}</option>{% endfor %}
-        </select>
-        <input class="input" name="badge_text" maxlength="40" placeholder="Например: Опыт 8 лет">
-        <button type="button" class="badge-del" onclick="this.closest('.badge-row').remove(); updateAddBtn();" aria-label="Удалить">✕</button>
+      <label class="check-row">
+        <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if profile and profile.public_enabled }} onchange="this.form.submit()">
+        <span>Принимать заявки (включить страницу) — сохраняется сразу</span>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-primary">Сохранить изменения</button>
+        <a class="btn btn-secondary" href="/tutor/requests/preview" target="_blank" rel="noopener">👁 Посмотреть пример</a>
       </div>
-    </template>
-    {% set pt = profile.page_theme if profile and profile.page_theme else 'auto' %}
-    <label class="field"><span>Тема страницы</span>
-      <select class="input" name="page_theme">
-        <option value="auto" {{ 'selected' if pt == 'auto' }}>Авто (как у гостя)</option>
-        <option value="light" {{ 'selected' if pt == 'light' }}>Светлая</option>
-        <option value="dark" {{ 'selected' if pt == 'dark' }}>Тёмная</option>
-      </select></label>
-    <label class="check-row">
-      <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if profile and profile.public_enabled }} onchange="this.form.submit()">
-      <span>Принимать заявки (включить страницу) — сохраняется сразу</span>
-    </label>
-    <div class="btn-row">
-      <button class="btn btn-primary">Сохранить изменения</button>
-      <a class="btn btn-secondary" href="/tutor/requests/preview" target="_blank" rel="noopener">👁 Посмотреть пример</a>
+    </form>
+    {% if profile and profile.slug and profile.public_enabled %}
+    <h3 style="font-size:15px;margin:16px 0 6px;">🔗 Твоя ссылка</h3>
+    <div class="copy-row">
+      <input class="input" id="pub-link" readonly value="{{ web_base }}/u/{{ profile.slug }}">
+      <button class="btn btn-secondary btn-sm" type="button" id="pub-copy" onclick="copyPubLink(this)">Копировать</button>
     </div>
-    <p class="muted" style="font-size:13px;margin-top:8px;">«Пример» — образец идеально оформленной страницы. Ориентируйся на него, заполняя свою.</p>
-  </form>
-  {% if profile and profile.slug and profile.public_enabled %}
-  <h3 style="font-size:15px;margin:16px 0 6px;">🔗 Твоя ссылка</h3>
-  <div class="copy-row">
-    <input class="input" id="pub-link" readonly value="{{ web_base }}/u/{{ profile.slug }}">
-    <button class="btn btn-secondary btn-sm" type="button" onclick="copyField('pub-link', this)">Копировать</button>
+    <a class="btn btn-ghost btn-sm" style="margin-top:10px" href="/u/{{ profile.slug }}" target="_blank" rel="noopener">Открыть мою страницу →</a>
+    {% endif %}
   </div>
-  <a class="btn btn-ghost btn-sm" style="margin-top:10px" href="/u/{{ profile.slug }}" target="_blank" rel="noopener">Открыть мою страницу →</a>
-  {% endif %}
+
+  <div class="req-preview-wrap">
+    <div class="req-preview" id="pp-preview">
+      <div class="req-preview-bar" aria-hidden="true">
+        <i></i><i></i><i></i>
+        <span class="req-preview-url" id="pp-url">{{ web_base | replace('https://','') }}/u/{{ profile.slug if profile and profile.slug else '…' }}</span>
+      </div>
+      <div class="req-preview-body">
+        <div class="req-preview-av">{{ user.full_name[0] | upper }}</div>
+        <div class="req-preview-name">{{ user.full_name }}</div>
+        <div class="req-preview-subj" id="pv-subjects"></div>
+        <div class="req-preview-badges" id="pv-badges"></div>
+        <div class="req-preview-bio" id="pv-bio"></div>
+        <span class="req-preview-btn">Записаться на занятие</span>
+      </div>
+    </div>
+    <p class="req-preview-note">Так твою страницу увидит ученик — обновляется на лету</p>
+  </div>
 </div>
 
-<div class="card">
+<div class="card" style="margin-top:16px;">
   {% set new_requests = requests | selectattr("status", "equalto", "new") | list %}
   <h2>Новые {% if new_requests %}<span class="badge submitted">{{ new_requests | length }}</span>{% endif %}</h2>
   <div class="req-list">
     {% for r in requests %}
-    <div class="req-row {{ 'req-done' if r.status != 'new' }}">
+    <div class="req-row {{ 'req-new' if r.status == 'new' else 'req-done' }}">
       <div class="req-main">
         <div class="req-head">
           <strong>{{ r.name }}</strong>
           <span class="muted">{{ r.created_at | msk('%d.%m %H:%M') }}</span>
         </div>
-        <div class="muted">📞 {{ r.contact }}{% if r.preferred_time %} · 🕒 {{ r.preferred_time }}{% endif %}</div>
+        <div class="muted">📞 <span class="req-contact">{{ r.contact }}</span>{% if r.preferred_time %} · 🕒 {{ r.preferred_time }}{% endif %}</div>
         {% if r.comment %}<div class="req-comment">💬 {{ r.comment }}</div>{% endif %}
       </div>
       {% if r.status == 'new' %}
@@ -108,19 +138,11 @@
 </div>
 
 <script>
-function copyField(id, btn) {
-  var el = document.getElementById(id);
-  el.removeAttribute('readonly');
-  el.focus(); el.select(); el.setSelectionRange(0, 99999);
-  function done(){
-    var old = btn.textContent; btn.textContent = '✓ Скопировано';
-    setTimeout(function(){ btn.textContent = old; }, 1500);
-  }
-  function fallback(){ try { document.execCommand('copy'); done(); } catch (e) {} }
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(el.value).then(done, fallback);
-  } else { fallback(); }
-  el.setAttribute('readonly', '');
+function copyPubLink(btn){
+  pingly.copy(document.getElementById('pub-link').value, 'Ссылка скопирована — делись где угодно', 'action');
+  btn.classList.add('copy-btn-ok');
+  var old = btn.textContent; btn.textContent = '✓ Скопировано';
+  setTimeout(function(){ btn.textContent = old; btn.classList.remove('copy-btn-ok'); }, 2000);
 }
 function updateAddBtn() {
   var rows = document.getElementById('badge-rows');
@@ -137,7 +159,81 @@ function addBadgeRow() {
   var tpl = document.getElementById('badge-row-tpl');
   rows.appendChild(tpl.content.cloneNode(true));
   updateAddBtn();
+  bindPreview(rows.lastElementChild);
+  renderBadges();
 }
-document.addEventListener('DOMContentLoaded', updateAddBtn);
+function removeBadgeRow(btn) {
+  var row = btn.closest('.badge-row');
+  row.style.transition = 'opacity .2s, transform .2s';
+  row.style.opacity = '0'; row.style.transform = 'translateX(16px)';
+  setTimeout(function(){ row.remove(); updateAddBtn(); renderBadges(); }, 200);
+}
+
+/* ---------- live preview ---------- */
+var pv = {
+  subjects: document.getElementById('pv-subjects'),
+  badges: document.getElementById('pv-badges'),
+  bio: document.getElementById('pv-bio'),
+  url: document.getElementById('pp-url'),
+  box: document.getElementById('pp-preview')
+};
+function renderBadges(){
+  pv.badges.innerHTML = '';
+  document.querySelectorAll('#badge-rows .badge-row').forEach(function(row){
+    var text = row.querySelector('input[name="badge_text"]').value.trim();
+    if (!text) return;
+    var sel = row.querySelector('select');
+    var emoji = (sel.options[sel.selectedIndex].text.match(/^\S+/) || [''])[0];
+    var chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = emoji + ' ' + text;
+    pv.badges.appendChild(chip);
+  });
+}
+function renderText(){
+  pv.subjects.textContent = document.getElementById('pp-subjects').value.trim() || 'Предметы не указаны';
+  pv.bio.textContent = document.getElementById('pp-bio').value.trim();
+  var slug = document.getElementById('pp-slug').value.trim() || '…';
+  pv.url.textContent = pv.url.textContent.replace(/\/u\/.*$/, '/u/' + slug);
+  var bio = document.getElementById('pp-bio');
+  var count = document.getElementById('pp-bio-count');
+  count.textContent = bio.value.length + ' / 600';
+  count.classList.toggle('over', bio.value.length > 560);
+}
+function renderTheme(){
+  var v = (document.querySelector('input[name="page_theme"]:checked') || {}).value;
+  var dark = v === 'dark' || (v === 'auto' && document.documentElement.getAttribute('data-theme') === 'dark');
+  pv.box.classList.toggle('theme-dark', dark);
+}
+function bindPreview(scope){
+  (scope || document).querySelectorAll('#badge-rows input, #badge-rows select').forEach(function(el){
+    el.addEventListener('input', renderBadges);
+    el.addEventListener('change', renderBadges);
+  });
+}
+['pp-subjects', 'pp-bio', 'pp-slug'].forEach(function(id){
+  document.getElementById(id).addEventListener('input', renderText);
+});
+document.querySelectorAll('input[name="page_theme"]').forEach(function(r){
+  r.addEventListener('change', renderTheme);
+});
+bindPreview();
+updateAddBtn();
+renderBadges();
+renderText();
+renderTheme();
+
+/* contact «@username» in requests becomes a clickable Telegram link */
+document.querySelectorAll('.req-contact').forEach(function(el){
+  var v = el.textContent.trim();
+  if (/^@[a-zA-Z0-9_]{4,}$/.test(v)) {
+    var a = document.createElement('a');
+    a.href = 'https://t.me/' + v.slice(1);
+    a.target = '_blank'; a.rel = 'noopener';
+    a.textContent = v;
+    a.style.cssText = 'color:var(--orange-600);font-weight:600;';
+    el.textContent = ''; el.appendChild(a);
+  }
+});
 </script>
 {% endblock %}
