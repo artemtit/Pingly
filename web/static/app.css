@@ -1094,6 +1094,13 @@ mark { background: var(--orange-100); color: inherit; border-radius: 3px; paddin
   }
 }
 
+/* Settings page: masonry (CSS columns) so a short card doesn't leave a tall
+   empty gap under it the way a row-based grid does. break-inside keeps each
+   card whole; margin-bottom stands in for the grid gap. */
+.settings-grid { column-count: 2; column-gap: 16px; }
+.settings-grid > .card { break-inside: avoid; margin: 0 0 16px; }
+@media (max-width: 980px) { .settings-grid { column-count: 1; } }
+
 /* ============================================================
    v42.3 — Mobile cabinet, Banco Plata-inspired pass.
    Apple-style squircle icons with translucent fills, "floating"

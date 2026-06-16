@@ -15,7 +15,7 @@
 {% elif error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
 {% if upgrade %}<div class="trial-banner trial-ending">🔒 Раздел «{{ {'finance':'Финансы','requests':'Заявки','homework':'Задания'}.get(upgrade, upgrade) }}» доступен на тарифе Max. Оформи Max, чтобы открыть его.</div>{% endif %}
 
-<section class="grid two" style="align-items: start;">
+<section class="settings-grid">
   <div class="card">
     <h2>Профиль</h2>
     <form method="post" action="/settings/name" class="form" style="margin-bottom:6px;">
