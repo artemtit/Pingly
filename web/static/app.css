@@ -16,7 +16,7 @@ body {
 [data-theme="dark"] .sidebar { background: #1E293B; border-right-color: #334155; }
 [data-theme="dark"] .card { background: #1E293B; border-color: #334155; }
 [data-theme="dark"] .mobile-header { background: #1E293B; border-bottom-color: #334155; }
-[data-theme="dark"] .bottom-nav { background: #1E293B; border-top-color: #334155; }
+[data-theme="dark"] .bottom-nav { background: rgba(30, 41, 59, .72); border-color: rgba(148, 163, 184, .18); }
 [data-theme="dark"] .input, [data-theme="dark"] select, [data-theme="dark"] textarea { background-color: #0F172A; color: var(--fg1); border-color: #475569; }
 [data-theme="dark"] .students-table { background: #1E293B; border-color: #334155; }
 [data-theme="dark"] .students-table-head { border-bottom-color: #334155; }
@@ -95,15 +95,15 @@ h2 { font-size: 20px; letter-spacing: -.02em; margin-bottom: 14px; }
 .two { grid-template-columns: 1fr 1fr; }
 .two-tight { grid-template-columns: 1fr 1fr; gap: 12px; }
 .stack { display: grid; gap: 16px; }
-.card { background: #fff; border: 1px solid var(--color-border); border-radius: 14px; padding: 22px; box-shadow: var(--shadow-sm); animation: rise .35s ease both; }
+.card { background: #fff; border: 1px solid rgba(17,24,39,.05); border-radius: 18px; padding: 22px; box-shadow: 0 6px 20px -12px rgba(17,24,39,.16), 0 1px 3px rgba(17,24,39,.04); animation: rise .5s var(--ease-out) both; }
 .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .card-head h2 { margin: 0; }
-@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
 .stat { display: flex; align-items: center; gap: 14px; }
 .stat > div { min-width: 0; flex: 1; }
-.stat-icon { width: 44px; height: 44px; flex-shrink: 0; border-radius: 11px; background: var(--orange-50); color: var(--orange-600); display: flex; align-items: center; justify-content: center; }
-.stat-icon.accent { background: var(--orange-500); color: #fff; }
+.stat-icon { width: 44px; height: 44px; flex-shrink: 0; border-radius: 14px; background: linear-gradient(140deg, rgba(249,115,22,.16), rgba(249,115,22,.04)); border: 1px solid rgba(249,115,22,.12); color: var(--orange-600); display: flex; align-items: center; justify-content: center; }
+.stat-icon.accent { background: linear-gradient(140deg, var(--orange-500), #fb923c); border-color: transparent; color: #fff; }
 .stat .value { font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: var(--fg1); line-height: 1; }
 .stat .label { color: var(--color-text-muted); font-size: 13px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -168,7 +168,7 @@ textarea { min-height: 86px; resize: vertical; }
 /* ---------------- empty states ---------------- */
 .empty { text-align: center; padding: 28px 16px; color: var(--color-text-muted); }
 .empty-emoji { font-size: 34px; margin-bottom: 8px; }
-.empty a { color: var(--color-primary-600); font-weight: 600; }
+.empty a:not(.btn) { color: var(--color-primary-600); font-weight: 600; }
 .empty-wide { grid-column: 1 / -1; text-align: center; padding: 48px 24px; }
 .empty-wide .empty-emoji { font-size: 48px; }
 
@@ -482,13 +482,18 @@ textarea { min-height: 86px; resize: vertical; }
   .bottom-nav {
     display: block !important;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: #fff;
-    border-top: 1px solid var(--gray-200);
+    left: 12px;
+    right: 12px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, .72);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, .65);
+    border-radius: 26px;
+    box-shadow: 0 14px 36px -12px rgba(15, 23, 42, .3),
+                0 0 0 1px rgba(17, 24, 39, .03);
     z-index: 100;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    overflow: hidden;
   }
 
   /* Мобильные блоки */
@@ -498,7 +503,7 @@ textarea { min-height: 86px; resize: vertical; }
   .mob-hw { display: block; margin-top: 8px; }
 
   /* Контент */
-  .main { padding: 16px; padding-bottom: 90px; }
+  .main { padding: 16px; padding-bottom: 104px; }
   .card { padding: 16px; }
   .nl-hero-head { margin: -16px -16px 14px; padding: 14px 16px; }
 
@@ -1047,4 +1052,135 @@ mark { background: var(--orange-100); color: inherit; border-radius: 3px; paddin
   .fin-hero { grid-template-columns: 1fr; }
   .fin-spark { margin: 0 auto; }
   .req-preview-wrap { order: -1; }
+}
+
+/* ============================================================
+   v42.2 — Mobile dashboard, Plata-inspired pass.
+   More air, larger radii, fewer tiles per screen, one clear
+   primary action. Keeps the orange brand. Phone-only; later in
+   the cascade so it overrides the dense rules above (some inline
+   margins need !important to beat template style="").
+   ============================================================ */
+@media (max-width: 640px) {
+  /* breathing room between dashboard blocks */
+  .main > section.grid { margin-top: 24px !important; }
+
+  /* calmer cards: bigger radius + more padding */
+  .card { border-radius: 20px; padding: 20px; }
+  .onboarding-card { border-radius: 20px; padding: 22px; }
+
+  /* premium greeting: bigger, tighter heading */
+  .topbar h1 { font-size: 27px; letter-spacing: -.02em; }
+  .topbar { margin-bottom: 20px; }
+
+  /* 5 dense tiles -> one hero + two supporting.
+     Hide the two secondary homework metrics on phones. */
+  .stats { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stats > .stat:first-child { grid-column: 1 / -1; }
+  .stats > .stat:nth-child(3),
+  .stats > .stat:nth-child(4) { display: none; }
+  .stat { border-radius: 18px; padding: 18px; }
+  .stats > .stat:first-child { padding: 22px; }
+  .stats > .stat:first-child .value { font-size: 36px; }
+  .stat-icon { width: 48px; height: 48px; border-radius: 14px; }
+  .stats > .stat:first-child .stat-icon { width: 54px; height: 54px; border-radius: 16px; }
+
+  /* one clear primary action: filled "add student" stays loud,
+     "add lesson" steps back to a quiet outline */
+  .topbar-actions .btn-primary { height: 54px; font-size: 16px; border-radius: 14px; }
+  .topbar-actions .btn-secondary {
+    height: 48px; background: transparent; border: 1px solid var(--gray-200);
+    color: var(--fg2); box-shadow: none; font-weight: 600; border-radius: 14px;
+  }
+}
+
+/* ============================================================
+   v42.3 — Mobile cabinet, Banco Plata-inspired pass.
+   Apple-style squircle icons with translucent fills, "floating"
+   cards (soft diffuse shadow, near-invisible border), bigger
+   radii, and a richer animation set (staggered reveal, tactile
+   press feedback, active-tab pop). Orange brand kept. Phone-only.
+   ============================================================ */
+@media (max-width: 640px) {
+  /* floating cards: hairline border + soft diffuse shadow */
+  .card {
+    border-radius: 24px;
+    border-color: rgba(17, 24, 39, .05);
+    box-shadow: 0 12px 32px -20px rgba(17, 24, 39, .22),
+                0 2px 6px -3px rgba(17, 24, 39, .06);
+  }
+  .onboarding-card { border-radius: 24px; }
+
+  /* Apple-style squircle icons: translucent orange fill + hairline */
+  .stat-icon:not(.accent) {
+    background: linear-gradient(140deg, rgba(249, 115, 22, .16), rgba(249, 115, 22, .04));
+    border: 1px solid rgba(249, 115, 22, .12);
+    color: var(--orange-600);
+    border-radius: 16px;
+  }
+  .stat-icon.accent {
+    background: linear-gradient(140deg, var(--orange-500), #fb923c);
+    border-radius: 16px;
+  }
+  .stats > .stat:first-child .stat-icon { border-radius: 18px; }
+
+  /* staggered card reveal */
+  .stats > .stat { animation: rise .5s var(--ease-out) both; }
+  .stats > .stat:first-child { animation-delay: .04s; }
+  .stats > .stat:nth-child(2) { animation-delay: .10s; }
+  .stats > .stat:nth-child(5) { animation-delay: .16s; }
+  .two > .card { animation: rise .5s var(--ease-out) both; }
+  .two > .card:nth-child(2) { animation-delay: .12s; }
+
+  /* tactile press feedback (Apple-like) */
+  a.stat, .btn, .bottom-nav a, .bottom-nav .more-toggle {
+    transition: transform .13s var(--ease-out), box-shadow .2s var(--ease-out), color .15s;
+  }
+  a.stat:active, .btn:active { transform: scale(.97); }
+  .bottom-nav a:active, .bottom-nav .more-toggle:active { transform: scale(.9); }
+
+  /* active tab pop in the bottom bar */
+  .bottom-nav a.active .ic, .bottom-nav .more-toggle.active .ic {
+    transform: scale(1.14);
+    transition: transform .22s var(--ease-out);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats > .stat, .two > .card { animation: none; }
+  a.stat:active, .btn:active,
+  .bottom-nav a:active, .bottom-nav .more-toggle:active { transform: none; }
+  .bottom-nav a.active .ic, .bottom-nav .more-toggle.active .ic { transform: none; }
+}
+
+/* ============================================================
+   v43 — animation polish, all widths. Transform/opacity only
+   (GPU-friendly, no layout thrash). The sweet spot: noticeable
+   but short; entrance ~0.5s, taps ~0.13s, hover lifts ~0.2s.
+   ============================================================ */
+.btn { transition: transform .13s var(--ease-out), box-shadow .15s var(--ease-out), background .15s; }
+.btn:active { transform: scale(.97); }
+
+/* dashboard sections cascade in on load */
+.main > section.grid > * { animation: rise .5s var(--ease-out) both; }
+.main > section.grid:nth-of-type(1) > *:nth-child(2) { animation-delay: .06s; }
+.main > section.grid:nth-of-type(1) > *:nth-child(3) { animation-delay: .12s; }
+.main > section.grid:nth-of-type(1) > *:nth-child(4) { animation-delay: .18s; }
+.main > section.grid:nth-of-type(1) > *:nth-child(5) { animation-delay: .24s; }
+.main > section.grid:nth-of-type(2) > * { animation-delay: .14s; }
+.main > section.grid:nth-of-type(3) > * { animation-delay: .20s; }
+
+/* subtle card lift on pointer devices (Plata-style) */
+@media (hover: hover) {
+  a.card, .card.liftable { transition: transform .2s var(--ease-out), box-shadow .25s var(--ease-out); }
+  a.card:hover, .card.liftable:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 38px -18px rgba(17,24,39,.28), 0 2px 8px -3px rgba(17,24,39,.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main > section.grid > * { animation: none; }
+  .btn:active { transform: none; }
+  a.card:hover, .card.liftable:hover { transform: none; }
 }
