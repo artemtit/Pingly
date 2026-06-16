@@ -2,7 +2,7 @@
 (function () {
   "use strict";
 
-  var STORAGE_KEY = "pingly_tour_v1";
+  var STORAGE_KEY = "pingly_tour_v2";
 
   var STEPS = {
     tutor: [
@@ -18,6 +18,10 @@
         text: "Настрой повторяющиеся занятия один раз — бот сам напомнит ученикам за 2 часа до урока." },
       { sel: 'a[href="/tutor/homework"]', emoji: "📝", title: "Задания",
         text: "Выдавай домашние задания и проверяй сданное — всё в одном месте." },
+      { sel: 'a[href="/tutor/finance"]', emoji: "💰", title: "Финансы",
+        text: "Сколько занятий проведено и на какую сумму, кто сколько должен — всё считается само." },
+      { sel: 'a[href="/tutor/requests"]', emoji: "📥", title: "Заявки",
+        text: "Заявки на занятия с твоей публичной страницы записи приходят сюда." },
       { sel: 'a[href="/tutor/settings"]', emoji: "⚙️", title: "Настройки",
         text: "Профиль, тема оформления и ссылка на бота." },
       { center: true, emoji: "🎉", title: "Готово!",
