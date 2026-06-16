@@ -222,38 +222,32 @@ class LessonService:
         now = datetime.now(timezone.utc)
         student_user_id = lesson.get("student_user_id")
         if student_user_id:
-            for ntype, delta, title in (
-                (NotificationType.LESSON_DAY_BEFORE, timedelta(days=1), "📅 Занятие завтра"),
-                (NotificationType.LESSON_HOUR_BEFORE, timedelta(hours=1), "⏰ Занятие через час"),
-            ):
-                send_at = starts_at - delta
-                # Lesson is closer than this lead time (e.g. added the same day) —
-                # don't queue a reminder whose moment already passed, or it fires
-                # instantly with the wrong "завтра"/"через час" wording.
-                if send_at <= now:
-                    continue
+            # Single reminder 2 hours before the lesson (matches the promise on
+            # the landing). Skipped if the lesson is sooner than 2h (e.g. added
+            # the same day), so it never fires instantly with wrong wording.
+            send_at = starts_at - timedelta(hours=2)
+            if send_at > now:
                 await self.repo.create_notification(
                     student_user_id,
-                    ntype.value,
-                    title,
+                    NotificationType.LESSON_HOUR_BEFORE.value,
+                    "⏰ Занятие через 2 часа",
                     f"Занятие начнётся {_fmt_dt_msk(starts_at)}",
                     {"lesson_id": lesson["id"]},
                     send_at,
                 )
-        # Nudge the tutor 3h before if the student still hasn't confirmed.
-        # The scheduler skips this if the lesson is already confirmed/cancelled.
-        # Skipped entirely when the lesson is sooner than 3h, otherwise it would
-        # fire the instant the tutor creates a same-day lesson.
+        # Nudge the tutor 1h before (after the student got the 2h reminder) if
+        # the lesson still isn't confirmed. The scheduler drops it if the lesson
+        # was already confirmed/cancelled. Skipped if the lesson is sooner than 1h.
         tutor_user_id = lesson.get("tutor_user_id")
         if tutor_user_id:
-            send_at = starts_at - timedelta(hours=3)
+            send_at = starts_at - timedelta(hours=1)
             if send_at > now:
                 who = student_name or (lesson.get("student_profiles") or {}).get("name") or "ученик"
                 await self.repo.create_notification(
                     tutor_user_id,
                     NotificationType.TUTOR_UNCONFIRMED.value,
                     "❓ Занятие пока не подтверждено",
-                    f"До занятия ({_fmt_dt_msk(starts_at)}) осталось немного, а {who} ещё не нажал(а) «Буду». Стоит написать.",
+                    f"До занятия ({_fmt_dt_msk(starts_at)}) меньше часа, а {who} ещё не нажал(а) «Буду». Стоит написать.",
                     {"lesson_id": lesson["id"]},
                     send_at,
                 )
@@ -360,14 +354,31 @@ class LessonService:
             )
         return count
 
-    async def student_confirm_lesson(self, student_user_id: str, lesson_id: str) -> bool:
-        """Mark a scheduled lesson as confirmed by the student."""
+    async def student_confirm_lesson(self, student_user_id: str, lesson_id: str) -> dict | None:
+        """Mark a scheduled lesson as confirmed by the student. Returns the lesson
+        (with tutor_user_id, starts_at, student_profiles) so the caller can push
+        the tutor, or None if it wasn't a confirmable lesson (already confirmed,
+        cancelled, etc.) — None also prevents a duplicate "confirmed" push."""
         lessons = await self.repo.list_lessons_for_student_user(student_user_id)
         lesson = next((l for l in lessons if l["id"] == lesson_id), None)
         if not lesson or lesson.get("status") != "scheduled":
-            return False
+            return None
         await self.repo.update_lesson_fields(lesson_id, {"status": LessonStatus.CONFIRMED.value})
-        return True
+        return lesson
+
+    async def confirm_push_target(self, lesson: dict) -> tuple[int, str] | None:
+        """Given a just-confirmed lesson, return (tutor_tg_id, message) to notify
+        the tutor, or None if the tutor has no Telegram linked."""
+        tutor_id = lesson.get("tutor_user_id")
+        if not tutor_id:
+            return None
+        tutor = await self.repo.get_user_by_id(tutor_id)
+        tg_id = (tutor or {}).get("tg_id")
+        if not tg_id:
+            return None
+        name = (lesson.get("student_profiles") or {}).get("name") or "Ученик"
+        when = _fmt_when_ru(lesson.get("starts_at", ""))
+        return tg_id, f"✅ {name} подтвердил(а) занятие {when}."
 
     async def student_request_reschedule(self, student_user_id: str, lesson_id: str) -> dict | None:
         """Student asks to move a lesson. Marks it and returns the lesson so the

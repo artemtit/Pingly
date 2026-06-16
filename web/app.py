@@ -924,7 +924,11 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.post("/student/lessons/{lesson_id}/confirm")
     async def student_confirm_lesson(lesson_id: str, user: dict = Depends(current_user)) -> Response:
         _require(user, "student")
-        await services.lessons.student_confirm_lesson(user["id"], lesson_id)
+        lesson = await services.lessons.student_confirm_lesson(user["id"], lesson_id)
+        if lesson:
+            target = await services.lessons.confirm_push_target(lesson)
+            if target:
+                await _send_telegram(target[0], target[1])
         return RedirectResponse("/student", status_code=303)
 
     @app.post("/student/lessons/{lesson_id}/cancel")
