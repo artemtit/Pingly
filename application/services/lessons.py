@@ -120,7 +120,7 @@ class LessonService:
         if not student:
             raise PermissionError("Student does not belong to tutor")
         lesson = await self.repo.create_lesson(tutor_user_id, student_id, starts_at)
-        await self._schedule_lesson_notifications(lesson, starts_at)
+        await self._schedule_lesson_notifications(lesson, starts_at, student.get("name"))
         return lesson
 
     async def create_schedule(
@@ -209,41 +209,54 @@ class LessonService:
             rule["lesson_time"],
             datetime.now(timezone.utc),
         )
+        student = await self.repo.get_student_for_tutor(tutor_user_id, student_id)
+        student_name = (student or {}).get("name")
         lessons = []
         for starts_at in occurrences:
             lesson = await self.repo.create_lesson(tutor_user_id, student_id, starts_at, schedule_rule_id=rule["id"])
             lessons.append(lesson)
-            await self._schedule_lesson_notifications(lesson, starts_at)
+            await self._schedule_lesson_notifications(lesson, starts_at, student_name)
         return lessons
 
-    async def _schedule_lesson_notifications(self, lesson: dict, starts_at: datetime) -> None:
+    async def _schedule_lesson_notifications(self, lesson: dict, starts_at: datetime, student_name: str | None = None) -> None:
+        now = datetime.now(timezone.utc)
         student_user_id = lesson.get("student_user_id")
-        if not student_user_id:
-            return
-        for ntype, delta, title in (
-            (NotificationType.LESSON_DAY_BEFORE, timedelta(days=1), "📅 Занятие завтра"),
-            (NotificationType.LESSON_HOUR_BEFORE, timedelta(hours=1), "⏰ Занятие через час"),
-        ):
-            await self.repo.create_notification(
-                student_user_id,
-                ntype.value,
-                title,
-                f"Занятие начнётся {_fmt_dt_msk(starts_at)}",
-                {"lesson_id": lesson["id"]},
-                starts_at - delta,
-            )
+        if student_user_id:
+            for ntype, delta, title in (
+                (NotificationType.LESSON_DAY_BEFORE, timedelta(days=1), "📅 Занятие завтра"),
+                (NotificationType.LESSON_HOUR_BEFORE, timedelta(hours=1), "⏰ Занятие через час"),
+            ):
+                send_at = starts_at - delta
+                # Lesson is closer than this lead time (e.g. added the same day) —
+                # don't queue a reminder whose moment already passed, or it fires
+                # instantly with the wrong "завтра"/"через час" wording.
+                if send_at <= now:
+                    continue
+                await self.repo.create_notification(
+                    student_user_id,
+                    ntype.value,
+                    title,
+                    f"Занятие начнётся {_fmt_dt_msk(starts_at)}",
+                    {"lesson_id": lesson["id"]},
+                    send_at,
+                )
         # Nudge the tutor 3h before if the student still hasn't confirmed.
         # The scheduler skips this if the lesson is already confirmed/cancelled.
+        # Skipped entirely when the lesson is sooner than 3h, otherwise it would
+        # fire the instant the tutor creates a same-day lesson.
         tutor_user_id = lesson.get("tutor_user_id")
         if tutor_user_id:
-            await self.repo.create_notification(
-                tutor_user_id,
-                NotificationType.TUTOR_UNCONFIRMED.value,
-                "❓ Ученик не подтвердил занятие",
-                f"До занятия ({_fmt_dt_msk(starts_at)}) осталось немного, а ученик ещё не нажал «Буду». Стоит написать.",
-                {"lesson_id": lesson["id"]},
-                starts_at - timedelta(hours=3),
-            )
+            send_at = starts_at - timedelta(hours=3)
+            if send_at > now:
+                who = student_name or (lesson.get("student_profiles") or {}).get("name") or "ученик"
+                await self.repo.create_notification(
+                    tutor_user_id,
+                    NotificationType.TUTOR_UNCONFIRMED.value,
+                    "❓ Занятие пока не подтверждено",
+                    f"До занятия ({_fmt_dt_msk(starts_at)}) осталось немного, а {who} ещё не нажал(а) «Буду». Стоит написать.",
+                    {"lesson_id": lesson["id"]},
+                    send_at,
+                )
 
     # ---- reads ----------------------------------------------------------
     async def list_tutor_calendar(self, tutor_user_id: str) -> list[dict]:
@@ -298,7 +311,7 @@ class LessonService:
                 f"Новое время: {_fmt_dt_msk(new_starts_at)}",
                 {"lesson_id": lesson_id},
             )
-            await self._schedule_lesson_notifications(lesson, new_starts_at)
+            await self._schedule_lesson_notifications(lesson, new_starts_at, (existing.get("student_profiles") or {}).get("name"))
         return lesson
 
     # ---- series actions -------------------------------------------------

@@ -978,12 +978,12 @@ mark { background: var(--orange-100); color: inherit; border-radius: 3px; paddin
 .req-preview-body { padding: 22px 20px; text-align: center; }
 .req-preview-av { width: 58px; height: 58px; border-radius: 50%; margin: 0 auto 10px;
   background: var(--orange-500); color: #fff; font-size: 25px; font-weight: 800; display: grid; place-items: center; }
-.req-preview-name { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
-.req-preview-subj { font-size: 13.5px; color: var(--fg2); margin-top: 3px; min-height: 18px; }
+.req-preview-name { font-size: 18px; font-weight: 800; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.req-preview-subj { font-size: 13.5px; color: var(--fg2); margin-top: 3px; min-height: 18px; overflow-wrap: anywhere; }
 .req-preview-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 12px; }
 .req-preview-badges .chip { display: inline-flex; align-items: center; gap: 5px; }
 .req-preview-bio { font-size: 13px; color: var(--fg2); line-height: 1.55; margin-top: 12px; text-align: left;
-  white-space: pre-line; max-height: 120px; overflow: hidden; }
+  white-space: pre-line; overflow-wrap: anywhere; max-height: 120px; overflow: hidden; }
 .req-preview-btn { margin-top: 16px; display: inline-flex; align-items: center; justify-content: center;
   background: var(--orange-600); color: #fff; font-weight: 700; font-size: 14px; border-radius: 11px;
   padding: 11px 26px; box-shadow: var(--shadow-primary); pointer-events: none; }
