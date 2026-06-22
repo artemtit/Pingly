@@ -88,10 +88,12 @@
   </aside>
 
   <main class="main">
+    {% block content %}{% endblock %}
     {% if user.role == "tutor" %}
     {% set sub = subscription_info(user) %}
     {% if sub.status == 'trial' and sub.days_left is not none %}
-    <div class="trial-banner {{ 'trial-ending' if sub.days_left <= 3 }}">
+    {# Плашка-подвал: после контента, чтобы не оттягивать внимание от кабинета #}
+    <div class="trial-banner trial-banner-foot {{ 'trial-ending' if sub.days_left <= 3 }}">
       {% if sub.days_left > 0 %}
       🎁 Пробный период: осталось <strong>{{ sub.days_left }}</strong> {{ sub.days_left | ru_days }}.
       Дальше — 990 ₽/мес.
@@ -102,7 +104,6 @@
     </div>
     {% endif %}
     {% endif %}
-    {% block content %}{% endblock %}
   </main>
 </div>
 

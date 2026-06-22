@@ -56,16 +56,14 @@ class PublicService:
             existing = await self.repo.get_tutor_profile_by_slug(slug)
             if existing and existing.get("user_id") != tutor_user_id:
                 return None, "Этот адрес уже занят — выбери другой"
-        patch = {
-            "slug": slug or None,
-            "bio": (bio or "").strip() or None,
-            "subjects": (subjects or "").strip() or None,
-            "public_enabled": public_enabled,
-        }
-        # update_tutor_profile drops None values, so push booleans/empties explicitly
+        # update_tutor_profile drops only None values (keeps empty strings), so we
+        # push bio/subjects as plain strings — an empty one must actually CLEAR the
+        # field, not be silently ignored. slug stays opt-in (None never clobbers it).
         theme = page_theme if page_theme in ("auto", "light", "dark") else "auto"
         profile = await self.repo.update_tutor_profile(tutor_user_id, {
-            **{k: v for k, v in patch.items() if v is not None},
+            **({"slug": slug} if slug else {}),
+            "bio": (bio or "").strip(),
+            "subjects": (subjects or "").strip(),
             "public_enabled": public_enabled,
             "badges": "\n".join(f"{b['icon']}|{b['text']}" for b in self.parse_badges(badges)),
             "page_theme": theme,

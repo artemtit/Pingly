@@ -622,7 +622,13 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         students = await services.students.list_students_by_user(user["id"])
         lessons = await services.lessons.list_tutor_calendar(user["id"])
         now = datetime.now(timezone.utc).isoformat()
-        upcoming = [l for l in lessons if (l.get("starts_at") or "") >= now][:30]
+        # "Будущие занятия" = only still-pending ones. A completed/cancelled lesson
+        # whose time hasn't passed yet must not show here with a «Проведено» badge.
+        upcoming = [
+            l for l in lessons
+            if l.get("status") in ("scheduled", "confirmed", "reschedule_requested")
+            and (l.get("starts_at") or "") >= now
+        ][:30]
         return templates.TemplateResponse("schedule.html", _ctx(request, user, "schedule", students=students, upcoming=upcoming))
 
     @app.post("/tutor/schedule")
@@ -633,20 +639,22 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         lesson_date: str = Form(""),
         interval_n: int = Form(1),
         weekdays: list[int] = Form(default=[]),
+        comment: str = Form(""),
         back: str = Form(""),
         user: dict = Depends(current_user),
     ) -> Response:
         _require(user, "tutor")
         time_norm = lesson_time.strip()[:5] or "15:00"
+        topic = comment.strip()[:500] or None
         if recurrence == "once":
             day = lesson_date.strip() or datetime.now(timezone.utc).date().isoformat()
             starts_at = datetime.fromisoformat(f"{day}T{time_norm}:00").replace(tzinfo=_MSK).astimezone(timezone.utc)
-            await services.lessons.create_one_time_lesson(user["id"], student_id, starts_at)
+            await services.lessons.create_one_time_lesson(user["id"], student_id, starts_at, public_comment=topic)
         else:
             wd = weekdays or None
             await services.lessons.create_schedule(
                 user["id"], student_id, recurrence, f"{time_norm}:00",
-                weekdays=wd, interval_n=interval_n,
+                weekdays=wd, interval_n=interval_n, public_comment=topic,
             )
         # quick-add from the calendar returns to the same view, not to month
         if back.startswith("/tutor/"):

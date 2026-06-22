@@ -109,18 +109,20 @@
 (function(){
   var data = JSON.parse(document.getElementById('fin-data').textContent);
 
-  /* ---- sparkline: last 6 months of income ---- */
-  (function(){
+  /* ---- sparkline: income by month, redrawn when the period changes ---- */
+  var ns = 'http://www.w3.org/2000/svg';
+  function drawSpark(months){
     var svg = document.getElementById('fin-spark');
-    var m = data.months || [];
-    if (!svg || m.length < 2) { if (svg) svg.style.display = 'none'; return; }
+    if (!svg) return;
+    svg.innerHTML = '';
+    if (months.length < 2) { svg.style.display = 'none'; return; }
+    svg.style.display = '';
     var W = 190, H = 84, padX = 12, top = 10, bottom = 22;
-    var max = Math.max.apply(null, m.map(function(x){ return x.sum; })) || 1;
-    var stepX = (W - padX * 2) / (m.length - 1);
-    var pts = m.map(function(x, i){
+    var max = Math.max.apply(null, months.map(function(x){ return x.sum; })) || 1;
+    var stepX = (W - padX * 2) / (months.length - 1);
+    var pts = months.map(function(x, i){
       return [padX + i * stepX, top + (H - top - bottom) * (1 - x.sum / max)];
     });
-    var ns = 'http://www.w3.org/2000/svg';
     var defs = document.createElementNS(ns, 'defs');
     defs.innerHTML = '<linearGradient id="sparkfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F97316" stop-opacity=".22"/><stop offset="1" stop-color="#F97316" stop-opacity="0"/></linearGradient>';
     svg.appendChild(defs);
@@ -132,24 +134,24 @@
     line.setAttribute('points', pts.map(function(p){ return p.join(','); }).join(' '));
     svg.appendChild(line);
     if (!pingly.reduceMotion) {
-      var len = 400;
+      var len = line.getTotalLength ? line.getTotalLength() : 400;
       line.style.strokeDasharray = len;
       line.style.strokeDashoffset = len;
-      line.style.transition = 'stroke-dashoffset 1s cubic-bezier(0,0,.2,1) .2s';
+      line.style.transition = 'stroke-dashoffset 1s cubic-bezier(0,0,.2,1) .15s';
       requestAnimationFrame(function(){ line.style.strokeDashoffset = '0'; });
     }
     var last = document.createElementNS(ns, 'circle');
     last.setAttribute('cx', pts[pts.length-1][0]); last.setAttribute('cy', pts[pts.length-1][1]); last.setAttribute('r', 3.2);
     svg.appendChild(last);
-    m.forEach(function(x, i){
+    months.forEach(function(x, i){
       var t = document.createElementNS(ns, 'text');
       t.setAttribute('x', pts[i][0]); t.setAttribute('y', H - 8); t.setAttribute('text-anchor', 'middle');
       t.textContent = x.label;
       svg.appendChild(t);
     });
-  }());
+  }
 
-  /* ---- period switch: месяц / квартал / всё время ---- */
+  /* ---- period switch: месяц / квартал / всё время (redraws number + chart) ---- */
   (function(){
     var m = data.months || [];
     var labelEl = document.getElementById('fin-earned-label');
@@ -157,6 +159,9 @@
     var totalAll = (data.history || []).reduce(function(acc, r){ return acc + (r.price || 0); }, 0);
     var labels = { month: 'заработано в этом месяце', quarter: 'заработано за 3 месяца', all: 'заработано за всё время' };
     function sumLast(n){ return m.slice(-n).reduce(function(acc, x){ return acc + x.sum; }, 0); }
+    // how many trailing months the chart shows per period (min 2 so it stays a line)
+    function windowFor(p){ return p === 'quarter' ? 3 : 6; }
+    drawSpark(m);
     document.querySelectorAll('[data-period]').forEach(function(b){
       b.addEventListener('click', function(){
         document.querySelectorAll('[data-period]').forEach(function(x){ x.classList.remove('active'); });
@@ -165,6 +170,7 @@
         var val = p === 'month' ? sumLast(1) : p === 'quarter' ? sumLast(3) : totalAll;
         numEl.textContent = pingly.fmt(val) + ' ₽';
         labelEl.textContent = labels[p];
+        drawSpark(m.slice(-windowFor(p)));
       });
     });
   }());

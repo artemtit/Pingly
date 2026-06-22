@@ -30,8 +30,11 @@ class AccountService:
         self.repo = repo
 
     async def apply_referral(self, new_user_id: str, ref_code: str) -> bool:
-        """Link a freshly registered tutor to a referrer and reward both with
-        +30 trial days. Idempotent: skips if the new user is already referred."""
+        """Link a freshly registered tutor to a referrer. The +30-day bonus is NOT
+        granted here — it's paid out only once the referred tutor actually buys a
+        subscription (see billing.grant_referral_reward). This kills the trivial
+        abuse of farming bonus days by self-registering through your own link.
+        Idempotent: skips if the new user is already referred."""
         code = (ref_code or "").strip()
         if not code:
             return False
@@ -42,8 +45,6 @@ class AccountService:
         if not referrer or referrer["id"] == new_user_id:
             return False
         await self.repo.set_referred_by(new_user_id, referrer["id"])
-        await self.repo.extend_trial(referrer["id"], 30)
-        await self.repo.extend_trial(new_user_id, 30)
         return True
 
     async def get_user(self, user_id: str) -> dict | None:

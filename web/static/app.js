@@ -133,7 +133,12 @@
   }
 
   /* ---------------- Buttons: loading on submit ---------------- */
+  // Bubble phase (not capture) so an inline `onsubmit="return confirm(...)"` runs
+  // first: if the user clicks «Нет» the submit is cancelled (defaultPrevented),
+  // and we must NOT disable the button — otherwise it spins forever with no
+  // navigation to reset it.
   document.addEventListener('submit', function (e) {
+    if (e.defaultPrevented) return;
     var form = e.target;
     if (form.dataset.noLoading !== undefined) return;
     var btn = e.submitter || form.querySelector('button[type="submit"], button:not([type])');
@@ -143,7 +148,7 @@
       btn.classList.add('btn-loading');
       btn.disabled = true;
     }, 0);
-  }, true);
+  }, false);
 
   /* ---------------- Modals: esc, backdrop, autofocus ---------------- */
   document.addEventListener('keydown', function (e) {

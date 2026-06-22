@@ -439,7 +439,7 @@ class SupabasePinglyRepository:
             .execute()
         )
 
-    async def create_lesson(self, tutor_user_id: str, student_id: str, starts_at: datetime, subject_id: str | None = None, schedule_rule_id: str | None = None) -> dict[str, Any]:
+    async def create_lesson(self, tutor_user_id: str, student_id: str, starts_at: datetime, subject_id: str | None = None, schedule_rule_id: str | None = None, public_comment: str | None = None) -> dict[str, Any]:
         student = await self.get_student_for_tutor(tutor_user_id, student_id)
         result = await self._db().table("lessons_v2").insert({
             "tutor_user_id": tutor_user_id,
@@ -450,6 +450,7 @@ class SupabasePinglyRepository:
             "starts_at": starts_at.isoformat(),
             "status": "scheduled",
             "price": student.get("default_price") if student else None,
+            "public_comment": public_comment,
         }).execute()
         return result.data[0]
 
@@ -765,6 +766,28 @@ class SupabasePinglyRepository:
                 pass
         new_end = (base + timedelta(days=days)).isoformat()
         await self._db().table("users").update({"trial_ends_at": new_end}).eq("id", user_id).execute()
+
+    async def grant_referral_reward(self, user_id: str) -> bool:
+        """Pay out the referral bonus (+30 trial days to both the referred tutor
+        and their referrer) exactly once — when the referred tutor first pays for a
+        subscription. The single conditional UPDATE on referral_rewarded_at is the
+        idempotency gate, so retried webhooks / renewals never double-pay."""
+        claim = await (
+            self._db().table("users")
+            .update({"referral_rewarded_at": datetime.now(timezone.utc).isoformat()})
+            .eq("id", user_id)
+            .is_("referral_rewarded_at", "null")
+            .not_.is_("referred_by", "null")
+            .execute()
+        )
+        row = _one(claim)
+        if not row:
+            return False
+        await self.extend_trial(user_id, 30)
+        referrer_id = row.get("referred_by")
+        if referrer_id:
+            await self.extend_trial(referrer_id, 30)
+        return True
 
     # ---------------- Admin panel ----------------
     async def admin_list_users(self) -> list[dict[str, Any]]:

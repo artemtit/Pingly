@@ -143,7 +143,9 @@ img { display: block; }
 
 /* fixed height (no CLS) + flex-end: the dialog grows upward like a real
    chat, and overflow clips oldest bubbles instead of newest */
-.chat-feed { height: 272px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 9px; padding-top: 14px; }
+/* padding-bottom keeps the «Буду/Отменяю» pulse glow (box-shadow 5px) from being
+   clipped by overflow:hidden at the feed's bottom edge */
+.chat-feed { height: 272px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 9px; padding-top: 14px; padding-bottom: 6px; }
 .chat-row { display: none; }
 .chat-row.show { display: flex; animation: msgIn .35s var(--ease-out); }
 .chat-row.right { justify-content: flex-end; }

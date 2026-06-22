@@ -32,10 +32,20 @@ class BillingService:
         plan = _normalize_plan(plan)
         price = _price_for_plan(plan)
         tier_label = "Max" if plan == "max" else "Pro"
+        # Stamp the buyer's identity into the description so a payment can be traced
+        # back to an account from the Platega dashboard (name · contact · short id).
+        ident = (user.get("email") or "").strip()
+        if not ident and user.get("tg_username"):
+            ident = "@" + str(user["tg_username"]).lstrip("@")
+        who = " · ".join(p for p in (
+            (user.get("full_name") or "").strip(),
+            ident,
+            f"#{str(user['id'])[:8].upper()}",
+        ) if p)
         try:
             result = await platega.create_payment(
                 amount=float(price),
-                description=f"Подписка Pingly {tier_label} (1 месяц)",
+                description=f"Pingly {tier_label}, 1 мес · {who}"[:180],
                 return_url=f"{base}/tutor/settings?paid=1",
                 failed_url=f"{base}/tutor/settings?paid=0",
                 # The plan rides along in the payload so the webhook can grant the
@@ -108,6 +118,12 @@ class BillingService:
                 await self.repo.activate_subscription(
                     activate_uid, SUBSCRIPTION_DAYS, plan if config.PLANS_ENABLED else None
                 )
+                # Pay out the referral bonus on the referred tutor's first real
+                # payment. Idempotent in the repo, so renewals never re-trigger it.
+                try:
+                    await self.repo.grant_referral_reward(activate_uid)
+                except Exception:
+                    pass
         elif status in ("CANCELED", "CHARGEBACKED"):
             try:
                 await self.repo.mark_subscription_payment(transaction_id, "canceled")

@@ -112,14 +112,14 @@ class LessonService:
     async def create_recurring_lesson_for_user(self, tutor_user_id: str, student_id: str, day_of_week: int, lesson_time: str, duration_minutes: int = 60) -> dict:
         return await self.create_schedule(tutor_user_id, student_id, "weekly", lesson_time, weekdays=[day_of_week], duration_minutes=duration_minutes)
 
-    async def create_one_time_lesson(self, tutor_user_id: str, student_id: str, starts_at: datetime, duration_minutes: int = 60) -> dict:
+    async def create_one_time_lesson(self, tutor_user_id: str, student_id: str, starts_at: datetime, duration_minutes: int = 60, public_comment: str | None = None) -> dict:
         tutor = await self.repo.get_user_by_id(tutor_user_id)
         if not tutor or tutor["role"] != "tutor":
             raise PermissionError("Only tutors can create lessons")
         student = await self.repo.get_student_for_tutor(tutor_user_id, student_id)
         if not student:
             raise PermissionError("Student does not belong to tutor")
-        lesson = await self.repo.create_lesson(tutor_user_id, student_id, starts_at)
+        lesson = await self.repo.create_lesson(tutor_user_id, student_id, starts_at, public_comment=public_comment)
         await self._schedule_lesson_notifications(lesson, starts_at, student.get("name"))
         return lesson
 
@@ -133,6 +133,7 @@ class LessonService:
         interval_n: int = 1,
         duration_minutes: int = 60,
         start_date: datetime | None = None,
+        public_comment: str | None = None,
     ) -> dict:
         tutor = await self.repo.get_user_by_id(tutor_user_id)
         if not tutor or tutor["role"] != "tutor":
@@ -155,7 +156,7 @@ class LessonService:
             weekdays=weekdays or [day_of_week],
             start_date=anchor.date().isoformat(),
         )
-        await self._generate_lessons(tutor_user_id, student_id, rule)
+        await self._generate_lessons(tutor_user_id, student_id, rule, public_comment=public_comment)
         return rule
 
     def _occurrences(self, recurrence: str, weekdays: list[int], interval_n: int, lesson_time: str, start: datetime) -> list[datetime]:
@@ -197,7 +198,7 @@ class LessonService:
                         out.append(occ)
         return sorted(set(out))[:MAX_GENERATED]
 
-    async def _generate_lessons(self, tutor_user_id: str, student_id: str, rule: dict) -> list[dict]:
+    async def _generate_lessons(self, tutor_user_id: str, student_id: str, rule: dict, public_comment: str | None = None) -> list[dict]:
         weekdays = rule.get("weekdays") or [rule["day_of_week"]]
         if isinstance(weekdays, str):
             import json
@@ -213,7 +214,7 @@ class LessonService:
         student_name = (student or {}).get("name")
         lessons = []
         for starts_at in occurrences:
-            lesson = await self.repo.create_lesson(tutor_user_id, student_id, starts_at, schedule_rule_id=rule["id"])
+            lesson = await self.repo.create_lesson(tutor_user_id, student_id, starts_at, schedule_rule_id=rule["id"], public_comment=public_comment)
             lessons.append(lesson)
             await self._schedule_lesson_notifications(lesson, starts_at, student_name)
         return lessons

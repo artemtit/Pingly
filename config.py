@@ -15,10 +15,14 @@ WEB_ENABLED: bool = os.getenv("WEB_ENABLED", "1") == "1"
 BOT_USERNAME: str = os.getenv("BOT_USERNAME", "")  # also set at startup in bot.py from get_me()
 
 # Telegram id that receives support messages from the web form (the founder).
+# This is the *delivery* target — stays as the founder so messages still reach Артём.
 SUPPORT_TG_ID: int = int(os.getenv("SUPPORT_TG_ID", "2091126912") or 0)
-# Public support contacts shown to users (and to the payment provider's review).
-SUPPORT_USERNAME: str = os.getenv("SUPPORT_USERNAME", "ligr5").lstrip("@")
-SUPPORT_EMAIL: str = os.getenv("SUPPORT_EMAIL", "at147824@gmail.com")
+# Public, project-branded support contacts shown to users (and to the payment
+# provider's review). Keep these separate from the founder's personal accounts.
+# NOTE: register @pingly_support (or forward it to the founder) and a
+# support@pingly-app.ru mailbox/forwarder, or override both in .env.
+SUPPORT_USERNAME: str = os.getenv("SUPPORT_USERNAME", "pingly_support").lstrip("@")
+SUPPORT_EMAIL: str = os.getenv("SUPPORT_EMAIL", "support@pingly-app.ru")
 
 # Platega payments (subscriptions). Secrets live in .env, never in git.
 PLATEGA_API_URL: str = os.getenv("PLATEGA_API_URL", "https://app.platega.io")
