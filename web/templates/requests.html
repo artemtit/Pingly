@@ -109,33 +109,53 @@
   </div>
 </div>
 
+{% macro req_row(r, done) %}
+<div class="req-row {{ 'req-done' if done else 'req-new' }}">
+  <div class="req-main">
+    <div class="req-head">
+      <strong>{{ r.name }}</strong>
+      <span class="muted">{{ r.created_at | msk('%d.%m %H:%M') }}</span>
+    </div>
+    <div class="muted">📞 <span class="req-contact">{{ r.contact }}</span>{% if r.preferred_time %} · 🕒 {{ r.preferred_time }}{% endif %}</div>
+    {% if r.comment %}<div class="req-comment">💬 {{ r.comment }}</div>{% endif %}
+  </div>
+  {% if done %}
+  <span class="badge completed">просмотрено</span>
+  {% else %}
+  <form method="post" action="/tutor/requests/{{ r.id }}/done">
+    <button class="btn btn-secondary btn-sm">✓ Просмотрено</button>
+  </form>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% set new_requests = requests | selectattr("status", "equalto", "new") | list %}
+{% set seen_requests = requests | rejectattr("status", "equalto", "new") | list %}
+
 <div class="card" style="margin-top:16px;">
-  {% set new_requests = requests | selectattr("status", "equalto", "new") | list %}
   <h2>Новые {% if new_requests %}<span class="badge submitted">{{ new_requests | length }}</span>{% endif %}</h2>
   <div class="req-list">
-    {% for r in requests %}
-    <div class="req-row {{ 'req-new' if r.status == 'new' else 'req-done' }}">
-      <div class="req-main">
-        <div class="req-head">
-          <strong>{{ r.name }}</strong>
-          <span class="muted">{{ r.created_at | msk('%d.%m %H:%M') }}</span>
-        </div>
-        <div class="muted">📞 <span class="req-contact">{{ r.contact }}</span>{% if r.preferred_time %} · 🕒 {{ r.preferred_time }}{% endif %}</div>
-        {% if r.comment %}<div class="req-comment">💬 {{ r.comment }}</div>{% endif %}
-      </div>
-      {% if r.status == 'new' %}
-      <form method="post" action="/tutor/requests/{{ r.id }}/done">
-        <button class="btn btn-secondary btn-sm">✓ Обработано</button>
-      </form>
-      {% else %}
-      <span class="badge completed">готово</span>
-      {% endif %}
-    </div>
+    {% for r in new_requests %}{{ req_row(r, false) }}{% else %}
+    {% if requests %}
+    <div class="empty"><div class="empty-emoji">✅</div><p>Новых заявок нет — все просмотрены.</p></div>
     {% else %}
     <div class="empty"><div class="empty-emoji">📭</div><p>Заявок пока нет. Включи публичную страницу выше и поделись ссылкой.</p></div>
+    {% endif %}
     {% endfor %}
   </div>
 </div>
+
+{% if seen_requests %}
+<details class="card req-seen" style="margin-top:16px;" open>
+  <summary class="card-head" style="cursor:pointer;list-style:none;">
+    <h2 style="margin:0;">Просмотренные <span class="badge completed">{{ seen_requests | length }}</span></h2>
+    <span class="req-seen-chev" aria-hidden="true">▾</span>
+  </summary>
+  <div class="req-list" style="margin-top:12px;">
+    {% for r in seen_requests %}{{ req_row(r, true) }}{% endfor %}
+  </div>
+</details>
+{% endif %}
 
 <script>
 function copyPubLink(btn){
