@@ -286,7 +286,11 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
    opacity:.7 over a dark page made names unreadable on mobile */
 .agenda-row.completed { background: var(--color-success-light); border-color: var(--success-border, var(--color-border)); }
 [data-theme="dark"] .agenda-row.completed { background: rgba(34,197,94,.13); border-color: rgba(34,197,94,.32); }
-.agenda-row.cancelled .agenda-time, .agenda-row.cancelled .agenda-name { text-decoration: line-through; opacity: .6; }
+/* Cancelled: red fill + red accent so it reads as «отменено» at a glance,
+   not just a dimmed strikethrough. */
+.agenda-row.cancelled { background: var(--color-error-light); border-color: rgba(239,68,68,.34); }
+[data-theme="dark"] .agenda-row.cancelled { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.34); }
+.agenda-row.cancelled .agenda-time, .agenda-row.cancelled .agenda-name { text-decoration: line-through; color: var(--error-text); opacity: .85; }
 .cal-weekday { font-size: 12px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; padding: 4px; text-align: center; }
 .cal-cell { min-height: 96px; border: 1px solid var(--color-border); border-radius: 11px; padding: 7px; display: flex; flex-direction: column; gap: 5px; transition: border-color .15s, transform .12s; background: #fff; }
 .cal-week .cal-cell { min-height: 200px; }
