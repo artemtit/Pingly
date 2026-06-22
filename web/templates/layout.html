@@ -64,6 +64,19 @@
       </button>
     </nav>
 
+    {% if user.role == "tutor" %}
+    {% set sub = subscription_info(user) %}
+    {% if sub.status == 'trial' and sub.days_left is not none %}
+    <a class="trial-side {{ 'trial-side-warn' if sub.days_left <= 3 }}" href="/tutor/settings" title="Подробнее о подписке">
+      <span class="trial-side-ic">🎁</span>
+      <span class="trial-side-text">
+        {% if sub.days_left > 0 %}Пробный: <b>{{ sub.days_left }}</b> {{ sub.days_left | ru_days }}<br><span class="trial-side-sub">дальше 990 ₽/мес →</span>
+        {% else %}Пробный истёк<br><span class="trial-side-sub">оформить подписку →</span>{% endif %}
+      </span>
+    </a>
+    {% endif %}
+    {% endif %}
+
     <div class="userbox">
       <div class="userbox-id">
         <span class="avatar-circle">{{ user.full_name[0] | upper }}</span>
@@ -88,22 +101,18 @@
   </aside>
 
   <main class="main">
-    {% block content %}{% endblock %}
     {% if user.role == "tutor" %}
     {% set sub = subscription_info(user) %}
     {% if sub.status == 'trial' and sub.days_left is not none %}
-    {# Плашка-подвал: после контента, чтобы не оттягивать внимание от кабинета #}
-    <div class="trial-banner trial-banner-foot {{ 'trial-ending' if sub.days_left <= 3 }}">
-      {% if sub.days_left > 0 %}
-      🎁 Пробный период: осталось <strong>{{ sub.days_left }}</strong> {{ sub.days_left | ru_days }}.
-      Дальше — 990 ₽/мес.
-      {% else %}
-      ⏳ Пробный период закончился. Всё ещё работает — оформи подписку, чтобы поддержать Pingly.
-      {% endif %}
+    {# На телефоне сайдбар скрыт, поэтому плашка показывается тут (только мобайл) #}
+    <div class="trial-banner trial-banner-mobile {{ 'trial-ending' if sub.days_left <= 3 }}">
+      {% if sub.days_left > 0 %}🎁 Пробный период: осталось <strong>{{ sub.days_left }}</strong> {{ sub.days_left | ru_days }}. Дальше — 990 ₽/мес.
+      {% else %}⏳ Пробный период закончился. Всё ещё работает — оформи подписку.{% endif %}
       <a href="/tutor/settings">Подробнее →</a>
     </div>
     {% endif %}
     {% endif %}
+    {% block content %}{% endblock %}
   </main>
 </div>
 

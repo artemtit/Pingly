@@ -141,15 +141,32 @@ function openDelete(btn){
   document.getElementById('delete-student-form').action = '/tutor/students/' + btn.getAttribute('data-id') + '/delete';
   pingly.openModal('delete-student-modal');
 }
-function closeKebabs(){ document.querySelectorAll('.kebab-menu.open').forEach(function(m){ m.classList.remove('open'); }); }
+function closeKebabs(){
+  document.querySelectorAll('.kebab-menu.open').forEach(function(m){
+    m.classList.remove('open');
+    m.style.position = ''; m.style.left = ''; m.style.top = ''; m.style.right = '';
+  });
+}
 function toggleKebab(btn){
   var menu = btn.parentElement.querySelector('.kebab-menu');
   var wasOpen = menu.classList.contains('open');
   closeKebabs();
-  if (!wasOpen) menu.classList.add('open');
+  if (wasOpen) return;
+  menu.classList.add('open');
+  // Render fixed near the button so the list's overflow:hidden can't clip it.
+  var r = btn.getBoundingClientRect();
+  menu.style.position = 'fixed';
+  menu.style.right = 'auto';
+  var left = Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8);
+  menu.style.left = Math.max(8, left) + 'px';
+  var top = r.bottom + 6;
+  if (top + menu.offsetHeight > window.innerHeight - 8) top = r.top - menu.offsetHeight - 6;
+  menu.style.top = Math.max(8, top) + 'px';
 }
 document.addEventListener('click', function(e){ if (!e.target.closest('.kebab-wrap')) closeKebabs(); });
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeKebabs(); });
+window.addEventListener('scroll', closeKebabs, true);
+window.addEventListener('resize', closeKebabs);
 
 /* ---- live filtering: search (debounced) + status + subject pills ---- */
 (function(){

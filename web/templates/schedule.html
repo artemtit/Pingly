@@ -3,15 +3,15 @@
 {% macro slesson(lesson) %}
 <div class="timeline-row">
   <div class="timeline-dot {{ lesson.status }}"></div>
-  <div class="timeline-body">
+  <a class="timeline-body" href="/tutor/calendar?view=day&date={{ lesson.starts_at | msk('%Y-%m-%d') }}" title="Открыть в календаре — там можно провести, отменить или перенести именно это занятие">
     <div class="timeline-when">{{ lesson.starts_at | msk }}</div>
     <div class="timeline-who">{{ lesson.student_profiles.name if lesson.student_profiles else "Ученик" }}</div>
-  </div>
+  </a>
   <div class="series-actions">
     {{ ui.status_badge(lesson.status) }}
     {% if lesson.schedule_rule_id and lesson.status == "scheduled" %}
     <details class="resched">
-      <summary class="link-btn">серия</summary>
+      <summary class="link-btn">⚙ вся серия</summary>
       <div class="series-menu">
         <form method="post" action="/tutor/series/{{ lesson.schedule_rule_id }}/reschedule" class="resched-form">
           <input class="input" type="time" name="new_time" required>
@@ -77,8 +77,9 @@
       <div class="field" id="interval-field" style="display:none;"><span>Интервал (N)</span>
         <input class="input" type="number" name="interval_n" value="1" min="1" max="30"></div>
 
-      <label class="field"><span>Тема урока <span class="muted" style="font-weight:400;">— необязательно</span></span>
+      <label class="field" id="topic-field"><span>Тема урока <span class="muted" style="font-weight:400;">— необязательно</span></span>
         <textarea class="input" name="comment" rows="2" maxlength="500" placeholder="Что будет на уроке — ученик увидит это в напоминании"></textarea></label>
+      <p class="muted" id="topic-series-hint" style="display:none;font-size:13px;margin:-4px 0 10px;">У серии тема у каждого занятия своя — задаётся в календаре кнопкой «Тема урока».</p>
 
       <button class="btn btn-primary">➕ Создать</button>
     </form>
@@ -87,6 +88,7 @@
 
   <div class="card">
     <div class="card-head"><h2>Будущие занятия</h2><a class="link-btn" href="/tutor/calendar">В календаре →</a></div>
+    {% if upcoming %}<p class="muted" style="margin:-2px 0 12px;font-size:12.5px;">Нажми на занятие — откроется в календаре, где можно провести, отменить или перенести именно его. «⚙ Вся серия» меняет сразу все будущие занятия по этому расписанию.</p>{% endif %}
     <div class="timeline">
       {% for lesson in upcoming[:8] %}{{ slesson(lesson) }}{% else %}
       <div class="empty"><div class="empty-emoji">🗓️</div><p>Будущих занятий нет.</p></div>
@@ -106,9 +108,13 @@
 <script>
 function onRecurrence() {
   var v = document.getElementById('recurrence').value;
-  document.getElementById('date-field').style.display = (v === 'once') ? '' : 'none';
+  var once = (v === 'once');
+  document.getElementById('date-field').style.display = once ? '' : 'none';
   document.getElementById('weekdays-field').style.display = (v === 'weekly' || v === 'multiple_weekly' || v === 'every_n_weeks') ? '' : 'none';
   document.getElementById('interval-field').style.display = (v === 'every_n_days' || v === 'every_n_weeks') ? '' : 'none';
+  // Тема — только у разового занятия; у серии она своя для каждого урока.
+  document.getElementById('topic-field').style.display = once ? '' : 'none';
+  document.getElementById('topic-series-hint').style.display = once ? 'none' : '';
 }
 onRecurrence();
 </script>

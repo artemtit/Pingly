@@ -157,6 +157,8 @@ textarea { min-height: 86px; resize: vertical; }
 .timeline-dot.scheduled { background: var(--color-info); } .timeline-dot.completed { background: var(--color-success); }
 .timeline-dot.rescheduled { background: var(--color-warning); } .timeline-dot.cancelled { background: var(--color-error); }
 .timeline-body { flex: 1; }
+a.timeline-body { color: inherit; text-decoration: none; min-width: 0; }
+a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .timeline-when { font-weight: 700; font-size: 14px; }
 .timeline-who { color: var(--color-text-muted); font-size: 13px; }
 
@@ -604,9 +606,24 @@ textarea { min-height: 86px; resize: vertical; }
   color: var(--color-text, #1f2937); border-radius: 12px; padding: 11px 15px; margin-bottom: 16px; font-size: 14px; }
 .trial-banner a { font-weight: 700; color: var(--color-primary-600, #ea580c); margin-left: auto; white-space: nowrap; }
 .trial-banner.trial-ending { background: var(--color-error-light); border-color: var(--color-error); }
-/* moved below the content: top margin instead of bottom */
-.trial-banner-foot { margin-top: 22px; margin-bottom: 0; }
 [data-theme="dark"] .trial-banner { background: #2A2017; border-color: #7C3A12; }
+
+/* Compact trial card in the sidebar (desktop/tablet) */
+.trial-side { display: flex; gap: 9px; align-items: flex-start; margin: 12px 10px 4px; padding: 11px 12px;
+  border-radius: 12px; background: var(--color-primary-50, #FFF7ED); border: 1px solid var(--color-primary-200, #FED7AA);
+  color: var(--fg1); font-size: 12.5px; line-height: 1.35; text-decoration: none;
+  transition: border-color .2s, transform .15s; }
+.trial-side:hover { border-color: var(--orange-400, #fb923c); transform: translateY(-1px); }
+.trial-side-warn { background: var(--color-error-light); border-color: var(--color-error); }
+.trial-side-ic { font-size: 15px; line-height: 1.2; flex: 0 0 auto; }
+.trial-side b { font-weight: 800; }
+.trial-side-sub { color: var(--orange-700, #c2410c); font-weight: 700; font-size: 11.5px; }
+[data-theme="dark"] .trial-side { background: #2A2017; border-color: #7C3A12; color: var(--fg1); }
+.sb-collapsed .trial-side { display: none; }
+
+/* On phones the sidebar is hidden, so the banner shows at the top of content */
+.trial-banner-mobile { display: none; margin-bottom: 16px; }
+@media (max-width: 640px) { .trial-banner-mobile { display: flex; } .trial-side { display: none; } }
 
 /* Stat tiles (finance / history) */
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
@@ -857,16 +874,15 @@ mark { background: var(--orange-100); color: inherit; border-radius: 3px; paddin
 .btn-invite:focus-visible { outline: 2px solid var(--color-primary-700); outline-offset: 2px; }
 [data-theme="dark"] .btn-invite { background: rgba(249,115,22,.14); border-color: rgba(249,115,22,.4); color: #FDBA74; }
 .kebab-wrap { position: relative; }
-/* the open menu's row must out-stack the rows below it, otherwise the next
-   student row paints over the dropdown and the items look "overlapped" */
-.strow:has(.kebab-menu.open) { z-index: 60; }
-.kebab-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 200; min-width: 200px;
+/* JS renders the menu position:fixed near the button, so the list's
+   overflow:hidden can't clip it (z-index sits above the fixed bottom-nav) */
+.kebab-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 200; min-width: 210px;
   background: #fff; border: 1px solid var(--color-border); border-radius: 12px; box-shadow: var(--shadow-lg);
   padding: 6px; display: none; }
 .kebab-menu.open { display: block; animation: pop .18s var(--ease-out); }
 .kebab-menu a, .kebab-menu button { display: flex; align-items: center; gap: 10px; width: 100%;
   padding: 10px 12px; border: 0; background: none; border-radius: 9px; font: inherit; font-size: 14px;
-  font-weight: 600; color: var(--fg1); cursor: pointer; text-align: left; }
+  font-weight: 600; color: var(--fg1); cursor: pointer; text-align: left; white-space: nowrap; }
 .kebab-menu a:hover, .kebab-menu button:hover { background: var(--gray-50); }
 .kebab-menu .danger { color: var(--color-error); }
 .kebab-menu .danger:hover { background: var(--color-error-light); }

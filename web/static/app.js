@@ -140,6 +140,11 @@
   document.addEventListener('submit', function (e) {
     if (e.defaultPrevented) return;
     var form = e.target;
+    // Hard guard against double-submit (e.g. double-click создавало два занятия).
+    // A real submit navigates away, so the flag is gone on the next page load;
+    // a confirm()-cancelled submit hits the defaultPrevented return above first.
+    if (form.dataset.submitting) { e.preventDefault(); return; }
+    form.dataset.submitting = '1';
     if (form.dataset.noLoading !== undefined) return;
     var btn = e.submitter || form.querySelector('button[type="submit"], button:not([type])');
     if (!btn || !btn.classList.contains('btn')) return;
