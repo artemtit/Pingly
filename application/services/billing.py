@@ -5,6 +5,7 @@ from application.repositories import PinglyRepository
 from infrastructure import platega
 
 SUBSCRIPTION_DAYS = 30
+SUBSCRIPTION_DAYS_YEAR = 365
 
 
 def _normalize_plan(plan: str | None) -> str:
@@ -12,8 +13,21 @@ def _normalize_plan(plan: str | None) -> str:
     return p if p in ("pro", "max") else "max"
 
 
-def _price_for_plan(plan: str) -> int:
-    """Price for the chosen tier. With tiers off, every charge is the single price."""
+def _normalize_period(period: str | None) -> str:
+    p = (period or "month").lower()
+    return p if p in ("month", "year") else "month"
+
+
+def _days_for_period(period: str) -> int:
+    return SUBSCRIPTION_DAYS_YEAR if period == "year" else SUBSCRIPTION_DAYS
+
+
+def _price_for_plan(plan: str, period: str = "month") -> int:
+    """Price for the chosen tier + billing period. With tiers off (the current
+    single-tariff reality) the monthly price is the one flat price and the yearly
+    price is the flat yearly price — independent of the tier."""
+    if period == "year":
+        return config.SUBSCRIPTION_PRICE_YEAR_RUB
     if not config.PLANS_ENABLED:
         return config.SUBSCRIPTION_PRICE_RUB
     return config.PRICE_PRO_RUB if plan == "pro" else config.PRICE_MAX_RUB
@@ -26,12 +40,14 @@ class BillingService:
     def __init__(self, repo: PinglyRepository) -> None:
         self.repo = repo
 
-    async def start_subscription(self, user: dict, base_url: str, plan: str = "max") -> tuple[str | None, str | None]:
-        """Create a Platega payment for the chosen tier and return (redirect_url, error)."""
+    async def start_subscription(self, user: dict, base_url: str, plan: str = "max", period: str = "month") -> tuple[str | None, str | None]:
+        """Create a Platega payment for the chosen tier + period and return (redirect_url, error)."""
         base = base_url.rstrip("/")
         plan = _normalize_plan(plan)
-        price = _price_for_plan(plan)
+        period = _normalize_period(period)
+        price = _price_for_plan(plan, period)
         tier_label = "Max" if plan == "max" else "Pro"
+        period_label = "1 год" if period == "year" else "1 мес"
         # Stamp the buyer's identity into the description so a payment can be traced
         # back to an account from the Platega dashboard (name · contact · short id).
         ident = (user.get("email") or "").strip()
@@ -45,12 +61,12 @@ class BillingService:
         try:
             result = await platega.create_payment(
                 amount=float(price),
-                description=f"Pingly {tier_label}, 1 мес · {who}"[:180],
+                description=f"Pingly {tier_label}, {period_label} · {who}"[:180],
                 return_url=f"{base}/tutor/settings?paid=1",
                 failed_url=f"{base}/tutor/settings?paid=0",
-                # The plan rides along in the payload so the webhook can grant the
-                # right tier even if the ledger write below didn't land.
-                payload=f"{user['id']}:{plan}",
+                # The plan + period ride along in the payload so the webhook can grant
+                # the right tier and duration even if the ledger write below didn't land.
+                payload=f"{user['id']}:{plan}:{period}",
             )
         except platega.PlategaError as exc:
             return None, str(exc)
@@ -80,17 +96,18 @@ class BillingService:
             payment = await self.repo.get_subscription_payment_by_transaction(transaction_id)
         except Exception:
             payment = None
-        # Payload is "<user_id>:<plan>" (plan optional for older payments).
+        # Payload is "<user_id>:<plan>:<period>" (plan/period optional for older
+        # payments — they default to a monthly Max charge).
         raw_payload = str(body.get("payload") or "")
-        payload_uid, plan = raw_payload, "max"
-        if ":" in raw_payload:
-            payload_uid, plan = raw_payload.rsplit(":", 1)
-        plan = _normalize_plan(plan)
+        parts = raw_payload.split(":")
+        payload_uid = parts[0] if parts else raw_payload
+        plan = _normalize_plan(parts[1] if len(parts) > 1 else "max")
+        period = _normalize_period(parts[2] if len(parts) > 2 else "month")
         user_id = (payment or {}).get("user_id") or payload_uid or None
-        # Expected charge: the ledger amount if we have it, else the tier price.
+        # Expected charge: the ledger amount if we have it, else the tier+period price.
         expected_rub = (payment or {}).get("amount_rub")
         if expected_rub is None:
-            expected_rub = _price_for_plan(plan)
+            expected_rub = _price_for_plan(plan, period)
         if status == "CONFIRMED":
             # Defense-in-depth: if the callback reports an amount, it must match the
             # price we charge. The amount is server-set at creation, so a mismatch
@@ -116,7 +133,7 @@ class BillingService:
             if transitioned:
                 activate_uid = transitioned.get("user_id") or user_id
                 await self.repo.activate_subscription(
-                    activate_uid, SUBSCRIPTION_DAYS, plan if config.PLANS_ENABLED else None
+                    activate_uid, _days_for_period(period), plan if config.PLANS_ENABLED else None
                 )
                 # Pay out the referral bonus on the referred tutor's first real
                 # payment. Idempotent in the repo, so renewals never re-trigger it.

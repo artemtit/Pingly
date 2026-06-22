@@ -93,13 +93,30 @@
     {% if sub.trial_ends_at %}
     <div class="settings-row"><span class="muted">{{ 'Пробный до' if sub.status != 'active' else 'Действует до' }}</span><strong>{{ sub.trial_ends_at | msk('%d.%m.%Y') }}</strong></div>
     {% endif %}
-    <div class="settings-row"><span class="muted">Цена</span><strong>{% if plans_enabled %}Pro {{ price_pro }} ₽ · Max {{ price_max }} ₽{% else %}{{ price or 990 }} ₽/мес{% endif %}</strong></div>
+    <div class="settings-row"><span class="muted">Цена</span><strong>{% if plans_enabled %}Pro {{ price_pro }} ₽ · Max {{ price_max }} ₽{% else %}{{ price or 990 }} ₽/мес · {{ price_year or 9900 }} ₽/год{% endif %}</strong></div>
     {% if payments_enabled and not plans_enabled %}
-    <form method="post" action="/tutor/billing/subscribe" style="margin:12px 0 6px;">
-      <input type="hidden" name="plan" value="max">
-      <button class="btn btn-primary" style="width:100%;">💳 {{ 'Продлить подписку' if sub.status == 'active' else 'Оформить подписку' }} — {{ price or 990 }} ₽</button>
-    </form>
-    <p class="muted" style="margin:0 0 14px;font-size:13px;">Оплата через СБП. Доступ продлевается на 30 дней. Автосписаний нет — за 3 дня до конца напомним в Telegram.</p>
+    {% set verb = 'Продлить' if sub.status == 'active' else 'Оформить' %}
+    {% set year_save = (price or 990) * 12 - (price_year or 9900) %}
+    <div class="sub-options">
+      <form method="post" action="/tutor/billing/subscribe">
+        <input type="hidden" name="plan" value="max">
+        <input type="hidden" name="period" value="month">
+        <button class="btn btn-secondary sub-opt">
+          <span class="sub-opt-top">{{ verb }} на месяц</span>
+          <span class="sub-opt-price">{{ price or 990 }} ₽<small>/мес</small></span>
+        </button>
+      </form>
+      <form method="post" action="/tutor/billing/subscribe">
+        <input type="hidden" name="plan" value="max">
+        <input type="hidden" name="period" value="year">
+        <button class="btn btn-primary sub-opt">
+          {% if year_save > 0 %}<span class="sub-opt-tag">выгода {{ year_save }} ₽</span>{% endif %}
+          <span class="sub-opt-top">{{ verb }} на год</span>
+          <span class="sub-opt-price">{{ price_year or 9900 }} ₽<small>/год</small></span>
+        </button>
+      </form>
+    </div>
+    <p class="muted" style="margin:10px 0 14px;font-size:13px;">Оплата через СБП. Доступ — на 30 дней или на год, автосписаний нет: за 3 дня до конца напомним в Telegram.</p>
     {% elif payments_enabled and plans_enabled %}
     <p class="muted" style="margin:12px 0 14px;font-size:13px;">Выбери тариф ниже и оплати через СБП. Доступ — на 30 дней, автосписаний нет: за 3 дня до конца напомним в Telegram.</p>
     {% else %}

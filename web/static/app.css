@@ -67,7 +67,9 @@ h2 { font-size: 20px; letter-spacing: -.02em; margin-bottom: 14px; }
 .role-pill.is-student { background: var(--color-info-light); color: var(--info-text); }
 .role-pill.is-student .dot { background: var(--color-info); }
 
-.nav { display: grid; gap: 2px; padding: 4px 0; }
+/* Grow the nav so the free space sits below the links (a natural break) instead
+   of opening a hole between the trial banner and the account box at the bottom. */
+.nav { display: grid; gap: 2px; padding: 4px 0; flex: 1 1 auto; align-content: start; }
 .nav a { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 10px; color: var(--fg2); font-weight: 500; font-size: 14.5px; transition: background .15s, color .15s; }
 .nav a .ic { color: var(--gray-400); flex-shrink: 0; transition: color .15s; }
 .nav a:hover { background: var(--gray-50); color: var(--fg1); }
@@ -440,6 +442,11 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .more-sheet a.more-logout .ic { color: var(--color-error); }
 [data-theme="dark"] .more-sheet { background: #1E293B; }
 [data-theme="dark"] .more-sheet a { color: var(--fg1); }
+/* Active item: the light orange-50 pill is near-invisible on the dark sheet and
+   the dark orange-700 text on it reads as greyed-out. Use a translucent-orange
+   pill with a light orange label, like the dark-theme nav active state. */
+[data-theme="dark"] .more-sheet a.active { background: rgba(249,115,22,.16); color: var(--orange-400); }
+[data-theme="dark"] .more-sheet a.active .ic { color: var(--orange-400); }
 [data-theme="dark"] .more-sheet a.more-logout { color: #f87171; }
 [data-theme="dark"] .more-sheet a.more-logout .ic { color: #f87171; }
 
@@ -688,6 +695,19 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .sub-big { font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
 .sub-hero .muted { font-size: 13px; margin-top: 3px; }
 [data-theme="dark"] .sub-hero { background: #2A2017; border-color: #7C3A12; }
+
+/* Month / year subscribe options — two stacked-content buttons side by side. */
+.sub-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 0; }
+.sub-options form { display: flex; }
+.btn.sub-opt { position: relative; width: 100%; height: auto; flex-direction: column; gap: 2px;
+  padding: 12px 10px; line-height: 1.15; white-space: normal; text-align: center; }
+.sub-opt-top { font-size: 13px; font-weight: 600; opacity: .92; }
+.sub-opt-price { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.sub-opt-price small { font-size: 12px; font-weight: 600; opacity: .8; margin-left: 1px; }
+.sub-opt-tag { position: absolute; top: -9px; right: 8px; font-size: 10.5px; font-weight: 800;
+  background: var(--color-success, #16a34a); color: #fff; border-radius: 999px; padding: 2px 8px;
+  box-shadow: var(--shadow-sm); }
+@media (max-width: 380px) { .sub-options { grid-template-columns: 1fr; } }
 
 /* Edit / save toggle on read-only forms */
 .edit-actions { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -965,6 +985,15 @@ mark { background: var(--orange-100); color: inherit; border-radius: 3px; paddin
 .stat-card.stat-due { border-color: var(--color-error); background: var(--color-error-light); }
 .stat-card.stat-due .stat-num { color: var(--error-text); }
 [data-theme="dark"] .stat-card.stat-due { background: rgba(239,68,68,.12); }
+/* On phones the «ждут оплаты» card sits alone in a single column, so its short
+   left-aligned content left a big empty void on the right. Lay it out as a row:
+   icon + label on the left, the sum pushed to the right edge — fills the width. */
+@media (max-width: 640px) {
+  .stat-card.fin-due { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+  .stat-card.fin-due .stat-ico { margin-bottom: 0; }
+  .stat-card.fin-due .stat-label { order: 1; margin-top: 0; }
+  .stat-card.fin-due .stat-num { order: 2; margin-left: auto; }
+}
 .fin-check { width: 19px; height: 19px; accent-color: var(--orange-600); cursor: pointer; flex: 0 0 auto; }
 .fin-row { transition: background .15s, opacity .3s, transform .3s; }
 .fin-row.checked { background: var(--orange-50); border-color: var(--orange-200); }
@@ -977,8 +1006,11 @@ mark { background: var(--orange-100); color: inherit; border-radius: 3px; paddin
 .massbar { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 80px); z-index: 105;
   display: flex; align-items: center; gap: 14px; background: var(--gray-900); color: #fff;
   border-radius: 14px; padding: 12px 16px; box-shadow: var(--shadow-xl); font-size: 14px;
-  transition: transform .3s var(--ease-out); max-width: calc(100vw - 32px); flex-wrap: wrap; }
-.massbar.show { transform: translate(-50%, 0); }
+  transition: transform .3s var(--ease-out), opacity .2s var(--ease-out); max-width: calc(100vw - 32px); flex-wrap: wrap;
+  /* Hidden by default regardless of `bottom` — on mobile bottom is raised above
+     the tab-bar, so the slide-down alone no longer clears the viewport edge. */
+  opacity: 0; visibility: hidden; pointer-events: none; }
+.massbar.show { transform: translate(-50%, 0); opacity: 1; visibility: visible; pointer-events: auto; }
 .massbar .btn { height: 38px; }
 .massbar-cancel { background: none; border: 0; color: rgba(255,255,255,.7); font: inherit; font-size: 13.5px;
   font-weight: 600; cursor: pointer; }

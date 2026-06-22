@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -159,6 +160,7 @@ templates.env.globals["vk_invite_base"] = lambda: f"https://vk.me/club{_config.V
 templates.env.globals["plans_enabled"] = _config.PLANS_ENABLED
 templates.env.globals["price_pro"] = _config.PRICE_PRO_RUB
 templates.env.globals["price_max"] = _config.PRICE_MAX_RUB
+templates.env.globals["price_year"] = _config.SUBSCRIPTION_PRICE_YEAR_RUB
 templates.env.globals["plan_locked"] = _plan_locked
 templates.env.globals["user_plan"] = _user_plan
 services = create_services()
@@ -301,7 +303,8 @@ def _cabinet_url(user: dict) -> str:
 def _set_session(response: Response, user: dict) -> None:
     response.set_cookie(
         "pingly_session", signer.dumps(user["id"]),
-        httponly=True, samesite="lax", secure=True, max_age=60 * 60 * 24 * 30,
+        httponly=True, samesite="lax", secure=urlparse(WEB_BASE_URL).scheme == "https",
+        max_age=60 * 60 * 24 * 30,
     )
 
 
@@ -966,13 +969,13 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         return templates.TemplateResponse("history.html", _ctx(request, user, "history", history=history))
 
     @app.post("/tutor/billing/subscribe")
-    async def billing_subscribe(plan: str = Form("max"), user: dict = Depends(current_user)) -> Response:
+    async def billing_subscribe(plan: str = Form("max"), period: str = Form("month"), user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
         if not _config.PAYMENTS_ENABLED:
             # Payments are temporarily off (pending bank approval). Infra stays;
             # we just don't start a charge.
             return RedirectResponse("/tutor/settings?error=payments_off", status_code=303)
-        redirect, err = await services.billing.start_subscription(user, WEB_BASE_URL, plan)
+        redirect, err = await services.billing.start_subscription(user, WEB_BASE_URL, plan, period)
         if err or not redirect:
             from urllib.parse import quote
             return RedirectResponse(f"/tutor/settings?error={quote(err or 'Не удалось создать платёж')}", status_code=303)

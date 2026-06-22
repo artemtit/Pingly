@@ -25,7 +25,7 @@
       <svg class="fin-spark" id="fin-spark" width="190" height="84" viewBox="0 0 190 84" role="img" aria-label="Доход за последние 6 месяцев"></svg>
     </div>
   </div>
-  <div class="stat-card {{ 'stat-due' if overview.total_unpaid }}">
+  <div class="stat-card fin-due {{ 'stat-due' if overview.total_unpaid }}">
     <span class="stat-ico {{ 'stat-ico-warn' if overview.total_unpaid }}">{{ ui.icon('clock', 22) }}</span>
     <div class="stat-num" data-count="{{ overview.total_unpaid }}" data-suffix=" ₽">{{ overview.total_unpaid }} ₽</div>
     <div class="stat-label">ждут оплаты</div>

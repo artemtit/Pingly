@@ -30,6 +30,9 @@ PLATEGA_SECRET: str = os.getenv("PLATEGA_SECRET", "")
 # Payment method id: 2=SBP_QR, 10=CARDS_RUB, 11=CARD_ACQUIRING, 12=INTL, 13=CRYPTO
 PLATEGA_PAYMENT_METHOD: int = int(os.getenv("PLATEGA_PAYMENT_METHOD", "11") or 11)
 SUBSCRIPTION_PRICE_RUB: int = int(os.getenv("SUBSCRIPTION_PRICE_RUB", "990") or 990)
+# Yearly plan — paid once for 365 days. Default 9900 ₽ ≈ 10 months' worth, i.e.
+# two months free vs paying monthly (990×12 = 11880).
+SUBSCRIPTION_PRICE_YEAR_RUB: int = int(os.getenv("SUBSCRIPTION_PRICE_YEAR_RUB", "9900") or 9900)
 # Master switch for taking payments. Off until the bank approves the payment
 # provider — all billing infrastructure stays in place, only the entry point
 # (subscribe button + route) is gated. Flip PAYMENTS_ENABLED=1 in .env to turn on.
