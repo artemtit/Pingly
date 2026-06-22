@@ -195,6 +195,20 @@ class CachedStaticFiles(StaticFiles):
 def create_app() -> FastAPI:
     app = FastAPI(title="Pingly")
     app.mount("/static", CachedStaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+    @app.middleware("http")
+    async def _paywall(request: Request, call_next):
+        """Hard paywall: a tutor whose trial expired with no active subscription
+        is bounced to Settings (the only place with a pay button) on every other
+        cabinet page. Students and not-yet-lapsed tutors are untouched."""
+        if _config.PAYWALL_ENABLED and _config.PAYMENTS_ENABLED:
+            path = request.url.path
+            if path.startswith("/tutor") and not path.startswith(_PAYWALL_OPEN_PREFIXES):
+                user = await _user_from_cookie(request)
+                if user and user.get("role") == "tutor" and not _subscription_info(user)["active"]:
+                    return RedirectResponse("/tutor/settings?locked=1", status_code=303)
+        return await call_next(request)
+
     register_routes(app)
     app.add_exception_handler(404, _not_found)
     app.add_exception_handler(401, _unauthorized)
@@ -214,6 +228,27 @@ async def current_user(request: Request) -> dict:
     if not user:
         raise HTTPException(status_code=401)
     return user
+
+
+async def _user_from_cookie(request: Request) -> dict | None:
+    """Resolve the logged-in user from the session cookie without raising — for
+    use in middleware where an anonymous request must simply pass through."""
+    raw = request.cookies.get("pingly_session")
+    if not raw:
+        return None
+    try:
+        user_id = signer.loads(raw)
+    except BadSignature:
+        return None
+    try:
+        return await services.accounts.get_user(user_id)
+    except Exception:
+        return None
+
+
+# Tutor-cabinet paths that stay reachable while the hard paywall is locking the
+# rest of the cabinet — so a lapsed tutor can still get to the pay button.
+_PAYWALL_OPEN_PREFIXES = ("/tutor/settings", "/tutor/billing")
 
 
 def _login_redirect() -> RedirectResponse:
@@ -879,13 +914,13 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         return RedirectResponse("/tutor/schedule", status_code=303)
 
     @app.get("/tutor/settings", response_class=HTMLResponse)
-    async def tutor_settings(request: Request, saved: str | None = None, error: str | None = None, paid: str | None = None, upgrade: str | None = None, user: dict = Depends(current_user)) -> Response:
+    async def tutor_settings(request: Request, saved: str | None = None, error: str | None = None, paid: str | None = None, upgrade: str | None = None, locked: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
         profile = await services.public.get_profile(user["id"])
         return templates.TemplateResponse("settings.html", _ctx(
             request, user, "settings", bot_username=_config.BOT_USERNAME,
             profile=profile, web_base=WEB_BASE_URL, referral_code=user.get("referral_code"),
-            saved=saved, error=error, paid=paid, upgrade=upgrade, price=_config.SUBSCRIPTION_PRICE_RUB,
+            saved=saved, error=error, paid=paid, upgrade=upgrade, locked=locked, price=_config.SUBSCRIPTION_PRICE_RUB,
         ))
 
     # ---------------- STUDENT ----------------

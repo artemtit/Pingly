@@ -318,9 +318,16 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .resched { position: relative; display: inline-block; }
 .resched summary { list-style: none; cursor: pointer; }
 .resched summary::-webkit-details-marker { display: none; }
-.resched-form { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
-.series-actions { display: flex; align-items: center; gap: 10px; }
-.series-menu { margin-top: 8px; display: grid; gap: 8px; padding: 10px; border: 1px solid var(--color-border); border-radius: 11px; background: var(--color-neutral-50); }
+.resched-form { display: flex; gap: 6px; margin-top: 0; align-items: center; }
+.resched-form .input { flex: 1 1 auto; min-width: 0; }
+.series-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+/* Float the «вся серия» panel as a dropdown anchored to the gear, with a capped
+   width — inline it stretched the row and spilled off the right edge on mobile. */
+.series-menu { position: absolute; top: 100%; right: 0; z-index: 30; margin-top: 8px;
+  width: 250px; max-width: calc(100vw - 48px); display: grid; gap: 8px; padding: 10px;
+  border: 1px solid var(--color-border); border-radius: 11px; background: var(--color-neutral-50);
+  box-shadow: var(--shadow-lg, 0 10px 24px rgba(0,0,0,.14)); }
+.series-menu .btn { width: 100%; }
 
 .weekday-picker { display: flex; gap: 6px; flex-wrap: wrap; }
 .wd { position: relative; }
@@ -628,9 +635,11 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 [data-theme="dark"] .trial-side { background: #2A2017; border-color: #7C3A12; color: var(--fg1); }
 .sb-collapsed .trial-side { display: none; }
 
-/* On phones the sidebar is hidden, so the banner shows at the top of content */
+/* Below the desktop layout (≤980) the sidebar is a cramped top strip where the
+   side banner became a crooked floating box. Hide it there and show the clean
+   full-width in-content banner instead — both on tablet and phone. */
 .trial-banner-mobile { display: none; margin-bottom: 16px; }
-@media (max-width: 640px) { .trial-banner-mobile { display: flex; } .trial-side { display: none; } }
+@media (max-width: 980px) { .trial-banner-mobile { display: flex; } .trial-side { display: none; } }
 
 /* Stat tiles (finance / history) */
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }

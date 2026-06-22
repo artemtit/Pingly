@@ -38,6 +38,13 @@ SUBSCRIPTION_PRICE_YEAR_RUB: int = int(os.getenv("SUBSCRIPTION_PRICE_YEAR_RUB", 
 # (subscribe button + route) is gated. Flip PAYMENTS_ENABLED=1 in .env to turn on.
 PAYMENTS_ENABLED: bool = os.getenv("PAYMENTS_ENABLED", "0") == "1"
 
+# Hard paywall: once a tutor's trial has expired and they have no active
+# subscription, lock the whole tutor cabinet — every page redirects to Settings,
+# where they can pay. Only the Settings/billing/support/logout routes stay open.
+# Students are never affected. Requires PAYMENTS_ENABLED (otherwise there'd be no
+# way to pay out of the lock). Flip PAYWALL_ENABLED=1 in .env to turn on.
+PAYWALL_ENABLED: bool = os.getenv("PAYWALL_ENABLED", "0") == "1"
+
 # Two subscription tiers: Pro (essentials) and Max (+ Задания, Финансы, Заявки).
 # Dormant until PLANS_ENABLED=1: with it off, every account behaves as Max and
 # nothing is locked. Turn on together with PAYMENTS_ENABLED when billing is live.

@@ -145,6 +145,10 @@
     // a confirm()-cancelled submit hits the defaultPrevented return above first.
     if (form.dataset.submitting) { e.preventDefault(); return; }
     form.dataset.submitting = '1';
+    // Auto-expire the guard. A real submit navigates away long before this fires;
+    // but a form that stays on the page (target=_blank, download, a handler that
+    // doesn't navigate) must NOT be bricked forever — re-arm it after a beat.
+    var rearm = setTimeout(function () { delete form.dataset.submitting; }, 2500);
     if (form.dataset.noLoading !== undefined) return;
     var btn = e.submitter || form.querySelector('button[type="submit"], button:not([type])');
     if (!btn || !btn.classList.contains('btn')) return;
@@ -153,7 +157,29 @@
       btn.classList.add('btn-loading');
       btn.disabled = true;
     }, 0);
+    // Fallback un-stick: if we're still here after 4s the navigation never
+    // happened, so clear the spinner instead of leaving it spinning forever.
+    setTimeout(function () {
+      clearTimeout(rearm);
+      delete form.dataset.submitting;
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+    }, 4000);
   }, false);
+
+  // When the page is restored from the back-forward cache (e.g. the user hit
+  // «Назад» after being sent to the payment page and cancelling), buttons left
+  // in their loading state stay frozen with a spinner forever. Reset them — and
+  // re-arm the double-submit guard — every time the page is shown.
+  window.addEventListener('pageshow', function () {
+    document.querySelectorAll('.btn-loading').forEach(function (b) {
+      b.classList.remove('btn-loading');
+      b.disabled = false;
+    });
+    document.querySelectorAll('form[data-submitting]').forEach(function (f) {
+      delete f.dataset.submitting;
+    });
+  });
 
   /* ---------------- Modals: esc, backdrop, autofocus ---------------- */
   document.addEventListener('keydown', function (e) {

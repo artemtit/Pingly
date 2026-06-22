@@ -14,6 +14,7 @@
 {% if error == 'payments_off' %}<div class="trial-banner">💳 Онлайн-оплата временно недоступна. Сервис работает в полном объёме.</div>
 {% elif error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
 {% if upgrade %}<div class="trial-banner trial-ending">🔒 Раздел «{{ {'finance':'Финансы','requests':'Заявки','homework':'Задания'}.get(upgrade, upgrade) }}» доступен на тарифе Max. Оформи Max, чтобы открыть его.</div>{% endif %}
+{% if locked %}<div class="trial-banner trial-ending">🔒 Пробный период закончился. Кабинет на паузе — оформи подписку ниже, чтобы вернуть доступ к ученикам, расписанию и напоминаниям.</div>{% endif %}
 
 <section class="settings-grid">
   <div class="card">
