@@ -49,17 +49,19 @@
       </span>
     </a>
     <div class="strow-meta">
-      {% if student.tg_username %}
-      <a class="tg-chip" href="https://t.me/{{ student.tg_username }}" target="_blank" rel="noopener"
-        title="Написать @{{ student.tg_username }} в Telegram">{{ ui.icon('send', 15) }}<span class="tg-handle">@{{ student.tg_username }}</span></a>
-      {% endif %}
-      {% if not student.user_id %}
-      <button type="button" class="btn-invite" title="Скопировать ссылку-приглашение для Telegram"
-        data-invite="https://t.me/{{ bot_username }}?start=inv_{{ student.invite_token }}"
-        onclick="copyInvite(this)">{{ ui.icon('send', 14) }} Отправить ссылку</button>
-      {% else %}
-      <span class="badge badge-ok" title="Telegram подключён — напоминания приходят">✓ в Telegram</span>
-      {% endif %}
+      <div class="strow-contact">
+        {% if student.tg_username %}
+        <a class="tg-chip" href="https://t.me/{{ student.tg_username }}" target="_blank" rel="noopener"
+          title="Написать @{{ student.tg_username }} в Telegram">{{ ui.icon('send', 15) }}<span class="tg-handle">@{{ student.tg_username }}</span></a>
+        {% endif %}
+        {% if not student.user_id %}
+        <button type="button" class="btn-invite" title="Скопировать ссылку-приглашение для Telegram"
+          data-invite="https://t.me/{{ bot_username }}?start=inv_{{ student.invite_token }}"
+          onclick="copyInvite(this)">{{ ui.icon('send', 14) }} Отправить ссылку</button>
+        {% else %}
+        <span class="badge badge-ok" title="Telegram подключён — напоминания приходят">✓ в Telegram</span>
+        {% endif %}
+      </div>
       <div class="strow-actions">
         <button type="button" class="icon-btn" title="Редактировать" aria-label="Редактировать"
           data-id="{{ student.id }}" data-name="{{ student.name }}" data-subject="{{ student.subject_summary or '' }}"

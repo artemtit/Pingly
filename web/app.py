@@ -114,6 +114,9 @@ DEFAULT_BADGES = [
 
 templates.env.globals["badge_icons"] = BADGE_ICONS
 templates.env.globals["default_badges"] = DEFAULT_BADGES
+# Key→SVG map for the live preview, so its chips render the SAME icons as the
+# real public page (not the emoji from the <select> labels).
+templates.env.globals["badge_svgs"] = {k: v["svg"] for k, v in BADGE_ICONS.items()}
 
 
 def _user_plan(user: dict | None) -> str:
@@ -1082,19 +1085,19 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/admin/broadcast", response_class=HTMLResponse)
     async def admin_broadcast_form(request: Request, result: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require_admin(user)
-        targets = await services.admin.broadcast_targets()
+        counts = await services.admin.broadcast_counts()
         return templates.TemplateResponse(
             "admin/broadcast.html",
-            _ctx(request, user, "admin", target_count=len(targets), result=result),
+            _ctx(request, user, "admin", counts=counts, target_count=counts["tutors"], result=result),
         )
 
     @app.post("/admin/broadcast")
-    async def admin_broadcast_send(message: str = Form(...), user: dict = Depends(current_user)) -> Response:
+    async def admin_broadcast_send(message: str = Form(...), audience: str = Form("tutors"), user: dict = Depends(current_user)) -> Response:
         _require_admin(user)
         text = message.strip()
         if not text:
             return RedirectResponse("/admin/broadcast?result=empty", status_code=303)
-        targets = await services.admin.broadcast_targets()
+        targets = await services.admin.broadcast_targets(audience)
         stats = await _broadcast_telegram(targets, text)
         return RedirectResponse(
             f"/admin/broadcast?result={stats['sent']}-{stats['failed']}", status_code=303,

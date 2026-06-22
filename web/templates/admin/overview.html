@@ -21,11 +21,47 @@
   <div class="card stat"><span class="stat-icon accent">{{ ui.icon('star') }}</span><div><div class="value">{{ stats.active_subscriptions }}</div><div class="label">Активных подписок</div></div></div>
   <div class="card stat"><span class="stat-icon">{{ ui.icon('trending-up') }}</span><div><div class="value">+{{ stats.new_tutors_week }}</div><div class="label">Новых за 7 дней</div></div></div>
   <div class="card stat"><span class="stat-icon">{{ ui.icon('circle-check') }}</span><div><div class="value">{{ stats.active_access }}</div><div class="label">С активным доступом</div></div></div>
+  <div class="card stat"><span class="stat-icon accent">{{ ui.icon('russian-ruble') }}</span><div><div class="value">{{ "{:,}".format(stats.mrr).replace(",", " ") }} ₽</div><div class="label">MRR (оценка)</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('gauge') }}</span><div><div class="value">{{ stats.conversion }}%</div><div class="label">Конверсия в оплату</div></div></div>
 </section>
 
 <section class="card" style="margin-top:18px;">
   <div class="card-head"><h2>💰 Выручка</h2></div>
   <p class="big-date">{{ "{:,}".format(stats.revenue_total).replace(",", " ") }} ₽</p>
   <p class="muted" style="margin-top:6px;">Подтверждённых платежей: {{ stats.payments_count }}.</p>
+</section>
+
+<section class="grid two" style="margin-top:18px;align-items:start;">
+  <div class="card">
+    <div class="card-head"><h2 style="margin:0;">🆕 Последние регистрации</h2></div>
+    {% if stats.recent_tutors %}
+    <div class="req-list">
+      {% for t in stats.recent_tutors %}
+      <div class="req-row">
+        <div class="req-main">
+          <div class="req-head"><strong>{{ t.name }}</strong>{% if t.tg %} <span class="muted">@{{ t.tg }}</span>{% endif %}</div>
+          <div class="muted">{{ t.created_at | msk('%d.%m.%Y %H:%M') }}</div>
+        </div>
+        {% if t.active %}<span class="badge completed">активен</span>{% else %}<span class="badge cancelled">неактивен</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<div class="empty"><p>Пока нет репетиторов.</p></div>{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2 style="margin:0;">💳 Последние платежи</h2></div>
+    {% if stats.recent_payments %}
+    <div class="req-list">
+      {% for p in stats.recent_payments %}
+      <div class="req-row">
+        <div class="req-main"><div class="req-head"><strong>{{ "{:,}".format(p.amount_rub).replace(",", " ") }} ₽</strong></div>
+          <div class="muted">{{ p.created_at | msk('%d.%m.%Y %H:%M') }}</div></div>
+        <span class="badge completed">оплачено</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<div class="empty"><p>Платежей ещё не было.</p></div>{% endif %}
+  </div>
 </section>
 {% endblock %}

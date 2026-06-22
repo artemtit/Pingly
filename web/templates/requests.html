@@ -197,16 +197,18 @@ var pv = {
   url: document.getElementById('pp-url'),
   box: document.getElementById('pp-preview')
 };
+var BADGE_SVGS = {{ badge_svgs | tojson }};
 function renderBadges(){
   pv.badges.innerHTML = '';
   document.querySelectorAll('#badge-rows .badge-row').forEach(function(row){
     var text = row.querySelector('input[name="badge_text"]').value.trim();
     if (!text) return;
-    var sel = row.querySelector('select');
-    var emoji = (sel.options[sel.selectedIndex].text.match(/^\S+/) || [''])[0];
+    var key = row.querySelector('select').value;
     var chip = document.createElement('span');
     chip.className = 'chip';
-    chip.textContent = emoji + ' ' + text;
+    // Same SVG icon the real /u/ page uses, so the preview is 1:1.
+    chip.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (BADGE_SVGS[key] || BADGE_SVGS['check'] || '') + '</svg>';
+    chip.appendChild(document.createTextNode(text));
     pv.badges.appendChild(chip);
   });
 }

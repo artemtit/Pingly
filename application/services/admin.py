@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import config
 from application.repositories import PinglyRepository
 
 VALID_PLANS = ("pro", "max")
+VALID_AUDIENCES = ("tutors", "students", "all")
 
 
 def _parse_dt(raw: object) -> datetime | None:
@@ -41,15 +43,36 @@ class AdminService:
         students = [u for u in users if u.get("role") == "student"]
         paid = [p for p in payments if (p.get("status") or "").lower() == "confirmed"]
 
+        active_subs = sum(1 for t in tutors if (t.get("subscription_status") or "").lower() == "active")
+        # Recent signups (latest tutors) and recent confirmed payments — small feeds.
+        recent_tutors = sorted(tutors, key=lambda t: str(t.get("created_at") or ""), reverse=True)[:8]
+        recent_payments = sorted(paid, key=lambda p: str(p.get("created_at") or ""), reverse=True)[:8]
+
         return {
             "tutors_total": len(tutors),
             "students_total": len(students),
             "lessons_total": len(lessons),
-            "active_subscriptions": sum(1 for t in tutors if (t.get("subscription_status") or "").lower() == "active"),
+            "active_subscriptions": active_subs,
             "active_access": sum(1 for t in tutors if _is_active(t, now)),
             "new_tutors_week": sum(1 for t in tutors if (_parse_dt(t.get("created_at")) or now) >= week_ago),
             "revenue_total": sum(int(p.get("amount_rub") or 0) for p in paid),
             "payments_count": len(paid),
+            # MRR ≈ active monthly subs × price; conversion = paid / all tutors.
+            "mrr": active_subs * config.SUBSCRIPTION_PRICE_RUB,
+            "conversion": round(active_subs / len(tutors) * 100) if tutors else 0,
+            "recent_tutors": [
+                {
+                    "name": t.get("full_name") or "—",
+                    "created_at": t.get("created_at"),
+                    "active": _is_active(t, now),
+                    "tg": t.get("tg_username"),
+                }
+                for t in recent_tutors
+            ],
+            "recent_payments": [
+                {"amount_rub": int(p.get("amount_rub") or 0), "created_at": p.get("created_at")}
+                for p in recent_payments
+            ],
         }
 
     async def list_tutors(self) -> list[dict]:
@@ -88,7 +111,20 @@ class AdminService:
     async def extend_trial(self, user_id: str, days: int) -> None:
         await self.repo.extend_trial(user_id, days)
 
-    async def broadcast_targets(self) -> list[int]:
-        """Telegram ids of all tutors who connected Telegram."""
-        tutors = await self.repo.admin_list_tutors()
-        return [int(t["tg_id"]) for t in tutors if t.get("tg_id")]
+    async def broadcast_targets(self, audience: str = "tutors") -> list[int]:
+        """Telegram ids of the chosen audience who connected Telegram:
+        'tutors' (default), 'students', or 'all'."""
+        audience = audience if audience in VALID_AUDIENCES else "tutors"
+        users = await self.repo.admin_list_users()
+        return [
+            int(u["tg_id"]) for u in users
+            if u.get("tg_id") and (audience == "all" or u.get("role") == audience)
+        ]
+
+    async def broadcast_counts(self) -> dict[str, int]:
+        """How many reachable (Telegram-connected) accounts per audience."""
+        users = await self.repo.admin_list_users()
+        with_tg = [u for u in users if u.get("tg_id")]
+        tutors = sum(1 for u in with_tg if u.get("role") == "tutor")
+        students = sum(1 for u in with_tg if u.get("role") == "student")
+        return {"tutors": tutors, "students": students, "all": len(with_tg)}

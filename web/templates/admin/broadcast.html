@@ -22,14 +22,46 @@
 {% endif %}
 
 <div class="card">
-  <div class="card-head"><h2>📢 Сообщение всем репетиторам</h2></div>
-  <p class="muted" style="margin:0 0 12px;">Уйдёт в Telegram всем репетиторам, подключившим бота — сейчас это <strong>{{ target_count }}</strong>. Пиши как обычное сообщение: анонсы, новости, важные изменения.</p>
-  <form method="post" action="/admin/broadcast" onsubmit="return confirm('Отправить сообщение ' + {{ target_count }} + ' репетиторам?')">
+  <div class="card-head"><h2>📢 Сообщение в Telegram</h2></div>
+  <p class="muted" style="margin:0 0 12px;">Уйдёт в Telegram выбранной аудитории (тем, кто подключил бота). Пиши как обычное сообщение: анонсы, новости, важные изменения.</p>
+  <form method="post" action="/admin/broadcast" id="bc-form">
+    <div class="field">
+      <span>Кому</span>
+      <div class="pills" role="radiogroup" aria-label="Аудитория" style="margin-top:6px;">
+        <label class="pill-btn active"><input type="radio" name="audience" value="tutors" data-count="{{ counts.tutors }}" checked hidden> Репетиторы · {{ counts.tutors }}</label>
+        <label class="pill-btn"><input type="radio" name="audience" value="students" data-count="{{ counts.students }}" hidden> Ученики · {{ counts.students }}</label>
+        <label class="pill-btn"><input type="radio" name="audience" value="all" data-count="{{ counts.all }}" hidden> Все · {{ counts.all }}</label>
+      </div>
+    </div>
     <label class="field">
       <span>Текст</span>
       <textarea name="message" rows="6" placeholder="Например: Привет! Добавили оплату через СБП и новые тарифы — загляни в Настройки." required></textarea>
     </label>
-    <button class="btn btn-primary" type="submit">Отправить {{ target_count }} репетиторам</button>
+    <button class="btn btn-primary" type="submit" id="bc-submit">Отправить {{ counts.tutors }} получателям</button>
   </form>
 </div>
+<script>
+(function(){
+  var form = document.getElementById('bc-form');
+  var submit = document.getElementById('bc-submit');
+  function current(){ return form.querySelector('input[name="audience"]:checked'); }
+  function refresh(){
+    var n = current().getAttribute('data-count');
+    submit.textContent = 'Отправить ' + n + ' получателям';
+  }
+  form.querySelectorAll('.pill-btn').forEach(function(label){
+    label.addEventListener('click', function(){
+      form.querySelectorAll('.pill-btn').forEach(function(l){ l.classList.remove('active'); });
+      label.classList.add('active');
+      label.querySelector('input').checked = true;
+      refresh();
+    });
+  });
+  form.addEventListener('submit', function(e){
+    var n = current().getAttribute('data-count');
+    if (!confirm('Отправить сообщение ' + n + ' получателям?')) { e.preventDefault(); }
+  });
+  refresh();
+})();
+</script>
 {% endblock %}
