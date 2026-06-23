@@ -332,6 +332,10 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
   border: 1px solid var(--color-border); border-radius: 11px; background: var(--color-neutral-50);
   box-shadow: var(--shadow-lg, 0 10px 24px rgba(0,0,0,.14)); }
 .series-menu .btn { width: 100%; }
+/* Inside the dropdown, stack the time field above its button (side-by-side cut
+   the «Перенести всю серию» label off). */
+.series-menu .resched-form { flex-direction: column; align-items: stretch; gap: 8px; }
+.series-menu .resched-form .input { width: 100%; flex: 0 0 auto; }
 
 .weekday-picker { display: flex; gap: 6px; flex-wrap: wrap; }
 .wd { position: relative; }
@@ -846,7 +850,7 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .sb-collapsed .sidebar .userbox-actions, .sb-collapsed .sidebar .userbox-legal,
 .sb-collapsed .sidebar .nav a span.nav-label, .sb-collapsed .sb-toggle span { display: none; }
 .sb-collapsed .sidebar .brand { justify-content: center; padding: 0; }
-.sb-collapsed .sidebar .brand-logo { width: 30px; object-fit: cover; object-position: center; }
+.sb-collapsed .sidebar .brand-logo { width: 30px; object-fit: cover; object-position: left; }
 .sb-collapsed .sidebar .nav a { justify-content: center; padding: 11px 0; }
 .sb-collapsed .sb-toggle { justify-content: center; width: 100%; }
 .sb-collapsed .sb-toggle .ic { transform: rotate(180deg); }

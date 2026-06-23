@@ -2,7 +2,6 @@
 {% import "macros.html" as ui %}
 {% macro slesson(lesson) %}
 <div class="timeline-row">
-  <div class="timeline-dot {{ lesson.status }}"></div>
   <a class="timeline-body" href="/tutor/calendar?view=day&date={{ lesson.starts_at | msk('%Y-%m-%d') }}" title="Открыть в календаре — там можно провести, отменить или перенести именно это занятие">
     <div class="timeline-when">{{ lesson.starts_at | msk }}</div>
     <div class="timeline-who">{{ lesson.student_profiles.name if lesson.student_profiles else "Ученик" }}</div>
