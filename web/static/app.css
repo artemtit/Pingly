@@ -845,7 +845,8 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .sb-collapsed .sidebar .role-pill, .sb-collapsed .sidebar .userbox-meta,
 .sb-collapsed .sidebar .userbox-actions, .sb-collapsed .sidebar .userbox-legal,
 .sb-collapsed .sidebar .nav a span.nav-label, .sb-collapsed .sb-toggle span { display: none; }
-.sb-collapsed .sidebar .brand-logo { width: 30px; object-fit: cover; object-position: left; }
+.sb-collapsed .sidebar .brand { justify-content: center; padding: 0; }
+.sb-collapsed .sidebar .brand-logo { width: 30px; object-fit: cover; object-position: center; }
 .sb-collapsed .sidebar .nav a { justify-content: center; padding: 11px 0; }
 .sb-collapsed .sb-toggle { justify-content: center; width: 100%; }
 .sb-collapsed .sb-toggle .ic { transform: rotate(180deg); }

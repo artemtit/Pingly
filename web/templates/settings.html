@@ -136,11 +136,12 @@
       <button class="btn btn-secondary btn-sm" type="button" onclick="copyField('ref-link', this)">Копировать</button>
     </div>
     {% set ref_text = 'Я веду учеников в Pingly — бот сам напоминает им о занятиях. Попробуй, по моей ссылке 14 дней бесплатно:' %}
+    {% set ref_msg = ref_text ~ ' ' ~ web_base ~ '/register?ref=' ~ referral_code %}
     <div class="share-row">
       <a class="share-btn share-tg" target="_blank" rel="noopener"
-         href="https://t.me/share/url?url={{ (web_base ~ '/register?ref=' ~ referral_code) | urlencode }}&text={{ ref_text | urlencode }}">✈️ Telegram</a>
+         href="https://t.me/share/url?url=&text={{ ref_msg | urlencode }}">✈️ Telegram</a>
       <a class="share-btn share-wa" target="_blank" rel="noopener"
-         href="https://wa.me/?text={{ (ref_text ~ ' ' ~ web_base ~ '/register?ref=' ~ referral_code) | urlencode }}">💬 WhatsApp</a>
+         href="https://wa.me/?text={{ ref_msg | urlencode }}">💬 WhatsApp</a>
     </div>
   </div>
   {% endif %}
