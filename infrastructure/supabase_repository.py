@@ -177,22 +177,19 @@ class SupabasePinglyRepository:
         student = await self.get_student_by_invite_token(invite_token)
         if not student:
             return None
+        # Invite is single-use. Once a student profile is linked to an account,
+        # the token must not re-bind it to a different Telegram — otherwise anyone
+        # who still has the invite link could attach their own tg_id and hijack
+        # the student (receive reminders, confirm/cancel lessons).
+        if student.get("user_id"):
+            return None
         existing = await self.get_user_by_tg_id(tg_id)
         if existing and existing.get("role") == "tutor":
             return None
-        linked_user_id = student.get("user_id")
         username = tg_username or student.get("tg_username")
         if existing:
             # This Telegram account already exists — point the profile at it.
             user_id = existing["id"]
-        elif linked_user_id:
-            # Student is already linked (e.g. via VK) — attach Telegram to the
-            # same account so both channels coexist on one student.
-            await self._db().table("users").update({
-                "tg_id": tg_id,
-                "tg_username": username,
-            }).eq("id", linked_user_id).execute()
-            user_id = linked_user_id
         else:
             result = await self._db().table("users").insert({
                 "role": "student",
@@ -201,10 +198,13 @@ class SupabasePinglyRepository:
                 "full_name": full_name or student["name"],
             }).execute()
             user_id = result.data[0]["id"]
+        # Conditional on user_id IS NULL guards a race between two simultaneous
+        # /start clicks; clearing invite_token retires the link after first use.
         await self._db().table("student_profiles").update({
             "user_id": user_id,
             "tg_username": username,
-        }).eq("id", student["id"]).execute()
+            "invite_token": None,
+        }).eq("id", student["id"]).is_("user_id", "null").execute()
         student["user_id"] = user_id
         return student
 
@@ -218,19 +218,15 @@ class SupabasePinglyRepository:
         student = await self.get_student_by_invite_token(invite_token)
         if not student:
             return None
+        # Single-use invite (see link_student_to_tg): never re-bind a linked
+        # student profile to a different VK account.
+        if student.get("user_id"):
+            return None
         existing = await self.get_user_by_vk_id(vk_id)
         if existing and existing.get("role") == "tutor":
             return None
-        linked_user_id = student.get("user_id")
         if existing:
             user_id = existing["id"]
-        elif linked_user_id:
-            # Student is already linked (e.g. via Telegram) — attach VK to the
-            # same account so both channels coexist on one student.
-            await self._db().table("users").update({
-                "vk_id": vk_id,
-            }).eq("id", linked_user_id).execute()
-            user_id = linked_user_id
         else:
             result = await self._db().table("users").insert({
                 "role": "student",
@@ -240,7 +236,8 @@ class SupabasePinglyRepository:
             user_id = result.data[0]["id"]
         await self._db().table("student_profiles").update({
             "user_id": user_id,
-        }).eq("id", student["id"]).execute()
+            "invite_token": None,
+        }).eq("id", student["id"]).is_("user_id", "null").execute()
         student["user_id"] = user_id
         return student
 
@@ -394,6 +391,18 @@ class SupabasePinglyRepository:
             .execute()
         )
         return _one(result)
+
+    async def list_schedule_rules(self, tutor_user_id: str) -> list[dict[str, Any]]:
+        """All active recurring rules (series) for a tutor."""
+        result = await (
+            self._db().table("schedule_rules")
+            .select("*")
+            .eq("tutor_user_id", tutor_user_id)
+            .eq("is_active", True)
+            .order("lesson_time")
+            .execute()
+        )
+        return result.data
 
     async def update_schedule_rule(self, rule_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
         result = await self._db().table("schedule_rules").update(patch).eq("id", rule_id).execute()

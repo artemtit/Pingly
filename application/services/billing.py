@@ -74,13 +74,17 @@ class BillingService:
         redirect = result.get("redirect") or result.get("return")
         if not transaction_id or not redirect:
             return None, "Platega не вернула ссылку на оплату"
-        # Ledger write is best-effort: the payment already exists at Platega and
-        # the webhook can still activate via payload, so a ledger hiccup must not
-        # block the user from reaching the payment page.
-        try:
-            await self.repo.create_subscription_payment(user["id"], transaction_id, price)
-        except Exception:
-            pass
+        # The ledger row is now REQUIRED for the webhook to activate (it no longer
+        # fabricates rows for unknown transaction ids), so make this write reliable
+        # with a couple of retries. We still don't block reaching the payment page
+        # on a hard failure — Platega retries the webhook, and a tutor who paid but
+        # didn't activate can be granted manually in the admin panel.
+        for _attempt in range(3):
+            try:
+                await self.repo.create_subscription_payment(user["id"], transaction_id, price)
+                break
+            except Exception:
+                continue
         return redirect, None
 
     async def handle_webhook(self, merchant_id: str | None, secret: str | None, body: dict) -> bool:
@@ -114,17 +118,21 @@ class BillingService:
             # means a tampered/foreign callback — refuse to grant entitlement.
             if not self._amount_ok(body, expected_rub):
                 return False
+            if not payment:
+                # We never initiated this transaction. A real payment always has a
+                # ledger row from start_subscription; a CONFIRMED callback for an
+                # unknown id is a forged/foreign request (possible if the webhook
+                # secret leaks) — never fabricate a row and grant a subscription.
+                # Ack so Platega stops retrying, but do NOT activate.
+                return True
             if not user_id:
                 # Nothing to activate; acknowledge so Platega stops retrying.
                 return True
-            # Authoritative idempotency: ensure a ledger row exists, then perform an
-            # atomic "pending -> confirmed" transition. activate_subscription runs
-            # ONLY when this call actually made the transition, so retried/duplicate
-            # CONFIRMED callbacks can never stack extra 30-day extensions.
+            # Authoritative idempotency: an atomic "pending -> confirmed" transition
+            # on the EXISTING ledger row. activate_subscription runs ONLY when this
+            # call actually made the transition, so retried/duplicate CONFIRMED
+            # callbacks can never stack extra subscription extensions.
             try:
-                await self.repo.upsert_subscription_payment_pending(
-                    user_id, transaction_id, expected_rub
-                )
                 transitioned = await self.repo.confirm_subscription_payment_once(transaction_id)
             except Exception:
                 # If the ledger is unreachable we cannot guarantee single activation,

@@ -8,7 +8,7 @@ from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from itsdangerous import BadSignature, URLSafeSerializer
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 import config as _config
 from application.factory import create_services
@@ -167,7 +167,13 @@ templates.env.globals["price_year"] = _config.SUBSCRIPTION_PRICE_YEAR_RUB
 templates.env.globals["plan_locked"] = _plan_locked
 templates.env.globals["user_plan"] = _user_plan
 services = create_services()
-signer = URLSafeSerializer(WEB_SECRET, salt="pingly-web-session")
+# Sessions expire after 30 days; a stolen cookie isn't valid forever. Refuse to
+# boot in production (https) with the insecure default secret — otherwise anyone
+# could forge a session for any user.
+SESSION_MAX_AGE = 60 * 60 * 24 * 30
+if WEB_SECRET in ("", "dev-change-me") and urlparse(WEB_BASE_URL).scheme == "https":
+    raise RuntimeError("WEB_SECRET must be set to a strong value in production")
+signer = URLSafeTimedSerializer(WEB_SECRET, salt="pingly-web-session")
 
 
 async def _not_found(request: Request, exc: Exception) -> Response:
@@ -224,8 +230,8 @@ async def current_user(request: Request) -> dict:
     if not raw:
         raise HTTPException(status_code=401)
     try:
-        user_id = signer.loads(raw)
-    except BadSignature as exc:
+        user_id = signer.loads(raw, max_age=SESSION_MAX_AGE)
+    except (BadSignature, SignatureExpired) as exc:
         raise HTTPException(status_code=401) from exc
     user = await services.accounts.get_user(user_id)
     if not user:
@@ -240,8 +246,8 @@ async def _user_from_cookie(request: Request) -> dict | None:
     if not raw:
         return None
     try:
-        user_id = signer.loads(raw)
-    except BadSignature:
+        user_id = signer.loads(raw, max_age=SESSION_MAX_AGE)
+    except (BadSignature, SignatureExpired):
         return None
     try:
         return await services.accounts.get_user(user_id)
@@ -342,7 +348,7 @@ def _set_session(response: Response, user: dict) -> None:
     response.set_cookie(
         "pingly_session", signer.dumps(user["id"]),
         httponly=True, samesite="lax", secure=urlparse(WEB_BASE_URL).scheme == "https",
-        max_age=60 * 60 * 24 * 30,
+        max_age=SESSION_MAX_AGE,
     )
 
 

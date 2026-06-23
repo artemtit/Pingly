@@ -135,11 +135,14 @@ class WebAuthService:
         received_hash = data.get("hash")
         if not received_hash or not self.bot_token:
             return False
+        # auth_date is mandatory: without it a once-captured payload could be
+        # replayed forever. Reject missing/old, allow small forward clock skew.
         auth_date = data.get("auth_date")
-        if auth_date and auth_date.isdigit():
-            age = datetime.now(timezone.utc).timestamp() - int(auth_date)
-            if age > _TG_AUTH_MAX_AGE:
-                return False
+        if not auth_date or not str(auth_date).isdigit():
+            return False
+        age = datetime.now(timezone.utc).timestamp() - int(auth_date)
+        if age > _TG_AUTH_MAX_AGE or age < -300:
+            return False
         pairs = sorted(f"{k}={v}" for k, v in data.items() if k != "hash" and v is not None)
         data_check_string = "\n".join(pairs)
         secret_key = hashlib.sha256(self.bot_token.encode("utf-8")).digest()
