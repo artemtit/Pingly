@@ -803,12 +803,12 @@ class SupabasePinglyRepository:
         return (await self._db().table("tutor_students").select("tutor_user_id").execute()).data
 
     async def admin_lessons_min(self) -> list[dict[str, Any]]:
-        return (await self._db().table("lessons_v2").select("id, starts_at, status").execute()).data
+        return (await self._db().table("lessons_v2").select("id, starts_at, status, tutor_user_id").execute()).data
 
     async def admin_payments(self) -> list[dict[str, Any]]:
         return (
             await self._db().table("subscription_payments")
-            .select("amount_rub, status, created_at").execute()
+            .select("amount_rub, status, created_at, user_id").execute()
         ).data
 
     async def admin_set_plan(self, user_id: str, plan: str) -> None:

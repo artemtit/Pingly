@@ -86,7 +86,7 @@ h2 { font-size: 20px; letter-spacing: -.02em; margin-bottom: 14px; }
 .link-btn { background: none; border: 0; padding: 0; color: var(--color-primary-700); font: inherit; font-weight: 600; cursor: pointer; }
 .link-btn:focus-visible { outline: 2px solid var(--color-primary-700); outline-offset: 2px; border-radius: 4px; }
 
-.main { padding: 32px; max-width: 1180px; }
+.main { padding: 32px; max-width: 1180px; margin-inline: auto; width: 100%; }
 .topbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 24px; }
 .topbar-id { display: flex; gap: 16px; align-items: center; }
 .eyebrow { color: var(--color-primary-700); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
@@ -292,14 +292,20 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 [data-theme="dark"] .agenda-row.cancelled { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.34); }
 .agenda-row.cancelled .agenda-time, .agenda-row.cancelled .agenda-name { text-decoration: line-through; color: var(--error-text); opacity: .85; }
 .cal-weekday { font-size: 12px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .05em; padding: 4px; text-align: center; }
-.cal-cell { min-height: 96px; border: 1px solid var(--color-border); border-radius: 11px; padding: 7px; display: flex; flex-direction: column; gap: 5px; transition: border-color .15s, transform .12s; background: #fff; }
+.cal-cell { min-height: 96px; border: 1px solid var(--color-border); border-radius: 11px; padding: 7px; display: flex; flex-direction: column; gap: 5px; transition: border-color .15s, transform .12s; background: #fff; overflow: hidden; }
 .cal-week .cal-cell { min-height: 200px; }
 .cal-cell:hover { border-color: var(--color-primary-400); transform: translateY(-2px); }
 .cal-cell.out { background: var(--color-neutral-50); opacity: .6; }
 .cal-cell.today { border-color: var(--color-primary-500); box-shadow: 0 0 0 2px rgba(249,115,22,.18); }
 .cal-daynum { font-weight: 700; font-size: 13px; }
-.cal-cell-lessons { display: grid; gap: 4px; }
-.cal-pill { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 6px; border-radius: 7px; background: var(--color-neutral-50); border: 1px solid var(--color-border); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cal-cell-lessons { display: grid; gap: 4px; min-width: 0; }
+.cal-pill { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 6px; border-radius: 7px; background: var(--color-neutral-50); border: 1px solid var(--color-border); overflow: hidden; white-space: nowrap; min-width: 0; }
+/* flex children need their own clamp — text-overflow on the flex row is ignored,
+   so the dot/time stay put and only the name truncates instead of pushing the
+   pill taller/wider and spilling out of the cell. */
+.cal-pill .dot { flex: 0 0 auto; }
+.cal-pill .cp-time { flex: 0 0 auto; }
+.cal-pill .cp-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .cal-pill.completed { background: var(--color-success-light); }
 .cal-pill.cancelled { background: var(--color-error-light); text-decoration: line-through; opacity: .7; }
 .cal-pill.rescheduled { background: var(--color-warning-light); }

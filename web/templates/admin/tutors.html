@@ -22,16 +22,19 @@
 <div class="card">
   <table class="table">
     <thead>
-      <tr><th>Репетитор</th><th>Регистрация</th><th>Доступ</th><th>Тариф</th><th>Учеников</th><th>Управление</th></tr>
+      <tr><th>Репетитор</th><th>Контакт</th><th>Регистрация</th><th>Доступ</th><th>Учеников</th><th>Занятий</th><th>Доход</th><th>Управление</th></tr>
     </thead>
     <tbody>
     {% for t in tutors %}
       <tr>
         <td>
           <strong>{{ t.full_name or "—" }}</strong>
-          <div class="muted" style="font-size:12px;">
-            {% if t.tg_username %}@{{ t.tg_username }}{% elif t.email %}{{ t.email }}{% else %}id {{ t.id[:8] }}{% endif %}
-          </div>
+          <div class="muted" style="font-size:12px;">id {{ t.id[:8] }}</div>
+        </td>
+        <td class="muted" style="font-size:12.5px;">
+          {% if t.tg_username %}<div><a href="https://t.me/{{ t.tg_username }}" target="_blank" rel="noopener" style="color:var(--orange-600);font-weight:600;">@{{ t.tg_username }}</a></div>{% endif %}
+          {% if t.email %}<div>{{ t.email }}</div>{% endif %}
+          {% if not t.tg_username and not t.email %}—{% endif %}
         </td>
         <td class="muted">{{ (t.created_at or "")[:10] }}</td>
         <td>
@@ -43,34 +46,30 @@
             <span class="badge">Истёк</span>
           {% endif %}
         </td>
-        <td>{{ user_plan(t) | upper }}</td>
         <td>{{ t.student_count }}</td>
+        <td>{{ t.lessons_done }}<span class="muted" style="font-size:12px;"> / {{ t.lesson_count }}</span></td>
+        <td>{% if t.revenue %}<strong>{{ "{:,}".format(t.revenue).replace(",", " ") }} ₽</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
         <td>
           <details class="resched">
             <summary class="btn btn-ghost btn-sm">⚙ Управлять</summary>
             <div class="admin-manage">
               <form method="post" action="/admin/tutors/{{ t.id }}/subscription" class="admin-row">
                 <input type="hidden" name="action" value="grant">
-                <select name="plan" class="input"><option value="max">Max</option><option value="pro">Pro</option></select>
+                <input type="hidden" name="plan" value="max">
                 <input class="input" type="number" name="days" value="30" min="1" style="width:72px;">
-                <button class="btn btn-primary btn-sm">Выдать подписку</button>
+                <button class="btn btn-primary btn-sm">Выдать подписку, дней</button>
               </form>
               <form method="post" action="/admin/tutors/{{ t.id }}/subscription" class="admin-row">
                 <input type="hidden" name="action" value="extend_trial">
                 <input class="input" type="number" name="days" value="14" min="1" style="width:72px;">
                 <button class="btn btn-secondary btn-sm">Продлить триал, дней</button>
               </form>
-              <form method="post" action="/admin/tutors/{{ t.id }}/subscription" class="admin-row">
-                <input type="hidden" name="action" value="set_plan">
-                <select name="plan" class="input"><option value="max">Max</option><option value="pro">Pro</option></select>
-                <button class="btn btn-ghost btn-sm">Сменить тариф</button>
-              </form>
             </div>
           </details>
         </td>
       </tr>
     {% else %}
-      <tr><td colspan="6"><div class="empty"><div class="empty-emoji">🪹</div><p>Репетиторов пока нет.</p></div></td></tr>
+      <tr><td colspan="8"><div class="empty"><div class="empty-emoji">🪹</div><p>Репетиторов пока нет.</p></div></td></tr>
     {% endfor %}
     </tbody>
   </table>

@@ -78,18 +78,47 @@ class AdminService:
     async def list_tutors(self) -> list[dict]:
         users = await self.repo.admin_list_users()
         links = await self.repo.admin_student_links()
+        lessons = await self.repo.admin_lessons_min()
+        payments = await self.repo.admin_payments()
+
         counts: dict[str, int] = {}
         for link in links:
             tid = link.get("tutor_user_id")
             if tid:
                 counts[tid] = counts.get(tid, 0) + 1
+
+        # Lessons total + held (completed/confirmed) per tutor — at-a-glance sense
+        # of how actively each account is used.
+        lesson_total: dict[str, int] = {}
+        lesson_done: dict[str, int] = {}
+        for lesson in lessons:
+            tid = lesson.get("tutor_user_id")
+            if not tid:
+                continue
+            lesson_total[tid] = lesson_total.get(tid, 0) + 1
+            if (lesson.get("status") or "").lower() in ("completed", "confirmed"):
+                lesson_done[tid] = lesson_done.get(tid, 0) + 1
+
+        # Confirmed subscription revenue per tutor.
+        revenue: dict[str, int] = {}
+        for p in payments:
+            if (p.get("status") or "").lower() != "confirmed":
+                continue
+            uid = p.get("user_id")
+            if uid:
+                revenue[uid] = revenue.get(uid, 0) + int(p.get("amount_rub") or 0)
+
         now = datetime.now(timezone.utc)
         tutors = []
         for u in users:
             if u.get("role") != "tutor":
                 continue
             u = dict(u)
-            u["student_count"] = counts.get(u["id"], 0)
+            uid = u["id"]
+            u["student_count"] = counts.get(uid, 0)
+            u["lesson_count"] = lesson_total.get(uid, 0)
+            u["lessons_done"] = lesson_done.get(uid, 0)
+            u["revenue"] = revenue.get(uid, 0)
             u["access_active"] = _is_active(u, now)
             tutors.append(u)
         tutors.sort(key=lambda t: str(t.get("created_at") or ""), reverse=True)
