@@ -343,14 +343,21 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .series-menu .resched-form { flex-direction: column; align-items: stretch; gap: 8px; }
 .series-menu .resched-form .input { width: 100%; flex: 0 0 auto; }
 
-/* Series list (recurring schedules), managed separately from single lessons. */
+/* Series list (recurring schedules), managed separately from single lessons.
+   The edit panel expands INLINE (pushes content down) rather than floating as a
+   dropdown — a floating panel in a short card spilled over the next card. */
 .series-list { display: grid; gap: 4px; }
-.series-item { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--color-neutral-100); }
-.series-item:last-child { border-bottom: 0; }
-.series-item-info { flex: 1; min-width: 0; }
+details.series-item { border-bottom: 1px solid var(--color-neutral-100); }
+details.series-item:last-child { border-bottom: 0; }
+[data-theme="dark"] details.series-item { border-bottom-color: #334155; }
+.series-item-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; cursor: pointer; list-style: none; }
+.series-item-head::-webkit-details-marker { display: none; }
+.series-item-head::marker { content: ""; }
+.series-item-info { min-width: 0; display: flex; flex-direction: column; }
 .series-item-info strong { font-size: 14.5px; }
-.series-item .resched { position: relative; margin-left: auto; flex-shrink: 0; }
-[data-theme="dark"] .series-item { border-bottom-color: #334155; }
+.series-edit-toggle { flex-shrink: 0; white-space: nowrap; }
+/* Override the floating-dropdown base style: render inline, full width. */
+.series-item .series-menu { position: static; width: 100%; max-width: none; margin: 0 0 12px; }
 
 .weekday-picker { display: flex; gap: 6px; flex-wrap: wrap; }
 .wd { position: relative; }
