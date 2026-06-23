@@ -58,8 +58,6 @@
         <button type="button" class="btn-invite" title="Скопировать ссылку-приглашение для Telegram"
           data-invite="https://t.me/{{ bot_username }}?start=inv_{{ student.invite_token }}"
           onclick="copyInvite(this)">{{ ui.icon('send', 14) }} Отправить ссылку</button>
-        {% else %}
-        <span class="badge badge-ok" title="Telegram подключён — напоминания приходят">✓ в Telegram</span>
         {% endif %}
       </div>
       <div class="strow-actions">

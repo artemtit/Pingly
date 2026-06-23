@@ -94,7 +94,7 @@
       {% if day.is_today %}<span class="today-tag">Сегодня</span>{% endif %}
       <div class="cal-cell-lessons">
         {% for lesson in day.lessons[:pill_limit] %}
-        <div class="cal-pill {{ lesson.status }}"><i class="dot {{ lesson.status }}"></i><span class="cp-time">{{ lesson.time }}</span> <span class="cp-name">{{ lesson.student }}</span></div>
+        <div class="cal-pill {{ lesson.status }}"><span class="cp-time">{{ lesson.time }}</span> <span class="cp-name">{{ lesson.student }}</span></div>
         {% endfor %}
         {% if day.lessons|length > pill_limit %}
         {% set pop_rows = [] %}
@@ -123,7 +123,6 @@
         <a class="agenda-row {{ lesson.status }}" href="{{ base }}?view=day&date={{ day.date }}">
           <span class="agenda-time">{{ lesson.time }}</span>
           <span class="agenda-name">{{ lesson.student }}</span>
-          <i class="dot {{ lesson.status }}"></i>
         </a>
         {% endfor %}
       </div>
@@ -242,7 +241,8 @@
       pop.appendChild(head);
       lessons.forEach(function(l){
         var row = document.createElement('div'); row.className = 'cal-pop-row';
-        row.innerHTML = '<i class="dot ' + l[2] + '"></i><span class="cal-pop-time"></span><span class="cal-pop-name"></span>';
+        row.className = 'cal-pop-row ' + l[2];
+        row.innerHTML = '<span class="cal-pop-time"></span><span class="cal-pop-name"></span>';
         row.querySelector('.cal-pop-time').textContent = l[0];
         row.querySelector('.cal-pop-name').textContent = l[1];
         pop.appendChild(row);

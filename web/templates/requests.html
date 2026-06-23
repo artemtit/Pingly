@@ -56,20 +56,12 @@
       </template>
       {% set pt = profile.page_theme if profile and profile.page_theme else 'auto' %}
       <div class="field"><span>Тема страницы</span>
-        <div class="theme-thumbs" role="radiogroup" aria-label="Тема страницы">
-          <label class="theme-thumb tt-auto">
-            <input type="radio" name="page_theme" value="auto" {{ 'checked' if pt == 'auto' }}>
-            <span class="tt-box"><span class="tt-art"><i></i><i></i></span><span class="tt-label">Авто</span></span>
-          </label>
-          <label class="theme-thumb tt-light">
-            <input type="radio" name="page_theme" value="light" {{ 'checked' if pt == 'light' }}>
-            <span class="tt-box"><span class="tt-art"><i></i><i></i></span><span class="tt-label">Светлая</span></span>
-          </label>
-          <label class="theme-thumb tt-dark">
-            <input type="radio" name="page_theme" value="dark" {{ 'checked' if pt == 'dark' }}>
-            <span class="tt-box"><span class="tt-art"><i></i><i></i></span><span class="tt-label">Тёмная</span></span>
-          </label>
+        <div class="pills theme-pills" role="radiogroup" aria-label="Тема страницы" style="margin-top:6px;">
+          <label class="pill-btn {{ 'active' if pt == 'auto' }}"><input type="radio" name="page_theme" value="auto" {{ 'checked' if pt == 'auto' }} hidden> 🌗 Авто</label>
+          <label class="pill-btn {{ 'active' if pt == 'light' }}"><input type="radio" name="page_theme" value="light" {{ 'checked' if pt == 'light' }} hidden> ☀️ Светлая</label>
+          <label class="pill-btn {{ 'active' if pt == 'dark' }}"><input type="radio" name="page_theme" value="dark" {{ 'checked' if pt == 'dark' }} hidden> 🌙 Тёмная</label>
         </div>
+        <p class="muted" style="margin-top:6px;font-size:13px;">«Авто» подстроится под устройство ученика.</p>
       </div>
       <label class="check-row">
         <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if profile and profile.public_enabled }} onchange="this.form.submit()">
@@ -102,10 +94,8 @@
         <div class="req-preview-subj" id="pv-subjects"></div>
         <div class="req-preview-badges" id="pv-badges"></div>
         <div class="req-preview-bio" id="pv-bio"></div>
-        <span class="req-preview-btn">Записаться на занятие</span>
       </div>
     </div>
-    <p class="req-preview-note">Так твою страницу увидит ученик — обновляется на лету</p>
   </div>
 </div>
 
@@ -236,8 +226,13 @@ function bindPreview(scope){
 ['pp-subjects', 'pp-bio', 'pp-slug'].forEach(function(id){
   document.getElementById(id).addEventListener('input', renderText);
 });
-document.querySelectorAll('input[name="page_theme"]').forEach(function(r){
-  r.addEventListener('change', renderTheme);
+document.querySelectorAll('.theme-pills .pill-btn').forEach(function(label){
+  label.addEventListener('click', function(){
+    document.querySelectorAll('.theme-pills .pill-btn').forEach(function(l){ l.classList.remove('active'); });
+    label.classList.add('active');
+    label.querySelector('input').checked = true;
+    renderTheme();
+  });
 });
 bindPreview();
 updateAddBtn();

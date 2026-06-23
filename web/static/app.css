@@ -598,11 +598,11 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .strow-name { font-size: 14.5px; font-weight: 600; color: var(--fg1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .strow-sub { font-size: 13px; color: var(--fg3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .strow-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-/* Fixed-width contact slot (chip / «Отправить ссылку» / «✓ в Telegram»),
-   right-aligned — so the pencil+kebab line up in one column across all rows
-   regardless of which contact element a row has. */
+/* Contact (chip / «Отправить ссылку») packs to the right next to the actions;
+   the actions group always ends at the card's right edge, so pencil+kebab line
+   up in one column across rows without reserving an empty fixed slot. */
 .strow-contact { display: flex; align-items: center; justify-content: flex-end; gap: 8px;
-  min-width: 168px; flex-shrink: 0; }
+  flex-shrink: 0; }
 .strow-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .tg-chip { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: var(--orange-700); text-decoration: none; padding: 6px 10px; border-radius: 999px; transition: background .15s; }
 .tg-chip:hover { background: var(--color-neutral-100); }
@@ -615,13 +615,12 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 
 @media (max-width: 640px) {
   .strow-sub { white-space: normal; }
-  .badge-ok { display: none; }
   .icon-btn { width: 44px; height: 44px; }
   .tg-handle { display: none; }
   .tg-chip { padding: 8px; }
-  /* On phones the meta sits on its own full-width line; drop the fixed slot so
-     the contact + actions just pack to the right without a forced gap. */
-  .strow-contact { min-width: 0; }
+  /* On phones the «Отправить ссылку» button just clutters the row — it's still
+     available inside the student card. Keep only the @-chip + actions. */
+  .btn-invite { display: none; }
 }
 
 /* ── Growth features (v005) ─────────────────────────────────── */
@@ -1081,15 +1080,15 @@ mark { background: var(--orange-100); color: inherit; border-radius: 3px; paddin
    the .theme-dark block recolours when the tutor picks the dark page theme. */
 .req-preview-body { padding: 26px 20px 24px; text-align: center;
   background: radial-gradient(ellipse 420px 240px at 50% -30px, var(--orange-50), transparent 70%); }
-.req-preview-av { width: 78px; height: 78px; border-radius: 50%; margin: 0 auto 16px;
+.req-preview-av { width: 84px; height: 84px; border-radius: 50%; margin: 0 auto 18px;
   background: linear-gradient(150deg, var(--orange-500), var(--orange-600)); color: #fff;
-  font-size: 33px; font-weight: 700; letter-spacing: -.02em; display: grid; place-items: center;
+  font-size: 36px; font-weight: 700; letter-spacing: -.02em; display: grid; place-items: center;
   border: 3px solid #fff; box-shadow: var(--shadow-primary); }
-.req-preview-name { font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: #0F172A;
+.req-preview-name { font-size: 28px; font-weight: 700; letter-spacing: -.02em; color: #0F172A;
   line-height: 1.15; overflow-wrap: anywhere; }
-.req-preview-subj { font-size: 15px; font-weight: 600; color: var(--orange-600); margin-top: 10px;
+.req-preview-subj { font-size: 16px; font-weight: 600; color: var(--orange-600); margin-top: 10px;
   min-height: 18px; overflow-wrap: anywhere; }
-.req-preview-bio { font-size: 15px; color: #475569; line-height: 1.5; margin: 14px auto 0; max-width: 34ch;
+.req-preview-bio { font-size: 16px; color: #64748B; line-height: 1.5; margin: 14px auto 0; max-width: 34ch;
   text-align: center; white-space: pre-line; overflow-wrap: anywhere; max-height: 120px; overflow: hidden; }
 .req-preview-badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 20px; }
 .req-preview-badges .chip { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px;
