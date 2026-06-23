@@ -163,8 +163,21 @@ class VkBot:
         lesson_id = payload.get("lesson_id")
 
         if action == "lesson_confirm":
+            user = await services.repo.get_user_by_vk_id(int(user_id)) if user_id else None
+            lesson = (
+                await services.lessons.student_confirm_lesson(user["id"], lesson_id)
+                if user and lesson_id else None
+            )
             await self._event_answer(event_id, user_id, peer_id, "Записал: ты будешь 👍")
             await self.send_message(peer_id, "✅ Отлично, ждём тебя на занятии!")
+            # Push the tutor "X подтвердил" (tutors are on Telegram in Фаза 1).
+            if lesson and self.tg_bot:
+                target = await services.lessons.confirm_push_target(lesson)
+                if target:
+                    try:
+                        await self.tg_bot.send_message(target[0], target[1])
+                    except Exception:
+                        pass
             return
 
         if action == "lesson_cancel":

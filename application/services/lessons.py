@@ -286,7 +286,7 @@ class LessonService:
         if not existing:
             raise PermissionError("Lesson does not belong to tutor")
         text = (comment or "").strip()
-        return await self.repo.update_lesson_fields(lesson_id, {"public_comment": text or None})
+        return await self.repo.update_lesson_fields(lesson_id, {"public_comment": text or None}, tutor_user_id)
 
     async def reschedule_lesson(self, tutor_user_id: str, lesson_id: str, new_starts_at: datetime) -> dict | None:
         existing = await self.repo.get_lesson_for_tutor(tutor_user_id, lesson_id)
@@ -297,7 +297,7 @@ class LessonService:
             "status": LessonStatus.SCHEDULED.value,
             "rescheduled_from": existing.get("starts_at"),
         }
-        lesson = await self.repo.update_lesson_fields(lesson_id, patch)
+        lesson = await self.repo.update_lesson_fields(lesson_id, patch, tutor_user_id)
         if lesson and lesson.get("student_user_id"):
             await self.repo.create_notification(
                 lesson["student_user_id"],
@@ -314,11 +314,11 @@ class LessonService:
         rule = await self.repo.get_schedule_rule(tutor_user_id, rule_id)
         if not rule:
             return 0
-        await self.repo.update_schedule_rule(rule_id, {"is_active": False})
+        await self.repo.update_schedule_rule(rule_id, {"is_active": False}, tutor_user_id)
         now = datetime.now(timezone.utc)
-        future = await self.repo.list_future_lessons_for_rule(rule_id, now)
+        future = await self.repo.list_future_lessons_for_rule(rule_id, now, tutor_user_id)
         for lesson in future:
-            await self.repo.update_lesson_fields(lesson["id"], {"status": LessonStatus.CANCELLED.value})
+            await self.repo.update_lesson_fields(lesson["id"], {"status": LessonStatus.CANCELLED.value}, tutor_user_id)
         if future and future[0].get("student_user_id"):
             await self.repo.create_notification(
                 future[0]["student_user_id"],
@@ -334,15 +334,15 @@ class LessonService:
         if not rule:
             return 0
         hour, minute = _parse_time(new_time)
-        await self.repo.update_schedule_rule(rule_id, {"lesson_time": f"{hour:02d}:{minute:02d}:00"})
+        await self.repo.update_schedule_rule(rule_id, {"lesson_time": f"{hour:02d}:{minute:02d}:00"}, tutor_user_id)
         now = datetime.now(timezone.utc)
-        future = await self.repo.list_future_lessons_for_rule(rule_id, now)
+        future = await self.repo.list_future_lessons_for_rule(rule_id, now, tutor_user_id)
         count = 0
         student_user_id = None
         for lesson in future:
             old = datetime.fromisoformat(lesson["starts_at"].replace("Z", "+00:00"))
             new_dt = old.replace(hour=hour, minute=minute, second=0, microsecond=0) - timedelta(hours=3)
-            await self.repo.update_lesson_fields(lesson["id"], {"starts_at": new_dt.isoformat(), "rescheduled_from": lesson["starts_at"]})
+            await self.repo.update_lesson_fields(lesson["id"], {"starts_at": new_dt.isoformat(), "rescheduled_from": lesson["starts_at"]}, tutor_user_id)
             student_user_id = lesson.get("student_user_id") or student_user_id
             count += 1
         if student_user_id:

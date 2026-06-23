@@ -22,6 +22,7 @@
         {% if error == "bad_credentials" %}Неверный email или пароль.
         {% elif error == "expired" %}Ссылка для входа устарела. Попробуй ещё раз.
         {% elif error == "tg_failed" %}Не удалось войти через Telegram. Попробуй ещё раз.
+        {% elif error == "too_many" %}Слишком много попыток входа. Подожди пару минут.
         {% else %}{{ error }}{% endif %}
       </div>
       {% endif %}

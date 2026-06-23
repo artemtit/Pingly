@@ -31,6 +31,11 @@ _MSK = timezone(timedelta(hours=3))
 _RATE_BUCKETS: dict[str, list[float]] = {}
 _BOOK_RATE_MAX = 5            # max accepted submissions
 _BOOK_RATE_WINDOW = 60.0     # per this many seconds, per (ip, slug)
+# Auth endpoints: throttle brute-force and registration/email spam. (max, window_s)
+_LOGIN_RATE = (10, 300.0)    # per IP / 5 min — password guessing
+_REGISTER_RATE = (5, 900.0)  # per IP / 15 min — signup spam
+_VERIFY_RATE = (10, 600.0)   # per email / 10 min — code guessing
+_RESEND_RATE = (3, 600.0)    # per email / 10 min — email bombing
 
 
 def _rate_ok(key: str, max_hits: int, window: float) -> bool:
@@ -385,7 +390,10 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         })
 
     @app.post("/login")
-    async def login_submit(email: str = Form(...), password: str = Form(...)) -> Response:
+    async def login_submit(request: Request, email: str = Form(...), password: str = Form(...)) -> Response:
+        ip = request.client.host if request.client else "?"
+        if not _rate_ok(f"login:{ip}", *_LOGIN_RATE):
+            return RedirectResponse("/login?error=too_many", status_code=303)
         user = await services.web_auth.login_email(email, password)
         if not user:
             return RedirectResponse("/login?error=bad_credentials", status_code=303)
@@ -411,8 +419,10 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
     ) -> Response:
         from urllib.parse import quote
+        ip = request.client.host if request.client else None
+        if not _rate_ok(f"reg:{ip or '?'}", *_REGISTER_RATE):
+            return RedirectResponse(f"/register?error={quote('Слишком много попыток. Попробуй позже.')}", status_code=303)
         if _config.CAPTCHA_ENABLED:
-            ip = request.client.host if request.client else None
             if not await _captcha.verify_turnstile(cf_turnstile_response, ip):
                 return RedirectResponse(f"/register?error={quote('Подтвердите, что вы не робот')}", status_code=303)
         user, err = await services.web_auth.register_tutor_email(
@@ -438,6 +448,9 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.post("/verify")
     async def verify_submit(email: str = Form(...), code: str = Form(...)) -> Response:
         from urllib.parse import quote
+        norm_email = email.strip().lower()
+        if not _rate_ok(f"verify:{norm_email}", *_VERIFY_RATE):
+            return RedirectResponse(f"/verify?email={quote(norm_email)}&error={quote('Слишком много попыток. Подожди и попробуй снова.')}", status_code=303)
         user, err = await services.web_auth.verify_email_code(email, code)
         if err or not user:
             return RedirectResponse(f"/verify?email={quote(email)}&error={quote(err or 'Неверный код')}", status_code=303)
@@ -448,8 +461,11 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.post("/verify/resend")
     async def verify_resend(email: str = Form(...)) -> Response:
         from urllib.parse import quote
+        norm_email = email.strip().lower()
+        if not _rate_ok(f"resend:{norm_email}", *_RESEND_RATE):
+            return RedirectResponse(f"/verify?email={quote(norm_email)}&error={quote('Код уже отправлен. Подожди минуту.')}", status_code=303)
         await services.web_auth.resend_code(email)
-        return RedirectResponse(f"/verify?email={quote(email.strip().lower())}&sent=1", status_code=303)
+        return RedirectResponse(f"/verify?email={quote(norm_email)}&sent=1", status_code=303)
 
     @app.get("/auth/telegram")
     async def auth_telegram(token: str) -> Response:
@@ -727,6 +743,8 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         user: dict = Depends(current_user),
     ) -> Response:
         _require(user, "tutor")
+        if _plan_locked(user, "homework"):
+            return RedirectResponse("/tutor/settings?upgrade=homework", status_code=303)
         due = _parse_local(due_at)
         await services.homework.create_homework(user["id"], student_id, title, description or None, due)
         return RedirectResponse("/tutor/homework", status_code=303)
@@ -734,6 +752,8 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.post("/tutor/homework/{homework_id}/review")
     async def review_homework(homework_id: str, comment: str = Form(""), user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
+        if _plan_locked(user, "homework"):
+            return RedirectResponse("/tutor/settings?upgrade=homework", status_code=303)
         await services.homework.review(user["id"], homework_id, comment.strip() or None)
         return RedirectResponse("/tutor/homework", status_code=303)
 
@@ -862,18 +882,24 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.post("/tutor/requests/{request_id}/done")
     async def mark_request_done(request_id: str, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
+        if _plan_locked(user, "requests"):
+            return RedirectResponse("/tutor/settings?upgrade=requests", status_code=303)
         await services.public.mark_request(user["id"], request_id, "done")
         return RedirectResponse("/tutor/requests", status_code=303)
 
     @app.post("/tutor/homework/templates")
     async def create_homework_template(title: str = Form(...), description: str = Form(""), user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
+        if _plan_locked(user, "homework"):
+            return RedirectResponse("/tutor/settings?upgrade=homework", status_code=303)
         await services.homework.create_template(user["id"], title, description)
         return RedirectResponse("/tutor/homework", status_code=303)
 
     @app.post("/tutor/homework/templates/{template_id}/delete")
     async def delete_homework_template(template_id: str, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
+        if _plan_locked(user, "homework"):
+            return RedirectResponse("/tutor/settings?upgrade=homework", status_code=303)
         await services.homework.delete_template(user["id"], template_id)
         return RedirectResponse("/tutor/homework", status_code=303)
 

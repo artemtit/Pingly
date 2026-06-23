@@ -404,20 +404,25 @@ class SupabasePinglyRepository:
         )
         return result.data
 
-    async def update_schedule_rule(self, rule_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
-        result = await self._db().table("schedule_rules").update(patch).eq("id", rule_id).execute()
+    async def update_schedule_rule(self, rule_id: str, patch: dict[str, Any], tutor_user_id: str | None = None) -> dict[str, Any] | None:
+        q = self._db().table("schedule_rules").update(patch).eq("id", rule_id)
+        if tutor_user_id is not None:  # owner-scope as defence-in-depth
+            q = q.eq("tutor_user_id", tutor_user_id)
+        result = await q.execute()
         return _one(result)
 
-    async def list_future_lessons_for_rule(self, rule_id: str, after: datetime) -> list[dict[str, Any]]:
-        result = await (
+    async def list_future_lessons_for_rule(self, rule_id: str, after: datetime, tutor_user_id: str | None = None) -> list[dict[str, Any]]:
+        q = (
             self._db().table("lessons_v2")
             .select("*")
             .eq("schedule_rule_id", rule_id)
             .in_("status", ACTIVE_LESSON_STATUSES)
             .gte("starts_at", after.isoformat())
             .order("starts_at")
-            .execute()
         )
+        if tutor_user_id is not None:
+            q = q.eq("tutor_user_id", tutor_user_id)
+        result = await q.execute()
         return result.data
 
     async def get_lesson_for_tutor(self, tutor_user_id: str, lesson_id: str) -> dict[str, Any] | None:
@@ -430,8 +435,11 @@ class SupabasePinglyRepository:
         )
         return _one(result)
 
-    async def update_lesson_fields(self, lesson_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
-        result = await self._db().table("lessons_v2").update(patch).eq("id", lesson_id).execute()
+    async def update_lesson_fields(self, lesson_id: str, patch: dict[str, Any], tutor_user_id: str | None = None) -> dict[str, Any] | None:
+        q = self._db().table("lessons_v2").update(patch).eq("id", lesson_id)
+        if tutor_user_id is not None:  # owner-scope as defence-in-depth
+            q = q.eq("tutor_user_id", tutor_user_id)
+        result = await q.execute()
         return _one(result)
 
     async def delete_lesson(self, tutor_user_id: str, lesson_id: str) -> None:

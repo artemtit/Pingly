@@ -196,7 +196,14 @@ async def _alert_package(tutor_user_id: str, student: dict, status: dict) -> Non
 
 def create_scheduler(bot: Bot, vk_bot=None) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="UTC")
-    scheduler.add_job(send_due_notifications, "interval", minutes=1, args=[bot, vk_bot])
+    # max_instances=1 + coalesce: if a delivery run is still going when the next
+    # minute fires, don't start a second overlapping run (which would re-read the
+    # same still-unsent rows and double-send). One process + this guard = no dupes;
+    # a distributed atomic claim would only be needed across multiple processes.
+    scheduler.add_job(
+        send_due_notifications, "interval", minutes=1, args=[bot, vk_bot],
+        max_instances=1, coalesce=True, misfire_grace_time=120,
+    )
     scheduler.add_job(
         enqueue_subscription_reminders, "interval", hours=12,
         next_run_time=datetime.now() + timedelta(seconds=30),
