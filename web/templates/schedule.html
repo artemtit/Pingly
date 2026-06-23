@@ -8,20 +8,6 @@
   </a>
   <div class="series-actions">
     {{ ui.status_badge(lesson.status) }}
-    {% if lesson.schedule_rule_id and lesson.status == "scheduled" %}
-    <details class="resched">
-      <summary class="link-btn">⚙ вся серия</summary>
-      <div class="series-menu">
-        <form method="post" action="/tutor/series/{{ lesson.schedule_rule_id }}/reschedule" class="resched-form">
-          <input class="input" type="time" name="new_time" required>
-          <button class="btn btn-secondary btn-sm">🔄 Перенести всю серию</button>
-        </form>
-        <form method="post" action="/tutor/series/{{ lesson.schedule_rule_id }}/cancel" onsubmit="return confirm('Отменить всю серию занятий? Будущие занятия по этому расписанию будут удалены.')">
-          <button class="btn btn-ghost btn-sm">❌ Отменить серию</button>
-        </form>
-      </div>
-    </details>
-    {% endif %}
   </div>
 </div>
 {% endmacro %}
@@ -85,22 +71,53 @@
     {% endif %}
   </div>
 
-  <div class="card">
-    <div class="card-head"><h2>Будущие занятия</h2><a class="link-btn" href="/tutor/calendar">В календаре →</a></div>
-    {% if upcoming %}<p class="muted" style="margin:-2px 0 12px;font-size:12.5px;">Нажми на занятие — откроется в календаре, где можно провести, отменить или перенести именно его. «⚙ Вся серия» меняет сразу все будущие занятия по этому расписанию.</p>{% endif %}
-    <div class="timeline">
-      {% for lesson in upcoming[:8] %}{{ slesson(lesson) }}{% else %}
-      <div class="empty"><div class="empty-emoji">🗓️</div><p>Будущих занятий нет.</p></div>
-      {% endfor %}
-    </div>
-    {% if upcoming | length > 8 %}
-    <details class="more-future">
-      <summary class="link-btn" style="display:inline-block;margin-top:10px;">Показать ещё {{ upcoming | length - 8 }}</summary>
-      <div class="timeline" style="margin-top:8px;">
-        {% for lesson in upcoming[8:] %}{{ slesson(lesson) }}{% endfor %}
+  <div class="sched-right">
+    <div class="card">
+      <div class="card-head"><h2>🔁 Серии</h2></div>
+      <p class="muted" style="margin:-2px 0 12px;font-size:12.5px;">Повторяющиеся расписания. Изменение серии затрагивает <b>сразу все будущие</b> занятия по ней. Чтобы изменить одно занятие — открой его в «Ближайших занятиях» ниже.</p>
+      <div class="series-list">
+        {% for s in series %}
+        <div class="series-item">
+          <div class="series-item-info">
+            <strong>{{ s.student_name }}</strong>
+            <div class="muted">{{ s.schedule_text }}</div>
+          </div>
+          <details class="resched">
+            <summary class="link-btn">⚙ Изменить серию</summary>
+            <div class="series-menu">
+              <form method="post" action="/tutor/series/{{ s.id }}/reschedule" class="resched-form">
+                <input class="input" type="time" name="new_time" value="{{ s.time_hhmm }}" required>
+                <button class="btn btn-secondary btn-sm">🔄 Перенести всю серию</button>
+              </form>
+              <form method="post" action="/tutor/series/{{ s.id }}/cancel" onsubmit="return confirm('Отменить всю серию занятий? Будущие занятия по этому расписанию будут удалены.')">
+                <button class="btn btn-ghost btn-sm">❌ Отменить серию</button>
+              </form>
+            </div>
+          </details>
+        </div>
+        {% else %}
+        <div class="empty"><div class="empty-emoji">🔁</div><p>Повторяющихся серий нет. Создай слева занятие с повторением.</p></div>
+        {% endfor %}
       </div>
-    </details>
-    {% endif %}
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <div class="card-head"><h2>📅 Ближайшие занятия</h2><a class="link-btn" href="/tutor/calendar">В календаре →</a></div>
+      {% if upcoming %}<p class="muted" style="margin:-2px 0 12px;font-size:12.5px;">Это отдельные занятия. Нажми на любое — откроется в календаре, где можно провести, отменить или перенести <b>именно его</b>, не трогая серию.</p>{% endif %}
+      <div class="timeline">
+        {% for lesson in upcoming[:8] %}{{ slesson(lesson) }}{% else %}
+        <div class="empty"><div class="empty-emoji">🗓️</div><p>Будущих занятий нет.</p></div>
+        {% endfor %}
+      </div>
+      {% if upcoming | length > 8 %}
+      <details class="more-future">
+        <summary class="link-btn" style="display:inline-block;margin-top:10px;">Показать ещё {{ upcoming | length - 8 }}</summary>
+        <div class="timeline" style="margin-top:8px;">
+          {% for lesson in upcoming[8:] %}{{ slesson(lesson) }}{% endfor %}
+        </div>
+      </details>
+      {% endif %}
+    </div>
   </div>
 </section>
 

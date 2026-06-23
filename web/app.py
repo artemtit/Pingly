@@ -83,6 +83,35 @@ def _ru_days(n: object) -> str:
     return "дней"
 
 
+def _series_view(rule: dict, name_by_id: dict) -> dict:
+    """Human-readable summary of a recurring schedule rule for the schedule page."""
+    import json
+    wd = rule.get("weekdays") or [rule.get("day_of_week", 0)]
+    if isinstance(wd, str):
+        try:
+            wd = json.loads(wd)
+        except Exception:
+            wd = [rule.get("day_of_week", 0)]
+    days = ", ".join(_DAYS_RU[int(d)] for d in wd if 0 <= int(d) <= 6)
+    t = str(rule.get("lesson_time") or "")[:5]
+    rec = rule.get("recurrence", "weekly")
+    n = int(rule.get("interval_n", 1) or 1)
+    if rec == "daily":
+        freq = "каждый день"
+    elif rec == "every_n_days":
+        freq = f"каждые {n} дн."
+    elif rec == "every_n_weeks":
+        freq = f"{days} · каждые {n} нед."
+    else:  # weekly / multiple_weekly
+        freq = f"{days} · каждую неделю"
+    return {
+        "id": rule["id"],
+        "student_name": name_by_id.get(rule.get("student_id"), "Ученик"),
+        "schedule_text": f"{freq} · {t}" if t else freq,
+        "time_hhmm": t,
+    }
+
+
 templates.env.filters["ru_weekday"] = _ru_weekday
 templates.env.filters["msk"] = _fmt_msk
 templates.env.filters["ru_days"] = _ru_days
@@ -692,7 +721,10 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             if l.get("status") in ("scheduled", "confirmed", "reschedule_requested")
             and (l.get("starts_at") or "") >= now
         ][:30]
-        return templates.TemplateResponse("schedule.html", _ctx(request, user, "schedule", students=students, upcoming=upcoming))
+        name_by_id = {s["id"]: s["name"] for s in students}
+        rules = await services.lessons.list_series(user["id"])
+        series = [_series_view(r, name_by_id) for r in rules]
+        return templates.TemplateResponse("schedule.html", _ctx(request, user, "schedule", students=students, upcoming=upcoming, series=series))
 
     @app.post("/tutor/schedule")
     async def create_schedule(

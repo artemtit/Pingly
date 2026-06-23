@@ -257,6 +257,11 @@ class LessonService:
     async def list_tutor_calendar(self, tutor_user_id: str) -> list[dict]:
         return await self.repo.list_lessons_for_tutor(tutor_user_id)
 
+    async def list_series(self, tutor_user_id: str) -> list[dict]:
+        """Active recurring schedules (series) for the tutor — managed as a whole,
+        separately from individual lesson occurrences."""
+        return await self.repo.list_schedule_rules(tutor_user_id)
+
     async def list_student_calendar(self, student_user_id: str) -> list[dict]:
         return await self.repo.list_lessons_for_student_user(student_user_id)
 

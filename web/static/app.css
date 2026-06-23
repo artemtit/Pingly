@@ -343,6 +343,15 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .series-menu .resched-form { flex-direction: column; align-items: stretch; gap: 8px; }
 .series-menu .resched-form .input { width: 100%; flex: 0 0 auto; }
 
+/* Series list (recurring schedules), managed separately from single lessons. */
+.series-list { display: grid; gap: 4px; }
+.series-item { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--color-neutral-100); }
+.series-item:last-child { border-bottom: 0; }
+.series-item-info { flex: 1; min-width: 0; }
+.series-item-info strong { font-size: 14.5px; }
+.series-item .resched { position: relative; margin-left: auto; flex-shrink: 0; }
+[data-theme="dark"] .series-item { border-bottom-color: #334155; }
+
 .weekday-picker { display: flex; gap: 6px; flex-wrap: wrap; }
 .wd { position: relative; }
 .wd input { position: absolute; opacity: 0; }
