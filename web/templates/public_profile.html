@@ -185,7 +185,6 @@
       <div class="avatar" aria-hidden="true">{{ tutor_name[0] | upper }}</div>
       <h1>{{ tutor_name }}</h1>
       {% if profile.subjects %}<p class="subjects">{{ profile.subjects }}</p>{% endif %}
-      {% if profile.bio %}<p class="bio">{{ profile.bio }}</p>{% endif %}
     </section>
 
     {% set chips = badges if badges else default_badges %}
@@ -199,6 +198,8 @@
       {% endfor %}
     </ul>
     {% endif %}
+
+    {% if profile.bio %}<p class="bio reveal d2">{{ profile.bio }}</p>{% endif %}
 
     <main>
     {% if sent %}

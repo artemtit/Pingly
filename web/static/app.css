@@ -1001,6 +1001,10 @@ mark { background: var(--orange-100); color: inherit; border-radius: 3px; paddin
 @keyframes calRight { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
 
 /* ---------------- Finance ---------------- */
+/* Finance top: earned card (wide) + «ждут оплаты» (narrow) side by side, no
+   orphan empty cells; stacks on small screens. */
+.fin-top { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; align-items: stretch; }
+@media (max-width: 760px) { .fin-top { grid-template-columns: 1fr; } }
 .fin-hero { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; }
 .fin-hero-num { font-size: 38px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
 .fin-spark { display: block; }
