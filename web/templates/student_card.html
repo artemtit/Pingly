@@ -176,39 +176,43 @@ function copyInvite(id, btn){
 
   <div class="stack">
     <div class="card">
-      <h2>📅 История занятий</h2>
-      <table class="table">
-        <thead><tr><th>Когда</th><th>Статус</th><th>Комментарий</th></tr></thead>
-        <tbody>
-        {% for lesson in lessons %}
-        <tr>
-          <td>{{ lesson.starts_at[:16].replace("T", " ") }}</td>
-          <td>{{ ui.status_badge(lesson.status) }}</td>
-          <td class="muted">{{ lesson.public_comment or "—" }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="3"><div class="empty"><div class="empty-emoji">📭</div><p>Занятий пока нет.</p></div></td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
+      <h2 class="h2-ico">{{ ui.icon('calendar-check') }} История занятий{% if lessons %} <span class="muted" style="font-weight:500;font-size:14px;">· {{ lessons|length }}</span>{% endif %}</h2>
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th>Когда</th><th>Статус</th><th>Комментарий</th></tr></thead>
+          <tbody>
+          {% for lesson in lessons %}
+          <tr>
+            <td>{{ lesson.starts_at[:16].replace("T", " ") }}</td>
+            <td>{{ ui.status_badge(lesson.status) }}</td>
+            <td class="muted">{{ lesson.public_comment or "—" }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3"><div class="empty"><div class="empty-emoji">{{ ui.icon('inbox') }}</div><p>Занятий пока нет.</p></div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div class="card">
-      <h2>📝 История домашних заданий</h2>
-      <table class="table">
-        <thead><tr><th>Задание</th><th>Статус</th><th>Комментарий</th></tr></thead>
-        <tbody>
-        {% for item in homework %}
-        <tr>
-          <td>{{ item.title }}</td>
-          <td><span class="badge {{ item.status }}">{{ item.status }}</span></td>
-          <td class="muted">{{ item.tutor_comment or item.description or "—" }}</td>
-        </tr>
-        {% else %}
-        <tr><td colspan="3"><div class="empty"><div class="empty-emoji">📭</div><p>Заданий пока нет.</p></div></td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
+      <h2 class="h2-ico">{{ ui.icon('file-pen') }} История домашних заданий</h2>
+      <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th>Задание</th><th>Статус</th><th>Комментарий</th></tr></thead>
+          <tbody>
+          {% for item in homework %}
+          <tr>
+            <td>{{ item.title }}</td>
+            <td><span class="badge {{ item.status }}">{{ item.status }}</span></td>
+            <td class="muted">{{ item.tutor_comment or item.description or "—" }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3"><div class="empty"><div class="empty-emoji">{{ ui.icon('inbox') }}</div><p>Заданий пока нет.</p></div></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </section>

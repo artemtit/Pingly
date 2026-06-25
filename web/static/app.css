@@ -360,9 +360,21 @@ details.series-item:last-child { border-bottom: 0; }
 .series-item .series-menu { position: static; width: 100%; max-width: none; margin: 0 0 12px; }
 
 /* Headings with a leading brand icon (icon set replaces decorative emoji). */
-.h1-ico, .h2-ico { display: inline-flex; align-items: center; gap: 9px; }
-.h1-ico svg, .h2-ico svg { color: var(--orange-500); flex: 0 0 auto; }
+.h1-ico, .h2-ico, .h3-ico { display: inline-flex; align-items: center; gap: 10px; }
+.h1-ico svg { color: var(--orange-500); flex: 0 0 auto; width: 30px; height: 30px; }
+.h2-ico svg { color: var(--orange-500); flex: 0 0 auto; width: 25px; height: 25px; }
+.h3-ico svg { color: var(--orange-500); flex: 0 0 auto; width: 20px; height: 20px; }
 .series-edit-toggle { display: inline-flex; align-items: center; gap: 6px; }
+/* Generic inline icon (from ui.icon) sits on the text baseline outside flex rows. */
+.ic { vertical-align: -0.15em; }
+/* Empty-state icon replaces the big decorative emoji. */
+.empty-emoji svg { width: 46px; height: 46px; color: var(--gray-300); }
+[data-theme="dark"] .empty-emoji svg { color: var(--gray-600); }
+.empty-wide .empty-emoji svg { width: 56px; height: 56px; }
+/* Long history tables get a capped, scrollable body so the page can't grow huge. */
+.table-scroll { max-height: 460px; overflow-y: auto; border-radius: 10px; }
+.table-scroll thead th { position: sticky; top: 0; z-index: 1; background: var(--color-bg); }
+[data-theme="dark"] .table-scroll thead th { background: #1E293B; }
 
 .weekday-picker { display: flex; gap: 6px; flex-wrap: wrap; }
 .wd { position: relative; }

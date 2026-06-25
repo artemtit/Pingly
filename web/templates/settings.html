@@ -199,8 +199,8 @@
       <textarea name="message" required maxlength="3000" placeholder="Опиши проблему или вопрос…"></textarea>
       <button class="btn btn-primary btn-sm">Отправить</button>
     </form>
-    {% if bot_username %}
-    <p class="muted" style="margin-top:12px;font-size:13px;">Или напрямую: <a href="https://t.me/{{ bot_username }}" target="_blank" rel="noopener">@{{ bot_username }}</a></p>
+    {% if support_username %}
+    <p class="muted" style="margin-top:12px;font-size:13px;">Или напрямую: <a href="https://t.me/{{ support_username }}" target="_blank" rel="noopener">@{{ support_username }}</a></p>
     {% endif %}
   </div>
 </section>
