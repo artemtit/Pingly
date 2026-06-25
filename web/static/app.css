@@ -359,6 +359,11 @@ details.series-item:last-child { border-bottom: 0; }
 /* Override the floating-dropdown base style: render inline, full width. */
 .series-item .series-menu { position: static; width: 100%; max-width: none; margin: 0 0 12px; }
 
+/* Headings with a leading brand icon (icon set replaces decorative emoji). */
+.h1-ico, .h2-ico { display: inline-flex; align-items: center; gap: 9px; }
+.h1-ico svg, .h2-ico svg { color: var(--orange-500); flex: 0 0 auto; }
+.series-edit-toggle { display: inline-flex; align-items: center; gap: 6px; }
+
 .weekday-picker { display: flex; gap: 6px; flex-wrap: wrap; }
 .wd { position: relative; }
 .wd input { position: absolute; opacity: 0; }

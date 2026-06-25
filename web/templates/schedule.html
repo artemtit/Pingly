@@ -15,7 +15,7 @@
 <div class="topbar">
   <div>
     <div class="eyebrow">Расписание</div>
-    <h1>🗓️ Добавить занятие</h1>
+    <h1 class="h1-ico">{{ ui.icon('calendar-plus', 24) }} Добавить занятие</h1>
     <p class="muted">Разовое или повторяющееся — Pingly сам создаст уроки и напоминания.</p>
   </div>
 </div>
@@ -66,14 +66,14 @@
         <textarea class="input" name="comment" rows="2" maxlength="500" placeholder="Что будет на уроке — ученик увидит это в напоминании"></textarea></label>
       <p class="muted" id="topic-series-hint" style="display:none;font-size:13px;margin:-4px 0 10px;">У серии тема у каждого занятия своя — задаётся в календаре кнопкой «Тема урока».</p>
 
-      <button class="btn btn-primary">➕ Создать</button>
+      <button class="btn btn-primary">{{ ui.icon('plus', 16) }} Создать</button>
     </form>
     {% endif %}
   </div>
 
   <div class="sched-right">
     <div class="card">
-      <div class="card-head"><h2>🔁 Серии</h2></div>
+      <div class="card-head"><h2 class="h2-ico">{{ ui.icon('refresh') }} Серии</h2></div>
       <p class="muted" style="margin:-2px 0 12px;font-size:12.5px;">Повторяющиеся расписания. Изменение серии затрагивает <b>сразу все будущие</b> занятия по ней. Чтобы изменить одно занятие — открой его в «Ближайших занятиях» ниже.</p>
       <div class="series-list">
         {% for s in series %}
@@ -83,15 +83,15 @@
               <strong>{{ s.student_name }}</strong>
               <span class="muted">{{ s.schedule_text }}</span>
             </span>
-            <span class="link-btn series-edit-toggle">⚙ Изменить серию</span>
+            <span class="link-btn series-edit-toggle">{{ ui.icon('settings', 16) }} Изменить серию</span>
           </summary>
           <div class="series-menu">
             <form method="post" action="/tutor/series/{{ s.id }}/reschedule" class="resched-form">
               <input class="input" type="time" name="new_time" value="{{ s.time_hhmm }}" required>
-              <button class="btn btn-secondary btn-sm">🔄 Перенести всю серию</button>
+              <button class="btn btn-secondary btn-sm">{{ ui.icon('refresh', 15) }} Перенести всю серию</button>
             </form>
             <form method="post" action="/tutor/series/{{ s.id }}/cancel" onsubmit="return confirm('Отменить всю серию занятий? Будущие занятия по этому расписанию будут удалены.')">
-              <button class="btn btn-ghost btn-sm">❌ Отменить серию</button>
+              <button class="btn btn-ghost btn-sm">{{ ui.icon('circle-x', 15) }} Отменить серию</button>
             </form>
           </div>
         </details>
@@ -102,7 +102,7 @@
     </div>
 
     <div class="card" style="margin-top:18px;">
-      <div class="card-head"><h2>📅 Ближайшие занятия</h2><a class="link-btn" href="/tutor/calendar">В календаре →</a></div>
+      <div class="card-head"><h2 class="h2-ico">{{ ui.icon('calendar-check') }} Ближайшие занятия</h2><a class="link-btn" href="/tutor/calendar">В календаре →</a></div>
       {% if upcoming %}<p class="muted" style="margin:-2px 0 12px;font-size:12.5px;">Это отдельные занятия. Нажми на любое — откроется в календаре, где можно провести, отменить или перенести <b>именно его</b>, не трогая серию.</p>{% endif %}
       <div class="timeline">
         {% for lesson in upcoming[:8] %}{{ slesson(lesson) }}{% else %}
