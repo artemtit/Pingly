@@ -8,18 +8,18 @@
   </div>
 </div>
 
-{% if saved == 'support' %}<div class="trial-banner">✅ Сообщение отправлено — ответим в Telegram</div>
-{% elif saved %}<div class="trial-banner">✅ Сохранено</div>{% endif %}
-{% if paid == '1' %}<div class="trial-banner">✅ Оплата прошла — подписка активна</div>
+{% if saved == 'support' %}<div class="trial-banner">{{ ui.icon('check', 15) }} Сообщение отправлено — ответим в Telegram</div>
+{% elif saved %}<div class="trial-banner">{{ ui.icon('check', 15) }} Сохранено</div>{% endif %}
+{% if paid == '1' %}<div class="trial-banner">{{ ui.icon('check', 15) }} Оплата прошла — подписка активна</div>
 {% elif paid == '0' %}<div class="trial-banner trial-ending">Оплата не завершена. Если списание прошло — статус обновится в течение минуты.</div>{% endif %}
 {% if error == 'payments_off' %}<div class="trial-banner">{{ ui.icon('credit-card', 15) }} Онлайн-оплата временно недоступна. Сервис работает в полном объёме.</div>
 {% elif error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
-{% if upgrade %}<div class="trial-banner trial-ending">🔒 Раздел «{{ {'finance':'Финансы','requests':'Заявки','homework':'Задания'}.get(upgrade, upgrade) }}» доступен на тарифе Max. Оформи Max, чтобы открыть его.</div>{% endif %}
-{% if locked %}<div class="trial-banner trial-ending">🔒 Пробный период закончился. Кабинет на паузе — оформи подписку ниже, чтобы вернуть доступ к ученикам, расписанию и напоминаниям.</div>{% endif %}
+{% if upgrade %}<div class="trial-banner trial-ending">{{ ui.icon('lock', 15) }} Раздел «{{ {'finance':'Финансы','requests':'Заявки','homework':'Задания'}.get(upgrade, upgrade) }}» доступен на тарифе Max. Оформи Max, чтобы открыть его.</div>{% endif %}
+{% if locked %}<div class="trial-banner trial-ending">{{ ui.icon('lock', 15) }} Пробный период закончился. Кабинет на паузе — оформи подписку ниже, чтобы вернуть доступ к ученикам, расписанию и напоминаниям.</div>{% endif %}
 
 <section class="settings-grid">
   <div class="card">
-    <h2>Профиль</h2>
+    <h2>{{ ui.icon('users', 18) }} Профиль</h2>
     <form method="post" action="/settings/name" class="form" style="margin-bottom:6px;">
       <label class="field"><span>Имя</span>
         <input class="input" name="full_name" value="{{ user.full_name }}" required maxlength="80"></label>
@@ -40,7 +40,7 @@
   </div>
 
   <div class="card">
-    <h2>🤖 Telegram</h2>
+    <h2>{{ ui.icon('bot', 18) }} Telegram</h2>
     {% if user.tg_id %}
     <div class="settings-row"><span class="muted">Подключён</span><strong>@{{ user.tg_username or "—" }}</strong></div>
     <div class="settings-row"><span>Уведомления</span><span class="badge completed">приходят в Telegram</span></div>
@@ -72,11 +72,11 @@
   {% if user.role == "tutor" %}
   {% set sub = subscription_info(user) %}
   <div class="card">
-    <h2>💎 Подписка</h2>
+    <h2>{{ ui.icon('gem', 18) }} Подписка</h2>
     {% set n = sub.days_left or 0 %}
     {% set days_word = n | ru_days %}
     {% if sub.status == 'active' %}
-    <div class="sub-hero"><div class="sub-big">Активна ✅</div><div class="muted">Спасибо, что пользуешься Pingly.</div></div>
+    <div class="sub-hero"><div class="sub-big">Активна <span class="sub-big-mark">{{ ui.icon('check', 18) }}</span></div><div class="muted">Спасибо, что пользуешься Pingly.</div></div>
     {% elif n > 0 %}
     <div class="sub-hero {{ 'sub-warn' if n <= 3 }}">
       <div class="sub-big">{{ n }} {{ days_word }}</div>
@@ -130,7 +130,7 @@
 
   {% if referral_code %}
   <div class="card">
-    <h2>🎁 Приведи коллегу</h2>
+    <h2>{{ ui.icon('gift', 18) }} Приведи коллегу</h2>
     <p class="muted" style="margin-bottom:8px;">Когда репетитор зарегистрируется по твоей ссылке и оформит подписку, — <strong>+30 дней</strong> и тебе, и ему.</p>
     <div class="copy-row">
       <input class="input" id="ref-link" readonly value="{{ web_base }}/register?ref={{ referral_code }}">

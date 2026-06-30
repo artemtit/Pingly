@@ -9,7 +9,7 @@
   </div>
 </div>
 
-{% if saved %}<div class="trial-banner">✅ Сохранено</div>{% endif %}
+{% if saved %}<div class="trial-banner">{{ ui.icon('check', 15) }} Сохранено</div>{% endif %}
 {% if error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
 
 <div class="req-split">
@@ -43,7 +43,7 @@
           </div>
           {% endfor %}
         </div>
-        <button type="button" class="btn btn-ghost btn-sm" id="badge-add" onclick="addBadgeRow()" style="margin-top:6px;">+ Добавить плашку</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="badge-add" onclick="addBadgeRow()" style="margin-top:6px;">{{ ui.icon('plus', 14) }} Добавить плашку</button>
         <p class="muted" id="badge-max-hint" style="margin-top:6px;display:none;font-size:13px;">Максимум 4 плашки.</p>
       </div>
       <template id="badge-row-tpl">
@@ -128,7 +128,7 @@
   <div class="req-list">
     {% for r in new_requests %}{{ req_row(r, false) }}{% else %}
     {% if requests %}
-    <div class="empty"><div class="empty-emoji">✅</div><p>Новых заявок нет — все просмотрены.</p></div>
+    <div class="empty"><div class="empty-emoji">{{ ui.icon('check', 40) }}</div><p>Новых заявок нет — все просмотрены.</p></div>
     {% else %}
     <div class="empty"><div class="empty-emoji">{{ ui.icon('inbox', 40) }}</div><p>Заявок пока нет. Включи публичную страницу выше и поделись ссылкой.</p></div>
     {% endif %}

@@ -24,7 +24,7 @@
       <div class="auth-error">{{ error }}</div>
       {% endif %}
 
-      {% if ref %}<div class="auth-note">🎁 Тебя пригласили — получишь +30 дней бесплатно</div>{% endif %}
+      {% if ref %}<div class="auth-note">Тебя пригласили — получишь +30 дней бесплатно</div>{% endif %}
       <form class="auth-form" method="post" action="/register">
         <input type="hidden" name="ref" value="{{ ref }}">
         <div class="auth-field">

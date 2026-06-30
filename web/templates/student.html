@@ -1,20 +1,19 @@
 {% extends "layout.html" %}
 {% import "macros.html" as ui %}
-{% import "macros.html" as ui %}
 {% block content %}
 
 {# ── Desktop topbar ─────────────────────────────────────────── #}
 <div class="topbar desktop-only">
   <div>
     <div class="eyebrow">Кабинет ученика</div>
-    <h1>Привет, {{ user.full_name.split(" ")[0] }}! 👋</h1>
+    <h1>Привет, {{ user.full_name.split(" ")[0] }}! {{ ui.icon('hand', 24) }}</h1>
     <p class="muted">Ближайшее занятие и задания — в одном месте.</p>
   </div>
 </div>
 
 {# ── Mobile greeting ────────────────────────────────────────── #}
 <div class="mob-greeting">
-  <h1 style="font-size:26px;font-weight:700;letter-spacing:-.02em;">Привет, {{ user.full_name.split(" ")[0] }}! 👋</h1>
+  <h1 style="font-size:26px;font-weight:700;letter-spacing:-.02em;">Привет, {{ user.full_name.split(" ")[0] }}! {{ ui.icon('hand', 24) }}</h1>
   <p class="muted" style="margin-top:6px;font-size:15px;">Напоминания придут в Telegram за 2 часа до занятия.</p>
 </div>
 
@@ -35,10 +34,10 @@
     {% if next_lesson.status == 'scheduled' %}
     <div class="nl-actions">
       <form method="post" action="/student/lessons/{{ next_lesson.id }}/confirm" style="flex:1">
-        <button class="btn btn-primary nl-btn">✅ Буду</button>
+        <button class="btn btn-primary nl-btn">{{ ui.icon('check', 15) }} Буду</button>
       </form>
       <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1" onsubmit="return confirm('Отменить занятие? Репетитор увидит, что тебя не будет.')">
-        <button class="btn btn-secondary nl-btn">❌ Отменяю</button>
+        <button class="btn btn-secondary nl-btn">{{ ui.icon('circle-x', 15) }} Отменяю</button>
       </form>
     </div>
     <form method="post" action="/student/lessons/{{ next_lesson.id }}/reschedule-request" style="margin-top:8px">
@@ -46,9 +45,9 @@
     </form>
     {% elif next_lesson.status == 'confirmed' %}
     <div class="nl-actions">
-      <div class="btn btn-primary nl-btn" style="flex:1;pointer-events:none;opacity:.85">✅ Подтверждено</div>
+      <div class="btn btn-primary nl-btn" style="flex:1;pointer-events:none;opacity:.85">{{ ui.icon('check', 15) }} Подтверждено</div>
       <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1" onsubmit="return confirm('Отменить занятие? Репетитор увидит, что тебя не будет.')">
-        <button class="btn btn-secondary nl-btn">❌ Отменяю</button>
+        <button class="btn btn-secondary nl-btn">{{ ui.icon('circle-x', 15) }} Отменяю</button>
       </form>
     </div>
     <form method="post" action="/student/lessons/{{ next_lesson.id }}/reschedule-request" style="margin-top:8px">
@@ -68,7 +67,7 @@
     {% for hw in active_hw %}
     <div class="hw-item compact">
       <div class="hw-head"><strong>{{ hw.title }}</strong>{{ ui.status_badge(hw.status) }}</div>
-      <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">✅ Сдать</button></form>
+      <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">{{ ui.icon('check', 15) }} Сдать</button></form>
     </div>
     {% else %}
     <div class="empty"><div class="empty-emoji">{{ ui.icon('inbox', 40) }}</div><p>Заданий пока нет.</p></div>
@@ -106,7 +105,7 @@
     </div>
     {{ ui.status_badge(hw.status) }}
     <form method="post" action="/student/homework/{{ hw.id }}/submit">
-      <button class="btn btn-primary btn-sm">✅ Сдать</button>
+      <button class="btn btn-primary btn-sm">{{ ui.icon('check', 15) }} Сдать</button>
     </form>
   </div>
   {% endfor %}

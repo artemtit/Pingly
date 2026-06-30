@@ -14,8 +14,8 @@
     </div>
   </div>
   <div style="display:flex;gap:10px;align-items:center;">
-    <button class="btn btn-ghost" onclick="document.getElementById('delete-modal').classList.add('open')" style="color:var(--color-error);">🗑 Удалить</button>
-    <a class="btn btn-ghost" href="/tutor/students">← К списку</a>
+    <button class="btn btn-ghost" onclick="document.getElementById('delete-modal').classList.add('open')" style="color:var(--color-error);">{{ ui.icon('trash', 15) }} Удалить</button>
+    <a class="btn btn-ghost" href="/tutor/students">К списку</a>
   </div>
 </div>
 
@@ -42,18 +42,18 @@
 
 {% if created %}
 <div class="card" style="border-color: var(--color-success); background: var(--color-success-light); margin-bottom: 16px;">
-  <strong style="color: var(--success-text);">✅ Ученик {{ student.name }} создан</strong>
+  <strong style="color: var(--success-text);">{{ ui.icon('check', 15) }} Ученик {{ student.name }} создан</strong>
 </div>
 {% endif %}
 
 {% set all_connected = student.tg_connected and (student.vk_connected or not vk_enabled) %}
 {% if not all_connected %}
 <div class="card invite-banner" style="margin-bottom: 16px;">
-  <strong>📲 Подключение мессенджеров</strong>
+  <strong>{{ ui.icon('phone', 16) }} Подключение мессенджеров</strong>
   <p class="muted" style="margin: 6px 0 12px;">Ученик может получать напоминания в {{ 'Telegram и во ВКонтакте — можно подключить оба сразу' if vk_enabled else 'Telegram' }}. Отправь ссылку в нужный мессенджер: после входа в бота начнут приходить напоминания о занятиях, а ты увидишь ответы «Буду / Отменяю».</p>
 
   {% if student.tg_connected %}
-  <div class="chan-ok">✅ Telegram подключён</div>
+  <div class="chan-ok">{{ ui.icon('check', 15) }} Telegram подключён</div>
   {% else %}
   <div style="display:flex; gap:10px; flex-wrap:wrap;">
     <input class="input" id="invite-url" readonly style="flex:1; min-width:220px; font-size:14px;"
@@ -64,7 +64,7 @@
 
   {% if vk_enabled %}
     {% if student.vk_connected %}
-    <div class="chan-ok" style="margin-top:10px;">✅ ВКонтакте подключён</div>
+    <div class="chan-ok" style="margin-top:10px;">{{ ui.icon('check', 15) }} ВКонтакте подключён</div>
     {% else %}
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
       <input class="input" id="invite-url-vk" readonly style="flex:1; min-width:220px; font-size:14px;"
@@ -98,7 +98,7 @@ function copyInvite(id, btn){
 <section class="grid two" style="margin-top: 18px; align-items: start;">
   <div class="stack">
     <div class="card">
-      <div class="card-head"><h2>📌 Следующее занятие</h2></div>
+      <div class="card-head"><h2>{{ ui.icon('pin', 18) }} Следующее занятие</h2></div>
       {% if next_lesson %}
       <p class="big-date">{{ next_lesson.starts_at[:16].replace("T", " ") }}</p>
       {{ ui.status_badge(next_lesson.status) }}
@@ -109,14 +109,14 @@ function copyInvite(id, btn){
     </div>
 
     <div class="card" id="package">
-      <div class="card-head"><h2>📦 Абонемент</h2>
-        {% if saved == 'package' %}<span class="save-ok" data-autohide>✅ Сохранено</span>{% endif %}
+      <div class="card-head"><h2>{{ ui.icon('package', 18) }} Абонемент</h2>
+        {% if saved == 'package' %}<span class="save-ok" data-autohide>{{ ui.icon('check', 14) }} Сохранено</span>{% endif %}
       </div>
       {% if package %}
       <p class="big-date" style="{% if package.remaining <= 1 %}color:var(--color-error);{% endif %}">Осталось {{ package.remaining }} из {{ package.size }}</p>
       <p class="muted" style="margin-top:6px;">Пройдено занятий: {{ package.consumed }}. Когда останется 1 урок — оповещение придёт тебе и ученику в Telegram.</p>
       {% else %}
-      <div class="empty"><div class="empty-emoji">📦</div><p>Абонемент не подключён — занятия идут поурочно.</p></div>
+      <div class="empty"><div class="empty-emoji">{{ ui.icon('package', 40) }}</div><p>Абонемент не подключён — занятия идут поурочно.</p></div>
       {% endif %}
       <form method="post" action="/tutor/students/{{ student.id }}/package" style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
         <input type="hidden" name="action" value="set">
@@ -134,7 +134,7 @@ function copyInvite(id, btn){
 
     <div class="card" id="profile">
       <div class="card-head"><h2>{{ ui.icon('graduation-cap') }} Профиль обучения</h2>
-        {% if saved == 'profile' %}<span class="save-ok" data-autohide>✅ Сохранено</span>{% endif %}
+        {% if saved == 'profile' %}<span class="save-ok" data-autohide>{{ ui.icon('check', 14) }} Сохранено</span>{% endif %}
       </div>
       <form method="post" action="/tutor/students/{{ student.id }}/profile" class="form locked" onsubmit="saving(this)">
         <label class="field"><span>Имя</span>
@@ -152,7 +152,7 @@ function copyInvite(id, btn){
         <label class="field"><span>Цель обучения</span>
           <textarea name="goal" placeholder="Например: подготовка к ОГЭ на 5">{{ student.goal or '' }}</textarea></label>
         <div class="edit-actions">
-          <button type="button" class="btn btn-secondary edit-toggle" onclick="enableEdit(this)">✏️ Изменить</button>
+          <button type="button" class="btn btn-secondary edit-toggle" onclick="enableEdit(this)">{{ ui.icon('pencil', 15) }} Изменить</button>
           <button type="submit" class="btn btn-primary edit-save">Сохранить профиль</button>
           <button type="button" class="btn btn-ghost edit-cancel" onclick="location.reload()">Отмена</button>
         </div>
@@ -160,13 +160,13 @@ function copyInvite(id, btn){
     </div>
 
     <div class="card" id="notes">
-      <div class="card-head"><h2>🗒️ Заметки репетитора</h2>
-        {% if saved == 'note' %}<span class="save-ok" data-autohide>✅ Сохранено</span>{% endif %}
+      <div class="card-head"><h2>{{ ui.icon('file-pen', 18) }} Заметки репетитора</h2>
+        {% if saved == 'note' %}<span class="save-ok" data-autohide>{{ ui.icon('check', 14) }} Сохранено</span>{% endif %}
       </div>
       <form method="post" action="/tutor/students/{{ student.id }}/note" class="form locked" onsubmit="saving(this)">
         <textarea name="note" placeholder="Личные заметки: сильные стороны, что повторить, договорённости...">{{ note }}</textarea>
         <div class="edit-actions">
-          <button type="button" class="btn btn-secondary edit-toggle" onclick="enableEdit(this)">✏️ Изменить</button>
+          <button type="button" class="btn btn-secondary edit-toggle" onclick="enableEdit(this)">{{ ui.icon('pencil', 15) }} Изменить</button>
           <button type="submit" class="btn btn-primary edit-save">Сохранить заметку</button>
           <button type="button" class="btn btn-ghost edit-cancel" onclick="location.reload()">Отмена</button>
         </div>

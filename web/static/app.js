@@ -10,6 +10,7 @@
 
   var doc = document.documentElement;
   doc.classList.add('js');
+  var body = document.body;
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   var pingly = window.pingly = { reduceMotion: reduceMotion };
@@ -225,6 +226,24 @@
     });
   }
 
+  /* ---------------- Page transitions ---------------- */
+  function initPageTransitions() {
+    if (!body) return;
+    requestAnimationFrame(function () { body.classList.add('page-ready'); });
+    if (reduceMotion) return;
+    document.addEventListener('click', function (e) {
+      var link = e.target.closest && e.target.closest('a[href]');
+      if (!link) return;
+      if (link.target === '_blank' || link.hasAttribute('download')) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      var href = link.getAttribute('href') || '';
+      if (!href || href[0] === '#') return;
+      if (link.origin !== window.location.origin) return;
+      if (link.pathname === window.location.pathname && link.search === window.location.search) return;
+      body.classList.add('page-leaving');
+    });
+  }
+
   /* ---------------- Micro-confetti (mass payment feedback) ---------------- */
   pingly.confetti = function (x, y) {
     if (reduceMotion) return;
@@ -247,6 +266,7 @@
 
   /* ---------------- Boot ---------------- */
   function init() {
+    initPageTransitions();
     staggerCards();
     tickCounters();
     updateRelTimes();

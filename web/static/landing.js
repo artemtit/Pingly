@@ -177,11 +177,11 @@
       btnNo.classList.remove('pulse');
       btnYes.disabled = btnNo.disabled = true;
 
-      replyBubble.textContent = yes ? '✅ Буду' : '❌ Отменяю';
-      finalBubble.textContent = yes ? 'Отлично! Жду тебя в 15:00 👋' : 'Понял, передам репетитору 👋';
+      replyBubble.textContent = yes ? 'Буду' : 'Отменяю';
+      finalBubble.textContent = yes ? 'Отлично! Жду тебя в 15:00.' : 'Понял, передам репетитору.';
       noteText.textContent = yes
-        ? 'Маша подтвердила занятие в 15:00 ✅'
-        : 'Маша отменила занятие в 15:00 — слот свободен';
+        ? 'Маша подтвердила занятие в 15:00.'
+        : 'Маша отменила занятие в 15:00 — слот свободен.';
       noteCard.classList.toggle('cancel', !yes);
 
       later(function () { show('reply'); }, 350);

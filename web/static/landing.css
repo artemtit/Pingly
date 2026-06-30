@@ -116,6 +116,7 @@ img { display: block; }
   background: var(--orange-100); color: var(--orange-700);
   font-weight: 600; font-size: 13.5px; padding: 6px 14px; border-radius: 9999px;
 }
+.pill .ic { width: 15px; height: 15px; }
 .hero h1 {
   font-size: clamp(2.3rem, 1rem + 4vw, 3.6rem); font-weight: 700;
   letter-spacing: -.025em; line-height: 1.06; margin-top: 18px; text-wrap: balance;
@@ -180,8 +181,10 @@ img { display: block; }
 .chat-btn {
   flex: 1; padding: 10px; border-radius: 10px; border: none; cursor: pointer;
   font-family: var(--font-sans); font-weight: 600; font-size: 13.5px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   transition: transform .15s var(--ease-out), filter .15s, opacity .2s;
 }
+.chat-btn .ic { width: 15px; height: 15px; }
 .chat-btn:hover { transform: translateY(-1px); filter: brightness(.97); }
 .chat-yes { background: var(--color-success-light); color: var(--success-text); }
 .chat-no { background: var(--gray-100); color: var(--fg2); }
@@ -394,6 +397,7 @@ img { display: block; }
 
 .mini-profile { display: flex; align-items: center; gap: 12px; }
 .mini-sub { font-size: 12.5px; color: var(--fg3); margin-top: 2px; }
+.mini-sub .ic { width: 14px; height: 14px; vertical-align: -.16em; }
 .mini-progress { height: 8px; border-radius: 4px; background: var(--gray-100); overflow: hidden; margin-top: 4px; }
 .mini-progress i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--orange-400), var(--orange-600)); }
 

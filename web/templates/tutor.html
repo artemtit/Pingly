@@ -4,7 +4,7 @@
 <div class="topbar">
   <div>
     <div class="eyebrow">Кабинет репетитора</div>
-    <h1>Привет, {{ user.full_name.split(" ")[0] }}! 👋</h1>
+    <h1>Привет, {{ user.full_name.split(" ")[0] }}! {{ ui.icon('hand', 24) }}</h1>
     <p class="muted">Ученики, занятия и задания — в одном месте.</p>
   </div>
   <div class="topbar-actions">
@@ -75,7 +75,7 @@
 
 <section class="grid two" style="margin-top: 18px;">
   <div class="card">
-    <div class="card-head"><h2>📅 Ближайшие занятия</h2><a class="link-btn" href="/tutor/calendar">Календарь →</a></div>
+    <div class="card-head"><h2 class="h2-ico">{{ ui.icon('calendar-check') }} Ближайшие занятия</h2><a class="link-btn" href="/tutor/calendar">Календарь →</a></div>
     <div class="timeline">
       {% for lesson in upcoming %}
       <div class="timeline-row" data-rel-row>
@@ -89,7 +89,7 @@
       </div>
       {% else %}
       <div class="empty">
-        <div class="empty-emoji">🗓️</div>
+        <div class="empty-emoji">{{ ui.icon('calendar-check') }}</div>
         <p>Занятий пока нет — расписание пустое.</p>
         <a class="btn btn-primary btn-sm cta-pulse" style="margin-top:12px;" href="/tutor/schedule">{{ ui.icon('calendar-plus', 15) }} Добавить первое занятие</a>
       </div>
@@ -98,7 +98,7 @@
   </div>
 
   <div class="card">
-    <div class="card-head"><h2>📥 На проверку</h2><a class="link-btn" href="/tutor/homework">Все задания →</a></div>
+    <div class="card-head"><h2 class="h2-ico">{{ ui.icon('inbox') }} На проверку</h2><a class="link-btn" href="/tutor/homework">Все задания →</a></div>
     {% for hw in pending_hw %}
     <form method="post" action="/tutor/homework/{{ hw.id }}/review" class="review-row">
       <div>
@@ -107,17 +107,17 @@
       </div>
       <div class="review-actions">
         <input class="input" name="comment" placeholder="Комментарий">
-        <button class="btn btn-primary btn-sm">✅ Проверено</button>
+        <button class="btn btn-primary btn-sm">{{ ui.icon('check', 15) }} Проверено</button>
       </div>
     </form>
     {% else %}
     <div class="empty">
-      <div class="empty-emoji">🎉</div>
+      <div class="empty-emoji">{{ ui.icon('sparkles') }}</div>
       <p>Нет заданий на проверку — всё разобрано!</p>
       {% if students and not plan_locked(user, 'homework') %}
       <button class="btn btn-secondary btn-sm" style="margin-top:12px;" id="hw-quick-toggle"
         onclick="var f=document.getElementById('hw-quick');f.style.display=f.style.display==='grid'?'none':'grid';if(f.style.display==='grid')f.querySelector('select').focus();">
-        {{ ui.icon('plus', 15) }} Выдать задание
+        {{ ui.icon('file-text', 15) }} Выдать задание
       </button>
       {% endif %}
     </div>
@@ -131,7 +131,7 @@
         <input class="input" name="title" required placeholder="Название задания" aria-label="Название">
       </div>
       <textarea class="input" name="description" rows="2" placeholder="Что сделать (необязательно)"></textarea>
-      <button class="btn btn-primary btn-sm" style="justify-self:start;">Выдать задание</button>
+      <button class="btn btn-primary btn-sm" style="justify-self:start;">{{ ui.icon('send', 15) }} Выдать задание</button>
     </form>
     {% endif %}
     {% endfor %}
@@ -142,7 +142,7 @@
 <section class="grid two" style="margin-top: 18px;">
   {% if not plan_locked(user, 'finance') %}
   <div class="card">
-    <div class="card-head"><h2>💰 Финансы</h2><a class="link-btn" href="/tutor/finance">Подробнее →</a></div>
+    <div class="card-head"><h2 class="h2-ico">{{ ui.icon('wallet') }} Финансы</h2><a class="link-btn" href="/tutor/finance">Подробнее →</a></div>
     <div class="fin-mini-num"><span data-count="{{ finance.month_earned }}" data-suffix=" ₽">{{ finance.month_earned }} ₽</span></div>
     <div class="fin-mini-label">заработано в этом месяце</div>
     {% if finance.total_unpaid %}
@@ -151,27 +151,27 @@
       <a href="/tutor/finance">Собрать оплату →</a>
     </div>
     {% else %}
-    <div class="fin-ok-box">✓ Все проведённые занятия оплачены</div>
+    <div class="fin-ok-box">{{ ui.icon('check', 15) }} Все проведённые занятия оплачены</div>
     {% endif %}
   </div>
   {% endif %}
 
   {% if not plan_locked(user, 'requests') %}
   <div class="card">
-    <div class="card-head"><h2>📥 Новые заявки {% if new_requests %}<span class="badge submitted">{{ new_requests | length }}</span>{% endif %}</h2><a class="link-btn" href="/tutor/requests">Все →</a></div>
+    <div class="card-head"><h2 class="h2-ico">{{ ui.icon('inbox') }} Новые заявки {% if new_requests %}<span class="badge submitted">{{ new_requests | length }}</span>{% endif %}</h2><a class="link-btn" href="/tutor/requests">Все →</a></div>
     {% for r in new_requests[:3] %}
     <div class="timeline-row">
       <div class="timeline-body">
         <div class="timeline-who">{{ r.name }}</div>
-        <div class="muted">📞 {{ r.contact }}{% if r.preferred_time %} · 🕒 {{ r.preferred_time }}{% endif %}</div>
+        <div class="muted">{{ ui.icon('phone', 13) }} {{ r.contact }}{% if r.preferred_time %} · {{ ui.icon('clock', 13) }} {{ r.preferred_time }}{% endif %}</div>
       </div>
       <span class="muted">{{ r.created_at | msk('%d.%m') }}</span>
     </div>
     {% else %}
     <div class="empty">
-      <div class="empty-emoji">📭</div>
+      <div class="empty-emoji">{{ ui.icon('inbox') }}</div>
       <p>Новых заявок нет. Включи публичную страницу — новые ученики будут записываться сами.</p>
-      <a class="btn btn-secondary btn-sm cta-pulse" style="margin-top:12px;" href="/tutor/requests">🌐 Настроить страницу заявок</a>
+      <a class="btn btn-secondary btn-sm cta-pulse" style="margin-top:12px;" href="/tutor/requests">{{ ui.icon('globe', 15) }} Настроить страницу заявок</a>
     </div>
     {% endfor %}
   </div>
