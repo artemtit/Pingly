@@ -10,7 +10,6 @@
 
   var doc = document.documentElement;
   doc.classList.add('js');
-  var body = document.body;
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   var pingly = window.pingly = { reduceMotion: reduceMotion };
@@ -228,6 +227,7 @@
 
   /* ---------------- Page transitions ---------------- */
   function initPageTransitions() {
+    var body = document.body;
     if (!body) return;
     requestAnimationFrame(function () { body.classList.add('page-ready'); });
     if (reduceMotion) return;
