@@ -391,7 +391,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     async def disable_html_cache(request: Request, call_next):
         response = await call_next(request)
         ctype = (response.headers.get("content-type") or "").lower()
-        if "text/html" in ctype:
+        if "text/html" in ctype or response.status_code in {301, 302, 303, 307, 308}:
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
