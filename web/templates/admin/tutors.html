@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% import "macros.html" as ui %}
 {% block content %}
 <div class="topbar">
   <div>
@@ -69,7 +70,7 @@
         </td>
       </tr>
     {% else %}
-      <tr><td colspan="8"><div class="empty"><div class="empty-emoji">🪹</div><p>Репетиторов пока нет.</p></div></td></tr>
+      <tr><td colspan="8"><div class="empty"><div class="empty-emoji">{{ ui.icon('inbox', 40) }}</div><p>Репетиторов пока нет.</p></div></td></tr>
     {% endfor %}
     </tbody>
   </table>

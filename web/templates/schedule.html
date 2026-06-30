@@ -24,7 +24,7 @@
   <div class="card">
     <h2>Новое занятие</h2>
     {% if not students %}
-    <div class="empty"><div class="empty-emoji">👥</div><p>Сначала <a href="/tutor/students" class="link-btn">добавь ученика</a> на странице «Ученики».</p></div>
+    <div class="empty"><div class="empty-emoji">{{ ui.icon('users', 40) }}</div><p>Сначала <a href="/tutor/students" class="link-btn">добавь ученика</a> на странице «Ученики».</p></div>
     {% else %}
     <form method="post" action="/tutor/schedule" class="form" id="schedule-form">
       <label class="field"><span>Ученик</span>
@@ -105,7 +105,7 @@
       {% if upcoming %}<p class="muted" style="margin:-2px 0 12px;font-size:12.5px;">Это отдельные занятия. Нажми на любое — откроется в календаре, где можно провести, отменить или перенести <b>именно его</b>, не трогая серию.</p>{% endif %}
       <div class="timeline">
         {% for lesson in upcoming[:8] %}{{ slesson(lesson) }}{% else %}
-        <div class="empty"><div class="empty-emoji">🗓️</div><p>Будущих занятий нет.</p></div>
+        <div class="empty"><div class="empty-emoji">{{ ui.icon('calendar', 40) }}</div><p>Будущих занятий нет.</p></div>
         {% endfor %}
       </div>
       {% if upcoming | length > 8 %}

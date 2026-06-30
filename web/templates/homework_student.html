@@ -1,9 +1,10 @@
 {% extends "layout.html" %}
+{% import "macros.html" as ui %}
 {% block content %}
 <div class="topbar">
   <div>
     <div class="eyebrow">Задания</div>
-    <h1>📝 Мои домашние задания</h1>
+    <h1>{{ ui.icon('file-text', 24) }} Мои домашние задания</h1>
   </div>
 </div>
 
@@ -15,25 +16,25 @@
       <span class="badge {{ hw.status }}">{{ hw.status }}</span>
     </div>
     {% if hw.description %}<p class="muted">{{ hw.description }}</p>{% endif %}
-    {% if hw.due_at %}<p class="muted">⏰ Дедлайн: {{ hw.due_at[:16].replace("T", " ") }}</p>{% endif %}
-    {% if hw.tutor_comment %}<div class="hw-comment">💬 {{ hw.tutor_comment }}</div>{% endif %}
+    {% if hw.due_at %}<p class="muted">{{ ui.icon('clock', 14) }} Дедлайн: {{ hw.due_at[:16].replace("T", " ") }}</p>{% endif %}
+    {% if hw.tutor_comment %}<div class="hw-comment">{{ ui.icon('message-circle', 14) }} {{ hw.tutor_comment }}</div>{% endif %}
 
     <div class="hw-actions">
       {% if hw.status == "new" %}
-      <form method="post" action="/student/homework/{{ hw.id }}/progress"><button class="btn btn-ghost btn-sm">🚧 Взять в работу</button></form>
-      <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">✅ Сдать задание</button></form>
+      <form method="post" action="/student/homework/{{ hw.id }}/progress"><button class="btn btn-ghost btn-sm">{{ ui.icon('refresh', 15) }} Взять в работу</button></form>
+      <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">{{ ui.icon('check', 15) }} Сдать задание</button></form>
       {% elif hw.status == "in_progress" %}
-      <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">✅ Сдать задание</button></form>
+      <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">{{ ui.icon('check', 15) }} Сдать задание</button></form>
       {% elif hw.status == "submitted" %}
       <span class="hw-wait">⏳ Ждём проверки репетитора</span>
       {% else %}
-      <span class="hw-done">🎉 Проверено!</span>
+      <span class="hw-done">{{ ui.icon('check', 15) }} Проверено!</span>
       {% endif %}
     </div>
   </div>
   {% else %}
   <div class="card empty-wide">
-    <div class="empty-emoji">🎒</div>
+    <div class="empty-emoji">{{ ui.icon('file-text', 40) }}</div>
     <h2>Заданий пока нет</h2>
     <p class="muted">Когда репетитор выдаст задание, оно появится здесь.</p>
   </div>

@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% import "macros.html" as ui %}
+{% import "macros.html" as ui %}
 {% block content %}
 
 {# ── Desktop topbar ─────────────────────────────────────────── #}
@@ -41,7 +42,7 @@
       </form>
     </div>
     <form method="post" action="/student/lessons/{{ next_lesson.id }}/reschedule-request" style="margin-top:8px">
-      <button class="btn btn-ghost nl-btn" style="width:100%">🟠 Прошу перенести</button>
+      <button class="btn btn-ghost nl-btn" style="width:100%">{{ ui.icon('calendar-clock', 15) }} Прошу перенести</button>
     </form>
     {% elif next_lesson.status == 'confirmed' %}
     <div class="nl-actions">
@@ -51,26 +52,26 @@
       </form>
     </div>
     <form method="post" action="/student/lessons/{{ next_lesson.id }}/reschedule-request" style="margin-top:8px">
-      <button class="btn btn-ghost nl-btn" style="width:100%">🟠 Прошу перенести</button>
+      <button class="btn btn-ghost nl-btn" style="width:100%">{{ ui.icon('calendar-clock', 15) }} Прошу перенести</button>
     </form>
     {% elif next_lesson.status == 'reschedule_requested' %}
-    <p class="muted" style="margin-top:10px;font-size:14px;">🟠 Запрос на перенос отправлен — репетитор предложит новое время.</p>
+    <p class="muted" style="margin-top:10px;font-size:14px;">{{ ui.icon('calendar-clock', 14) }} Запрос на перенос отправлен — репетитор предложит новое время.</p>
     {% endif %}
     {% else %}
-    <div class="card-head"><h2>📚 Ближайшее занятие</h2></div>
-    <div class="empty"><div class="empty-emoji">🌤️</div><p>Занятий пока нет — репетитор добавит их в боте.</p></div>
+    <div class="card-head"><h2>{{ ui.icon('calendar-check', 18) }} Ближайшее занятие</h2></div>
+    <div class="empty"><div class="empty-emoji">{{ ui.icon('sun', 40) }}</div><p>Занятий пока нет — репетитор добавит их в боте.</p></div>
     {% endif %}
   </div>
 
   <div class="card desktop-only">
-    <div class="card-head"><h2>📝 Активные задания</h2><a class="link-btn" href="/student/homework">Все →</a></div>
+    <div class="card-head"><h2>{{ ui.icon('file-text', 18) }} Активные задания</h2><a class="link-btn" href="/student/homework">Все →</a></div>
     {% for hw in active_hw %}
     <div class="hw-item compact">
       <div class="hw-head"><strong>{{ hw.title }}</strong>{{ ui.status_badge(hw.status) }}</div>
       <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">✅ Сдать</button></form>
     </div>
     {% else %}
-    <div class="empty"><div class="empty-emoji">📭</div><p>Заданий пока нет.</p></div>
+    <div class="empty"><div class="empty-emoji">{{ ui.icon('inbox', 40) }}</div><p>Заданий пока нет.</p></div>
     {% endfor %}
   </div>
 

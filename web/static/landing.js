@@ -178,7 +178,7 @@
       btnYes.disabled = btnNo.disabled = true;
 
       replyBubble.textContent = yes ? '✅ Буду' : '❌ Отменяю';
-      finalBubble.textContent = yes ? 'Отлично! Жду тебя в 15:00 👋' : 'Понял, передам репетитору 👌';
+      finalBubble.textContent = yes ? 'Отлично! Жду тебя в 15:00 👋' : 'Понял, передам репетитору 👋';
       noteText.textContent = yes
         ? 'Маша подтвердила занятие в 15:00 ✅'
         : 'Маша отменила занятие в 15:00 — слот свободен';

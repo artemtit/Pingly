@@ -21,7 +21,7 @@
 
 <div class="modal-backdrop" id="delete-modal" role="dialog" aria-modal="true">
   <div class="modal">
-    <div class="modal-emoji">🗑️</div>
+    <div class="modal-emoji">{{ ui.icon('trash', 40) }}</div>
     <h2>Удалить ученика?</h2>
     <p class="muted" style="margin-top:8px;">Ученик <strong>{{ student.name }}</strong> будет удалён из твоего кабинета. Все его занятия и задания останутся в истории, но он больше не будет привязан к тебе.</p>
     <div class="modal-actions">
@@ -103,7 +103,7 @@ function copyInvite(id, btn){
       <p class="big-date">{{ next_lesson.starts_at[:16].replace("T", " ") }}</p>
       {{ ui.status_badge(next_lesson.status) }}
       {% else %}
-      <div class="empty"><div class="empty-emoji">🗓️</div><p>Не запланировано. <a href="/tutor/schedule">Добавить →</a></p></div>
+      <div class="empty"><div class="empty-emoji">{{ ui.icon('calendar', 40) }}</div><p>Не запланировано. <a href="/tutor/schedule">Добавить →</a></p></div>
       {% endif %}
       {% if last_activity %}<p class="muted" style="margin-top:14px;">Последняя активность: {{ last_activity[:16].replace("T", " ") }}</p>{% endif %}
     </div>
@@ -133,7 +133,7 @@ function copyInvite(id, btn){
     </div>
 
     <div class="card" id="profile">
-      <div class="card-head"><h2>🎓 Профиль обучения</h2>
+      <div class="card-head"><h2>{{ ui.icon('graduation-cap') }} Профиль обучения</h2>
         {% if saved == 'profile' %}<span class="save-ok" data-autohide>✅ Сохранено</span>{% endif %}
       </div>
       <form method="post" action="/tutor/students/{{ student.id }}/profile" class="form locked" onsubmit="saving(this)">

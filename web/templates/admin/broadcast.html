@@ -1,4 +1,5 @@
 {% extends "layout.html" %}
+{% import "macros.html" as ui %}
 {% block content %}
 <div class="topbar">
   <div>
@@ -22,7 +23,7 @@
 {% endif %}
 
 <div class="card">
-  <div class="card-head"><h2>📢 Сообщение в Telegram</h2></div>
+  <div class="card-head"><h2>{{ ui.icon('megaphone', 18) }} Сообщение в Telegram</h2></div>
   <p class="muted" style="margin:0 0 12px;">Уйдёт в Telegram выбранной аудитории (тем, кто подключил бота). Пиши как обычное сообщение: анонсы, новости, важные изменения.</p>
   <form method="post" action="/admin/broadcast" id="bc-form">
     <div class="field">

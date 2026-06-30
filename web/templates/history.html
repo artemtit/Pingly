@@ -4,7 +4,7 @@
 <div class="topbar">
   <div>
     <div class="eyebrow">История</div>
-    <h1>📚 Прошедшие занятия</h1>
+    <h1>{{ ui.icon('book-open', 24) }} Прошедшие занятия</h1>
     <p class="muted">Все занятия, которые уже прошли.</p>
   </div>
 </div>
@@ -39,7 +39,7 @@
       </div>
     </div>
     {% else %}
-    <div class="empty"><div class="empty-emoji">🌱</div><p>Прошедших занятий пока нет.</p></div>
+    <div class="empty"><div class="empty-emoji">{{ ui.icon('sprout', 40) }}</div><p>Прошедших занятий пока нет.</p></div>
     {% endfor %}
   </div>
 </div>

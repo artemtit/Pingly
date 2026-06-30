@@ -42,12 +42,12 @@
       <div class="day-lesson-body">
         <strong>{{ lesson.student }}</strong>
         {{ ui.status_badge(lesson.status) }}
-        {% if lesson.comment %}<div class="lesson-topic">📝 {{ lesson.comment }}</div>{% endif %}
+        {% if lesson.comment %}<div class="lesson-topic">{{ ui.icon('file-pen', 14) }} {{ lesson.comment }}</div>{% endif %}
       </div>
       {% if is_tutor %}
       <div class="day-lesson-actions">
         <details class="resched lesson-topic-edit">
-          <summary class="btn btn-ghost btn-sm">📝 {{ 'Изменить тему' if lesson.comment else 'Тема урока' }}</summary>
+          <summary class="btn btn-ghost btn-sm">{{ ui.icon('file-pen', 15) }} {{ 'Изменить тему' if lesson.comment else 'Тема урока' }}</summary>
           <form method="post" action="/tutor/lessons/{{ lesson.id }}/comment" class="resched-form">
             <input type="hidden" name="date" value="{{ day.date }}">
             <textarea class="input" name="comment" rows="2" placeholder="Что будет на уроке (необязательно)">{{ lesson.comment }}</textarea>
@@ -56,10 +56,10 @@
         </details>
         {% if lesson.status in ("scheduled", "confirmed", "reschedule_requested") %}
         <form method="post" action="/tutor/lessons/{{ lesson.id }}/complete"><button class="btn btn-primary btn-sm">🔵 Провести</button></form>
-        <form method="post" action="/tutor/lessons/{{ lesson.id }}/cancel" onsubmit="return confirm('Отменить это занятие?')"><button class="btn btn-ghost btn-sm">🔴 Отменить</button></form>
+        <form method="post" action="/tutor/lessons/{{ lesson.id }}/cancel" onsubmit="return confirm('Отменить это занятие?')"><button class="btn btn-ghost btn-sm">{{ ui.icon('circle-x', 15) }} Отменить</button></form>
         {% if day.date >= cal.today %}
         <details class="resched">
-          <summary class="btn btn-ghost btn-sm">🟡 Перенести</summary>
+          <summary class="btn btn-ghost btn-sm">{{ ui.icon('calendar-clock', 15) }} Перенести</summary>
           <form method="post" action="/tutor/lessons/{{ lesson.id }}/reschedule" class="resched-form">
             <input class="input" type="datetime-local" name="new_at" required>
             <button class="btn btn-secondary btn-sm">Сохранить</button>
@@ -67,13 +67,13 @@
         </details>
         {% endif %}
         {% endif %}
-        <form method="post" action="/tutor/lessons/{{ lesson.id }}/delete" onsubmit="return confirm('Удалить занятие из базы?')"><button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red,#ef4444)">🗑️</button></form>
+        <form method="post" action="/tutor/lessons/{{ lesson.id }}/delete" onsubmit="return confirm('Удалить занятие из базы?')"><button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red,#ef4444)">{{ ui.icon('trash', 15) }}</button></form>
       </div>
       {% endif %}
     </div>
     {% else %}
     <div class="empty">
-      <div class="empty-emoji">☀️</div>
+      <div class="empty-emoji">{{ ui.icon('sun', 40) }}</div>
       <p>На этот день занятий нет.</p>
       {% if is_tutor %}
       <button type="button" class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="openQuickAdd('{{ day.date }}')">{{ ui.icon('plus', 15) }} Добавить занятие</button>
@@ -132,7 +132,7 @@
     {% endfor %}
     {% if not ns.any %}
     <div class="empty">
-      <div class="empty-emoji">🗓️</div>
+      <div class="empty-emoji">{{ ui.icon('calendar', 40) }}</div>
       <p>В этом периоде занятий нет.</p>
       {% if is_tutor %}
       <button type="button" class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="openQuickAdd('{{ cal.today }}')">{{ ui.icon('plus', 15) }} Добавить занятие</button>
@@ -146,7 +146,7 @@
 {% if is_tutor %}
 <div class="modal-backdrop" id="quick-add-modal" role="dialog" aria-modal="true" aria-label="Новое занятие">
   <div class="modal">
-    <div class="modal-emoji">📅</div>
+    <div class="modal-emoji">{{ ui.icon('calendar-plus', 40) }}</div>
     <h2 id="qa-title">Новое занятие</h2>
     {% if students %}
     <form method="post" action="/tutor/schedule" class="form" style="margin-top:16px;text-align:left;">

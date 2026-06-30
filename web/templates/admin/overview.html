@@ -4,7 +4,7 @@
 <div class="topbar">
   <div>
     <div class="eyebrow">Админка</div>
-    <h1>Обзор</h1>
+    <h1>{{ ui.icon('bar-chart', 24) }} Обзор</h1>
   </div>
 </div>
 
@@ -26,14 +26,14 @@
 </section>
 
 <section class="card" style="margin-top:18px;">
-  <div class="card-head"><h2>💰 Выручка</h2></div>
+  <div class="card-head"><h2>{{ ui.icon('wallet', 18) }} Выручка</h2></div>
   <p class="big-date">{{ "{:,}".format(stats.revenue_total).replace(",", " ") }} ₽</p>
   <p class="muted" style="margin-top:6px;">Подтверждённых платежей: {{ stats.payments_count }}.</p>
 </section>
 
 <section class="grid two" style="margin-top:18px;align-items:start;">
   <div class="card">
-    <div class="card-head"><h2 style="margin:0;">🆕 Последние регистрации</h2></div>
+    <div class="card-head"><h2 style="margin:0;">{{ ui.icon('trending-up', 18) }} Последние регистрации</h2></div>
     {% if stats.recent_tutors %}
     <div class="req-list">
       {% for t in stats.recent_tutors %}
@@ -50,7 +50,7 @@
   </div>
 
   <div class="card">
-    <div class="card-head"><h2 style="margin:0;">💳 Последние платежи</h2></div>
+    <div class="card-head"><h2 style="margin:0;">{{ ui.icon('credit-card', 18) }} Последние платежи</h2></div>
     {% if stats.recent_payments %}
     <div class="req-list">
       {% for p in stats.recent_payments %}

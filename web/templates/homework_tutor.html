@@ -4,7 +4,7 @@
 <div class="topbar">
   <div>
     <div class="eyebrow">Задания</div>
-    <h1>📝 Домашние задания</h1>
+    <h1>{{ ui.icon('file-text', 24) }} Домашние задания</h1>
     <p class="muted">Выдавай задания и проверяй сданные работы.</p>
   </div>
 </div>
@@ -13,7 +13,7 @@
   <div class="card">
     <h2>Выдать задание</h2>
     {% if not students %}
-    <div class="empty"><div class="empty-emoji">👥</div><p>Сначала добавь ученика в боте.</p></div>
+    <div class="empty"><div class="empty-emoji">{{ ui.icon('users', 40) }}</div><p>Сначала добавь ученика в боте.</p></div>
     {% else %}
     {% if hw_templates %}
     <div class="tpl-chips">
@@ -63,14 +63,14 @@
         {% if hw.status == "submitted" %}
         <form method="post" action="/tutor/homework/{{ hw.id }}/review" class="review-row">
           <input class="input" name="comment" placeholder="Комментарий к проверке">
-          <button class="btn btn-primary btn-sm">✅ Проверено</button>
+          <button class="btn btn-primary btn-sm">{{ ui.icon('check', 15) }} Проверено</button>
         </form>
         {% elif hw.tutor_comment %}
-        <div class="hw-comment">💬 {{ hw.tutor_comment }}</div>
+        <div class="hw-comment">{{ ui.icon('message-circle', 14) }} {{ hw.tutor_comment }}</div>
         {% endif %}
       </div>
       {% else %}
-      <div class="empty"><div class="empty-emoji">📭</div><p>Заданий пока нет.</p></div>
+      <div class="empty"><div class="empty-emoji">{{ ui.icon('inbox', 40) }}</div><p>Заданий пока нет.</p></div>
       {% endfor %}
     </div>
   </div>

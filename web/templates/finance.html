@@ -4,7 +4,7 @@
 <div class="topbar">
   <div>
     <div class="eyebrow">Финансы</div>
-    <h1>💰 Оплаты</h1>
+    <h1>{{ ui.icon('wallet', 24) }} Оплаты</h1>
     <p class="muted">Считается по проведённым занятиям. Отмечай оплату — Pingly покажет, кто сколько должен.</p>
   </div>
 </div>
@@ -59,7 +59,7 @@
       {% endfor %}
     </div>
     {% else %}
-    <div class="empty"><div class="empty-emoji">📊</div><p>Пока нет проведённых занятий. Отмечай «Провести» в календаре — суммы появятся здесь.</p></div>
+    <div class="empty"><div class="empty-emoji">{{ ui.icon('bar-chart', 40) }}</div><p>Пока нет проведённых занятий. Отмечай «Провести» в календаре — суммы появятся здесь.</p></div>
     {% endif %}
     <p class="muted" style="margin-top:14px;font-size:13px;">Цену за занятие задаёшь в карточке ученика. Новые занятия берут её автоматически.</p>
   </div>
@@ -87,20 +87,20 @@
         <button type="button" class="fin-remind" title="Скопировать текст напоминания об оплате">Напомнить</button>
         <form method="post" action="/tutor/lessons/{{ l.id }}/paid">
           <input type="hidden" name="paid" value="1">
-          <button class="btn btn-primary btn-sm">✅ Оплачено</button>
+          <button class="btn btn-primary btn-sm">{{ ui.icon('check', 15) }} Оплачено</button>
         </form>
       </div>
       {% endfor %}
     </div>
     {% else %}
-    <div class="empty"><div class="empty-emoji">🎉</div><p>Все проведённые занятия оплачены.</p></div>
+    <div class="empty"><div class="empty-emoji">{{ ui.icon('sparkles', 40) }}</div><p>Все проведённые занятия оплачены.</p></div>
     {% endif %}
   </div>
 </section>
 
 <div class="massbar" id="massbar" aria-live="polite">
   <span id="massbar-text">Выбрано 0</span>
-  <button type="button" class="btn btn-primary btn-sm" id="massbar-pay">✅ Отметить оплачено</button>
+  <button type="button" class="btn btn-primary btn-sm" id="massbar-pay">{{ ui.icon('check', 15) }} Отметить оплачено</button>
   <button type="button" class="massbar-cancel" id="massbar-cancel">Отменить</button>
 </div>
 
