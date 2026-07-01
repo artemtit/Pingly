@@ -63,6 +63,12 @@ EMAIL_VERIFICATION_ENABLED: bool = os.getenv("EMAIL_VERIFICATION_ENABLED", "0") 
 RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
 RESEND_FROM: str = os.getenv("RESEND_FROM", "Pingly <onboarding@resend.dev>")
 
+# Product analytics (PostHog). OFF until POSTHOG_KEY is set — no tracking snippet
+# is emitted while empty, so no visitor data leaves the site. Privacy-safe config:
+# pageviews + explicit funnel events only, no autocapture, no session recording.
+POSTHOG_KEY: str = os.getenv("POSTHOG_KEY", "")
+POSTHOG_HOST: str = os.getenv("POSTHOG_HOST", "https://us.i.posthog.com")
+
 # Cloudflare Turnstile CAPTCHA on registration. Off until site/secret keys are set.
 CAPTCHA_ENABLED: bool = os.getenv("CAPTCHA_ENABLED", "0") == "1"
 TURNSTILE_SITE_KEY: str = os.getenv("TURNSTILE_SITE_KEY", "")

@@ -105,7 +105,7 @@
       <form method="post" action="/tutor/billing/subscribe">
         <input type="hidden" name="plan" value="max">
         <input type="hidden" name="period" value="month">
-        <button class="btn btn-secondary sub-opt">
+        <button class="btn btn-secondary sub-opt" onclick="window.plTrack&&plTrack('subscribe_click',{period:'month'})">
           <span class="sub-opt-top">{{ verb }} на месяц</span>
           <span class="sub-opt-price">{{ price or 990 }} ₽<small>/мес</small></span>
         </button>
@@ -113,7 +113,7 @@
       <form method="post" action="/tutor/billing/subscribe">
         <input type="hidden" name="plan" value="max">
         <input type="hidden" name="period" value="year">
-        <button class="btn btn-primary sub-opt">
+        <button class="btn btn-primary sub-opt" onclick="window.plTrack&&plTrack('subscribe_click',{period:'year'})">
           {% if year_save > 0 %}<span class="sub-opt-tag">выгода {{ year_save }} ₽</span>{% endif %}
           <span class="sub-opt-top">{{ verb }} на год</span>
           <span class="sub-opt-price">{{ price_year or 9900 }} ₽<small>/год</small></span>
