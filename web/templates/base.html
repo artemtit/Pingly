@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FBFBFD" id="theme-color-meta">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Pingly</title>
   <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
   <link rel="apple-touch-icon" href="/static/logo-mark.svg">
@@ -26,6 +29,8 @@
   function setTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
     localStorage.setItem('theme', t);
+    var _tc = document.getElementById('theme-color-meta');
+    if (_tc) _tc.setAttribute('content', t === 'dark' ? '#0F172A' : '#FBFBFD');
     document.querySelectorAll('.brand-logo').forEach(function(img){
       img.src = t === 'dark' ? img.dataset.darkSrc : img.dataset.lightSrc;
     });
