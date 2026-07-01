@@ -567,6 +567,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             "slug": profile.get("slug"), "sent": sent, "bot_username": _config.BOT_USERNAME,
             "badges": services.public.parse_badges(profile.get("badges")),
             "page_theme": profile.get("page_theme") or "auto",
+            "web_base": _config.WEB_BASE_URL,
         })
 
     @app.post("/u/{slug}/book")
@@ -919,6 +920,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             "request": request, "profile": sample_profile, "tutor_name": "Анна Соколова",
             "slug": "example", "sent": None, "bot_username": _config.BOT_USERNAME,
             "badges": sample_badges, "page_theme": "auto", "example": True,
+            "web_base": _config.WEB_BASE_URL,
         })
 
     @app.post("/tutor/requests/{request_id}/done")

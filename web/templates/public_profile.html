@@ -12,6 +12,22 @@
   })();
 </script>
 <title>{{ tutor_name }} — запись на занятие · Pingly</title>
+{% set _subj = profile.subjects if profile and profile.subjects else '' %}
+{% set og_desc = (_subj ~ ' · ' if _subj else '') ~ 'Запишись на занятие — напоминания придут в Telegram.' %}
+{% set og_url = (web_base or '') ~ '/u/' ~ (slug or '') %}
+<meta name="description" content="{{ og_desc }}">
+<meta property="og:type" content="profile">
+<meta property="og:site_name" content="Pingly">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:title" content="{{ tutor_name }} — запись на занятие">
+<meta property="og:description" content="{{ og_desc }}">
+<meta property="og:url" content="{{ og_url }}">
+<meta property="og:image" content="{{ web_base or '' }}/static/logo-email.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{ tutor_name }} — запись на занятие">
+<meta name="twitter:description" content="{{ og_desc }}">
+<meta name="twitter:image" content="{{ web_base or '' }}/static/logo-email.png">
+<link rel="canonical" href="{{ og_url }}">
 <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
 <style>
   :root {
