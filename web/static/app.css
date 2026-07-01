@@ -1541,3 +1541,53 @@ mark { background: var(--orange-100); color: inherit; border-radius: 3px; paddin
   .btn:active { transform: none; }
   a.card:hover, .card.liftable:hover { transform: none; }
 }
+
+/* ============================================================
+   Design polish pass (system-wide, additive — safe to revert as a block)
+   ============================================================ */
+
+/* 1 — Branded text selection */
+::selection { background: rgba(249,115,22,.22); }
+::-moz-selection { background: rgba(249,115,22,.22); }
+[data-theme="dark"] ::selection { background: rgba(249,115,22,.34); }
+
+/* 2 — Slim, theme-aware scrollbars */
+* { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,.5) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(148,163,184,.45); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,.7); background-clip: padding-box; }
+[data-theme="dark"] * { scrollbar-color: rgba(100,116,139,.55) transparent; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(100,116,139,.5); background-clip: padding-box; }
+
+/* 3 — Smooth in-page scroll + anchor offset under sticky headers */
+html { scroll-behavior: smooth; }
+:target { scroll-margin-top: 80px; }
+
+/* 4 — Global keyboard focus ring. :where() has 0 specificity, so any
+   component-specific :focus-visible still wins; this only fills gaps. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--orange-500, #F97316);
+  outline-offset: 2px;
+}
+:where(button, summary, a):focus:not(:focus-visible) { outline: none; }
+
+/* 5 — Brand caret + consistent placeholder tone */
+input, textarea, select { caret-color: var(--orange-500, #F97316); }
+::placeholder { color: var(--fg3, #94A3B8); opacity: 1; }
+
+/* 6 — No grey tap-flash on mobile (we have our own :active states) */
+a, button, summary, label, .btn, .icon-btn, .pill-btn { -webkit-tap-highlight-color: transparent; }
+
+/* 7 — Empty-state copy: centred, readable measure */
+.empty p { max-width: 44ch; margin-left: auto; margin-right: auto; }
+
+/* 8 — Disabled buttons read as disabled everywhere */
+.btn:disabled, .btn[disabled] { opacity: .6; cursor: not-allowed; box-shadow: none; }
+
+/* 9 — Images/SVGs never intercept text selection or drag */
+svg { -webkit-user-select: none; user-select: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

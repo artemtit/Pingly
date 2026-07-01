@@ -640,3 +640,21 @@ img { display: block; }
   .js [data-reveal] { opacity: 1; }
   .js .steps-line-fill { transform: scaleX(1); }
 }
+
+/* ============================================================
+   Design polish pass (auth / landing / public) — additive
+   ============================================================ */
+::selection { background: rgba(249,115,22,.22); }
+::-moz-selection { background: rgba(249,115,22,.22); }
+:root[data-dark] ::selection, [data-theme="dark"] ::selection { background: rgba(249,115,22,.34); }
+* { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,.5) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(148,163,184,.45); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,.7); background-clip: padding-box; }
+html { scroll-behavior: smooth; }
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid #F97316; outline-offset: 2px; }
+:where(button, summary, a):focus:not(:focus-visible) { outline: none; }
+input, textarea, select { caret-color: #F97316; }
+a, button, summary, label { -webkit-tap-highlight-color: transparent; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
