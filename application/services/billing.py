@@ -92,7 +92,10 @@ class BillingService:
         so Platega doesn't retry a request we've already understood)."""
         if not platega.verify_webhook_headers(merchant_id, secret):
             return False
-        transaction_id = str(body.get("id") or "")
+        # Platega's create-response returns the id as "transactionId"; the callback
+        # may echo it as "id" or "transactionId". Accept either so a real payment
+        # always matches our ledger row (else it'd succeed but never activate).
+        transaction_id = str(body.get("id") or body.get("transactionId") or "")
         status = str(body.get("status") or "")
         if not transaction_id:
             return False
