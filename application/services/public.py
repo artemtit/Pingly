@@ -28,6 +28,10 @@ class PublicService:
             return None
         return profile
 
+    async def list_public_slugs(self) -> list[str]:
+        """Enabled public-profile slugs — for the sitemap."""
+        return await self.repo.list_public_slugs()
+
     @staticmethod
     def parse_badges(raw: str | None) -> list[dict]:
         """Badges stored one per line as "icon|text". Returns [{icon, text}], max 4,

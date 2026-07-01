@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlparse
@@ -229,6 +230,13 @@ async def _forbidden(request: Request, exc: Exception) -> Response:
     return RedirectResponse("/", status_code=303)
 
 
+async def _server_error(request: Request, exc: Exception) -> Response:
+    """Any unhandled error → log it (with traceback) and show a branded page
+    instead of a raw stack trace / blank 500."""
+    logging.getLogger("pingly.web").exception("Unhandled error on %s", request.url.path)
+    return templates.TemplateResponse("500.html", {"request": request}, status_code=500)
+
+
 class CachedStaticFiles(StaticFiles):
     """Static files with a long Cache-Control so Cloudflare/browsers serve them
     from cache instead of hitting the origin on every page load. CSS/JS are
@@ -261,6 +269,8 @@ def create_app() -> FastAPI:
     app.add_exception_handler(404, _not_found)
     app.add_exception_handler(401, _unauthorized)
     app.add_exception_handler(403, _forbidden)
+    app.add_exception_handler(500, _server_error)
+    app.add_exception_handler(Exception, _server_error)
     return app
 
 
@@ -428,6 +438,12 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     async def sitemap() -> Response:
         base = WEB_BASE_URL.rstrip("/")
         paths = ["/", "/register", "/login", "/privacy", "/terms", "/contacts"]
+        # Public tutor pages are real, indexable content — include each enabled one.
+        try:
+            for slug in await services.public.list_public_slugs():
+                paths.append(f"/u/{slug}")
+        except Exception:
+            logging.getLogger("pingly.web").warning("sitemap: could not list public slugs", exc_info=True)
         urls = "".join(f"<url><loc>{base}{p}</loc></url>" for p in paths)
         xml = ('<?xml version="1.0" encoding="UTF-8"?>'
                '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'

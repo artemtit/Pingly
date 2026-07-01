@@ -680,6 +680,17 @@ class SupabasePinglyRepository:
         )
         return _one(result)
 
+    async def list_public_slugs(self) -> list[str]:
+        """Slugs of all enabled public profiles — for the sitemap."""
+        result = await (
+            self._db().table("tutor_profiles")
+            .select("slug")
+            .eq("public_enabled", True)
+            .not_.is_("slug", "null")
+            .execute()
+        )
+        return [r["slug"] for r in (result.data or []) if r.get("slug")]
+
     async def update_tutor_profile(self, tutor_user_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
         clean = {k: v for k, v in patch.items() if v is not None}
         if not clean:
