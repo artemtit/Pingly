@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN: str = os.environ["BOT_TOKEN"]
+# Numeric bot id (the part before ':') — public, used by the Telegram Login Widget's
+# programmatic Telegram.Login.auth() so we can render our own branded login button.
+BOT_ID: str = BOT_TOKEN.split(":")[0]
 SUPABASE_URL: str = os.environ["SUPABASE_URL"]
 SUPABASE_KEY: str = os.environ["SUPABASE_KEY"]
 WEB_BASE_URL: str = os.getenv("WEB_BASE_URL", "http://localhost:8000")

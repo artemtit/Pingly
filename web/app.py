@@ -118,6 +118,7 @@ templates.env.filters["ru_days"] = _ru_days
 templates.env.globals["subscription_info"] = _subscription_info
 templates.env.globals["support_email"] = _config.SUPPORT_EMAIL
 templates.env.globals["support_username"] = _config.SUPPORT_USERNAME
+templates.env.globals["tg_bot_id"] = _config.BOT_ID
 templates.env.globals["payments_enabled"] = _config.PAYMENTS_ENABLED
 templates.env.globals["captcha_enabled"] = _config.CAPTCHA_ENABLED
 templates.env.globals["turnstile_site_key"] = _config.TURNSTILE_SITE_KEY
