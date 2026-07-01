@@ -217,7 +217,7 @@
   document.querySelectorAll('.fin-remind').forEach(function(btn){
     btn.addEventListener('click', function(){
       var row = btn.closest('.unpaid-row');
-      var msg = 'Привет! Напоминаю про оплату занятия ' + row.dataset.date + ' — ' + pingly.fmt(row.dataset.price) + ' ₽ 🙂';
+      var msg = 'Привет! Напоминаю про оплату занятия ' + row.dataset.date + ' — ' + pingly.fmt(row.dataset.price) + ' ₽';
       pingly.copy(msg, 'Текст напоминания скопирован — отправь ученику в Telegram', 'action');
     });
   });

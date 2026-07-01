@@ -1,6 +1,7 @@
+{% import "macros.html" as ui %}
 <div class="modal-backdrop" id="add-student-modal" role="dialog" aria-modal="true">
   <div class="modal">
-    <div class="modal-emoji">👤</div>
+    <div class="modal-emoji">{{ ui.icon('users') }}</div>
     <h2>Новый ученик</h2>
     <p class="muted" style="margin-top:6px;">Добавь ученика прямо здесь. Telegram можно указать позже — после создания дадим ссылку-приглашение для напоминаний.</p>
     <form method="post" action="/tutor/students/create" class="form" style="margin-top:16px;text-align:left;">

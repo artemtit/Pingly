@@ -31,7 +31,7 @@
       <label class="field"><span>О себе</span>
         <textarea name="bio" id="pp-bio" maxlength="600" placeholder="Короткий рассказ: опыт, формат, результаты">{{ profile.bio if profile and profile.bio else '' }}</textarea>
         <span class="char-count" id="pp-bio-count"></span></label>
-      <div class="field"><span>Плашки под именем <span class="muted" style="font-weight:400;">— иконка + текст, до 4. Например: «🕐 Время — Отвечаю в течение дня»</span></span>
+      <div class="field"><span>Плашки под именем <span class="muted" style="font-weight:400;">— иконка + текст, до 4. Например: «{{ ui.icon('clock', 13) }} Время — Отвечаю в течение дня»</span></span>
         <div id="badge-rows">
           {% for b in badge_list %}
           <div class="badge-row">

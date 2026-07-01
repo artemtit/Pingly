@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{%- macro icon(name) -%}
+{%- macro icon(name, size=19) -%}
 {%- set paths = {
   'zap': '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
   'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/>',
@@ -13,9 +13,13 @@
   'russian-ruble': '<path d="M6 11h8a4 4 0 0 0 0-8H9v18"/><path d="M6 15h8"/>',
   'inbox': '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
   'menu': '<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>',
-  'log-out': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>'
+  'log-out': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+  'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  'gift': '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/>',
+  'moon': '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  'sun': '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>'
 } -%}
-<svg class="ic" aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{{ paths.get(name, '') | safe }}</svg>
+<svg class="ic" aria-hidden="true" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{{ paths.get(name, '') | safe }}</svg>
 {%- endmacro -%}
 
 {% block body %}
@@ -24,7 +28,7 @@
     <img class="brand-logo" src="/static/logo.svg" data-light-src="/static/logo.svg" data-dark-src="/static/logo-dark.svg" height="26" alt="Pingly">
   </a>
   <div style="display:flex;align-items:center;gap:10px;">
-    <button class="theme-toggle" onclick="toggleTheme()" title="Тёмная тема" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;line-height:1;">🌙</button>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Тёмная тема" style="background:none;border:none;cursor:pointer;padding:4px;line-height:0;color:var(--fg2);">{{ icon('moon', 20) }}</button>
     <span class="avatar-circle">{{ user.full_name[0] | upper }}</span>
   </div>
 </header>
@@ -46,9 +50,9 @@
       <a href="/tutor/students" title="Ученики" class="{{ 'active' if active == 'students' }}">{{ icon('users') }} <span class="nav-label">Ученики</span></a>
       <a href="/tutor/calendar" title="Календарь" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }} <span class="nav-label">Календарь</span></a>
       <a href="/tutor/schedule" title="Расписание" class="{{ 'active' if active == 'schedule' }}">{{ icon('calendar-clock') }} <span class="nav-label">Расписание</span></a>
-      <a href="/tutor/homework" title="Задания" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }} <span class="nav-label">Задания{% if plan_locked(user, 'homework') %} <span class="lock-badge">🔒</span>{% endif %}</span></a>
-      <a href="/tutor/finance" title="Финансы" class="{{ 'active' if active == 'finance' }}">{{ icon('russian-ruble') }} <span class="nav-label">Финансы{% if plan_locked(user, 'finance') %} <span class="lock-badge">🔒</span>{% endif %}</span></a>
-      <a href="/tutor/requests" title="Заявки" class="{{ 'active' if active == 'requests' }}">{{ icon('inbox') }} <span class="nav-label">Заявки{% if plan_locked(user, 'requests') %} <span class="lock-badge">🔒</span>{% endif %}</span></a>
+      <a href="/tutor/homework" title="Задания" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }} <span class="nav-label">Задания{% if plan_locked(user, 'homework') %} <span class="lock-badge">{{ icon('lock', 13) }}</span>{% endif %}</span></a>
+      <a href="/tutor/finance" title="Финансы" class="{{ 'active' if active == 'finance' }}">{{ icon('russian-ruble') }} <span class="nav-label">Финансы{% if plan_locked(user, 'finance') %} <span class="lock-badge">{{ icon('lock', 13) }}</span>{% endif %}</span></a>
+      <a href="/tutor/requests" title="Заявки" class="{{ 'active' if active == 'requests' }}">{{ icon('inbox') }} <span class="nav-label">Заявки{% if plan_locked(user, 'requests') %} <span class="lock-badge">{{ icon('lock', 13) }}</span>{% endif %}</span></a>
       <a href="/tutor/settings" title="Настройки" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} <span class="nav-label">Настройки</span></a>
       {% if user.is_admin %}<a href="/admin" title="Админка" class="{{ 'active' if active == 'admin' }}">{{ icon('zap') }} <span class="nav-label">Админка</span></a>{% endif %}
       {% else %}
@@ -68,7 +72,7 @@
     {% set sub = subscription_info(user) %}
     {% if sub.status == 'trial' and sub.days_left is not none %}
     <a class="trial-side {{ 'trial-side-warn' if sub.days_left <= 3 }}" href="/tutor/settings" title="Подробнее о подписке">
-      <span class="trial-side-ic">🎁</span>
+      <span class="trial-side-ic">{{ icon('gift', 18) }}</span>
       <span class="trial-side-text">
         {% if sub.days_left > 0 %}Пробный: <b>{{ sub.days_left }}</b> {{ sub.days_left | ru_days }}<br><span class="trial-side-sub">дальше 990 ₽/мес →</span>
         {% else %}Пробный истёк<br><span class="trial-side-sub">оформить подписку →</span>{% endif %}
@@ -90,7 +94,7 @@
         <span>·</span>
         <a href="/logout">Выйти</a>
         <span>·</span>
-        <button class="link-btn theme-toggle" onclick="toggleTheme()" title="Тёмная тема">🌙</button>
+        <button class="link-btn theme-toggle" onclick="toggleTheme()" title="Тёмная тема" style="line-height:0;">{{ icon('moon', 16) }}</button>
       </div>
       <div class="userbox-legal">
         <a href="/privacy">Конфиденциальность</a>
@@ -106,8 +110,8 @@
     {% if sub.status == 'trial' and sub.days_left is not none %}
     {# На телефоне сайдбар скрыт, поэтому плашка показывается тут (только мобайл) #}
     <div class="trial-banner trial-banner-mobile {{ 'trial-ending' if sub.days_left <= 3 }}">
-      {% if sub.days_left > 0 %}🎁 Пробный период: осталось <strong>{{ sub.days_left }}</strong> {{ sub.days_left | ru_days }}. Дальше — 990 ₽/мес.
-      {% else %}⏳ Пробный период закончился. Всё ещё работает — оформи подписку.{% endif %}
+      {% if sub.days_left > 0 %}{{ icon('gift', 15) }} Пробный период: осталось <strong>{{ sub.days_left }}</strong> {{ sub.days_left | ru_days }}. Дальше — 990 ₽/мес.
+      {% else %}{{ icon('calendar-clock', 15) }} Пробный период закончился. Всё ещё работает — оформи подписку.{% endif %}
       <a href="/tutor/settings">Подробнее →</a>
     </div>
     {% endif %}
@@ -123,7 +127,7 @@
     <a href="/tutor" class="{{ 'active' if active == 'overview' }}">{{ icon('zap') }}<span>Обзор</span></a>
     <a href="/tutor/students" class="{{ 'active' if active == 'students' }}">{{ icon('users') }}<span>Ученики</span></a>
     <a href="/tutor/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }}<span>Занятия</span></a>
-    <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }}<span>Задания{% if plan_locked(user, 'homework') %} 🔒{% endif %}</span></a>
+    <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }}<span>Задания{% if plan_locked(user, 'homework') %} {{ icon('lock', 12) }}{% endif %}</span></a>
     <button type="button" class="more-toggle {{ 'active' if active in more_sections }}" onclick="toggleMore()" aria-label="Ещё разделы">{{ icon('menu') }}<span>Ещё</span></button>
     {% else %}
     <a href="/student" class="{{ 'active' if active == 'overview' }}">{{ icon('graduation-cap') }}<span>Главная</span></a>
@@ -139,8 +143,8 @@
   <div class="more-sheet-grip"></div>
   {% if user.role == "tutor" %}
   <a href="/tutor/schedule" class="{{ 'active' if active == 'schedule' }}">{{ icon('calendar-clock') }} Расписание</a>
-  <a href="/tutor/finance" class="{{ 'active' if active == 'finance' }}">{{ icon('russian-ruble') }} Финансы{% if plan_locked(user, 'finance') %} <span class="lock-badge">🔒</span>{% endif %}</a>
-  <a href="/tutor/requests" class="{{ 'active' if active == 'requests' }}">{{ icon('inbox') }} Заявки{% if plan_locked(user, 'requests') %} <span class="lock-badge">🔒</span>{% endif %}</a>
+  <a href="/tutor/finance" class="{{ 'active' if active == 'finance' }}">{{ icon('russian-ruble') }} Финансы{% if plan_locked(user, 'finance') %} <span class="lock-badge">{{ icon('lock', 13) }}</span>{% endif %}</a>
+  <a href="/tutor/requests" class="{{ 'active' if active == 'requests' }}">{{ icon('inbox') }} Заявки{% if plan_locked(user, 'requests') %} <span class="lock-badge">{{ icon('lock', 13) }}</span>{% endif %}</a>
   <a href="/tutor/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} Настройки</a>
   {% else %}
   <a href="/student/history" class="{{ 'active' if active == 'history' }}">{{ icon('calendar-clock') }} История</a>

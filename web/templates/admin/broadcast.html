@@ -16,7 +16,7 @@
 
 {% if result and result != 'empty' %}
 <div class="card" style="border-color: var(--color-success); background: var(--color-success-light); margin-bottom: 16px;">
-  <strong style="color: var(--success-text);">✅ Отправлено: {{ result.split('-')[0] }}, не доставлено: {{ result.split('-')[1] }}</strong>
+  <strong style="color: var(--success-text);">{{ ui.icon('check', 15) }} Отправлено: {{ result.split('-')[0] }}, не доставлено: {{ result.split('-')[1] }}</strong>
 </div>
 {% elif result == 'empty' %}
 <div class="card invite-banner" style="margin-bottom: 16px;"><strong>Пустое сообщение не отправлено.</strong></div>

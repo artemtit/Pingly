@@ -242,7 +242,7 @@ function saving(form){
   var b = form.querySelector('button[type="submit"], button:not([type])');
   if (b){ b.dataset.label = b.textContent; b.textContent = 'Сохраняю…'; b.disabled = true; }
 }
-// Fade the "✅ Сохранено" chip out after a few seconds.
+// Fade the "Сохранено" chip out after a few seconds.
 document.querySelectorAll('.save-ok[data-autohide]').forEach(function(el){
   setTimeout(function(){ el.style.opacity = '0'; }, 2600);
 });

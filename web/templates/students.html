@@ -86,7 +86,7 @@
 
 <div class="card st-empty-search" id="st-empty">
   <div class="empty">
-    <div class="empty-emoji">🔍</div>
+    <div class="empty-emoji">{{ ui.icon('search') }}</div>
     <p>Никого не нашли по запросу «<span id="st-empty-q"></span>»</p>
     <button class="btn btn-primary btn-sm" style="margin-top:12px;" id="st-empty-add">{{ ui.icon('plus', 15) }} Добавить ученика «<span id="st-empty-q2"></span>»</button>
   </div>
@@ -94,7 +94,7 @@
 
 <div class="modal-backdrop" id="edit-student-modal" role="dialog" aria-modal="true">
   <div class="modal">
-    <div class="modal-emoji">✏️</div>
+    <div class="modal-emoji">{{ ui.icon('pencil') }}</div>
     <h2>Изменить ученика</h2>
     <form method="post" id="edit-student-form" class="form" style="margin-top:16px;text-align:left;">
       <label class="field"><span>Имя ученика</span>
@@ -112,7 +112,7 @@
 
 <div class="modal-backdrop" id="delete-student-modal" role="dialog" aria-modal="true">
   <div class="modal">
-    <div class="modal-emoji">🗑️</div>
+    <div class="modal-emoji">{{ ui.icon('trash') }}</div>
     <h2>Удалить ученика?</h2>
     <p class="muted" style="margin-top:8px;"><strong id="delete-name"></strong> будет удалён из твоего кабинета. История занятий и заданий сохранится.</p>
     <div class="modal-actions">
@@ -247,7 +247,7 @@ window.addEventListener('resize', closeKebabs);
 </script>
 {% else %}
 <div class="card empty-wide onboarding-card">
-  <div class="empty-emoji">👥</div>
+  <div class="empty-emoji">{{ ui.icon('users') }}</div>
   <h2>Учеников пока нет</h2>
   <p class="muted" style="margin-top:6px;">Три шага — и напоминания заработают:</p>
   <div class="onb-progress" aria-hidden="true"><i style="width:6%"></i></div>

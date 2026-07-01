@@ -16,7 +16,7 @@
 
 {% if saved %}
 <div class="card" style="border-color: var(--color-success); background: var(--color-success-light); margin-bottom: 16px;">
-  <strong style="color: var(--success-text);">✅ Изменения применены</strong>
+  <strong style="color: var(--success-text);">{{ ui.icon('check', 15) }} Изменения применены</strong>
 </div>
 {% endif %}
 
@@ -52,7 +52,7 @@
         <td>{% if t.revenue %}<strong>{{ "{:,}".format(t.revenue).replace(",", " ") }} ₽</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
         <td>
           <details class="resched">
-            <summary class="btn btn-ghost btn-sm">⚙ Управлять</summary>
+            <summary class="btn btn-ghost btn-sm">{{ ui.icon('settings', 15) }} Управлять</summary>
             <div class="admin-manage">
               <form method="post" action="/admin/tutors/{{ t.id }}/subscription" class="admin-row">
                 <input type="hidden" name="action" value="grant">
