@@ -456,7 +456,24 @@ img { display: block; }
 .foot-copy { font-size: 13px; color: var(--fg3); }
 
 /* ---------------- Auth (login / register) ---------------- */
-.auth-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--gray-50); }
+.auth-page {
+  min-height: 100vh; display: flex; flex-direction: column; position: relative;
+  background:
+    radial-gradient(ellipse 40rem 30rem at 12% -6%, rgba(249, 115, 22, .13), transparent 60%),
+    radial-gradient(ellipse 38rem 30rem at 88% 4%, rgba(59, 130, 246, .09), transparent 60%),
+    radial-gradient(ellipse 44rem 34rem at 50% 116%, rgba(168, 85, 247, .08), transparent 60%),
+    linear-gradient(180deg, #FBFBFD 0%, #F4F5F8 100%);
+  background-attachment: fixed;
+}
+/* Faint dot-grid texture, fading toward the edges — matches the cabinet. */
+.auth-page::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(15, 23, 42, .045) 1px, transparent 1.4px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(ellipse 100% 80% at 50% 0%, #000, transparent 78%);
+  mask-image: radial-gradient(ellipse 100% 80% at 50% 0%, #000, transparent 78%);
+}
+.auth-page > * { position: relative; z-index: 1; }
 .auth-top { padding: 20px 24px; }
 .auth-main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
 .auth-card {
