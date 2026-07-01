@@ -10,7 +10,9 @@
 
 {% if saved == 'support' %}<div class="trial-banner">{{ ui.icon('check', 15) }} Сообщение отправлено — ответим в Telegram</div>
 {% elif saved %}<div class="trial-banner">{{ ui.icon('check', 15) }} Сохранено</div>{% endif %}
-{% if paid == '1' %}<div class="trial-banner">{{ ui.icon('check', 15) }} Оплата прошла — подписка активна</div>
+{% if paid == '1' %}{% set _ps = subscription_info(user) %}
+  {% if _ps.status == 'active' %}<div class="trial-banner">{{ ui.icon('check', 15) }} Оплата прошла — подписка активна. Спасибо!</div>
+  {% else %}<div class="trial-banner">{{ ui.icon('clock', 15) }} Оплата обрабатывается — подписка активируется в течение минуты. Обнови страницу.</div>{% endif %}
 {% elif paid == '0' %}<div class="trial-banner trial-ending">Оплата не завершена. Если списание прошло — статус обновится в течение минуты.</div>{% endif %}
 {% if error == 'payments_off' %}<div class="trial-banner">{{ ui.icon('credit-card', 15) }} Онлайн-оплата временно недоступна. Сервис работает в полном объёме.</div>
 {% elif error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
@@ -83,7 +85,7 @@
       <div class="muted">осталось пробного периода</div>
     </div>
     {% else %}
-    <div class="sub-hero sub-warn"><div class="sub-big">Пробный истёк</div><div class="muted">Сервис продолжает работать — без блокировки</div></div>
+    <div class="sub-hero sub-warn"><div class="sub-big">Пробный истёк</div><div class="muted">{% if paywall_enabled %}Кабинет на паузе — оформи подписку ниже, чтобы вернуть доступ к ученикам, расписанию и напоминаниям{% else %}Сервис продолжает работать — без блокировки{% endif %}</div></div>
     {% endif %}
 
     <div class="settings-row"><span class="muted">Тариф</span><strong>Pingly Pro</strong></div>
