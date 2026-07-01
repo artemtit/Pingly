@@ -995,6 +995,17 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/tutor/settings", response_class=HTMLResponse)
     async def tutor_settings(request: Request, saved: str | None = None, error: str | None = None, paid: str | None = None, upgrade: str | None = None, locked: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
+        # Returning from a payment: don't rely solely on the Platega webhook — ask
+        # Platega directly and activate if confirmed, then refresh the user so the
+        # page immediately shows the active subscription.
+        if paid == "1" and _config.PAYMENTS_ENABLED:
+            try:
+                if await services.billing.reconcile_on_return(user["id"]):
+                    refreshed = await services.accounts.get_user(user["id"])
+                    if refreshed:
+                        user = refreshed
+            except Exception:
+                pass
         profile = await services.public.get_profile(user["id"])
         return templates.TemplateResponse("settings.html", _ctx(
             request, user, "settings", bot_username=_config.BOT_USERNAME,

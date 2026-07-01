@@ -892,6 +892,20 @@ class SupabasePinglyRepository:
         )
         return _one(result)
 
+    async def get_latest_pending_payment_for_user(self, user_id: str) -> dict[str, Any] | None:
+        """Most recent still-pending payment for a user — used to reconcile on the
+        return page when the Platega webhook hasn't landed yet."""
+        result = await (
+            self._db().table("subscription_payments")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("status", "pending")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        return _one(result)
+
     async def mark_subscription_payment(self, transaction_id: str, status: str, confirmed: bool = False) -> dict[str, Any] | None:
         patch: dict[str, Any] = {"status": status}
         if confirmed:

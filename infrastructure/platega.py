@@ -51,6 +51,20 @@ async def create_payment(
     return resp.json()
 
 
+async def get_transaction(transaction_id: str) -> dict:
+    """Fetch a transaction's current state. GET {API}/transaction/{id} — used to
+    reconcile a payment on the return page if the webhook hasn't arrived yet.
+    Returns a dict that includes a "status" field (e.g. PENDING / CONFIRMED)."""
+    if not config.PLATEGA_MERCHANT_ID or not config.PLATEGA_SECRET:
+        raise PlategaError("Platega credentials are not configured")
+    url = f"{config.PLATEGA_API_URL.rstrip('/')}/transaction/{transaction_id}"
+    async with httpx.AsyncClient(timeout=20) as client:
+        resp = await client.get(url, headers=_headers())
+    if resp.status_code >= 400:
+        raise PlategaError(f"Platega {resp.status_code}: {resp.text}")
+    return resp.json()
+
+
 def verify_webhook_headers(merchant_id: str | None, secret: str | None) -> bool:
     """Platega authenticates the callback with the same X-MerchantId/X-Secret.
     Compared in constant time so the endpoint isn't a timing oracle for the secret.

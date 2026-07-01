@@ -87,6 +87,45 @@ class BillingService:
                 continue
         return redirect, None
 
+    async def reconcile_on_return(self, user_id: str) -> bool:
+        """Fallback for a slow/missing webhook: when the payer lands back on the
+        settings page (?paid=1), query Platega for their latest pending payment and
+        activate if it's CONFIRMED. Uses the SAME atomic 'pending -> confirmed'
+        gate as the webhook, so it can never double-activate. Returns True if this
+        call activated the subscription."""
+        try:
+            payment = await self.repo.get_latest_pending_payment_for_user(user_id)
+        except Exception:
+            payment = None
+        if not payment or not payment.get("transaction_id"):
+            return False
+        tid = payment["transaction_id"]
+        try:
+            tx = await platega.get_transaction(tid)
+        except platega.PlategaError:
+            return False
+        if str(tx.get("status") or "") != "CONFIRMED":
+            return False
+        expected = payment.get("amount_rub")
+        if expected is not None and not self._amount_ok(tx, expected):
+            return False
+        try:
+            transitioned = await self.repo.confirm_subscription_payment_once(tid)
+        except Exception:
+            return False
+        if not transitioned:
+            return False  # the webhook already activated it — nothing to do
+        activate_uid = transitioned.get("user_id") or user_id
+        # period/plan aren't stored on the ledger row; infer the period from amount
+        # (990 monthly vs 9900 yearly). Tiers are off, so plan stays default.
+        period = "year" if int(expected or 0) >= config.SUBSCRIPTION_PRICE_YEAR_RUB else "month"
+        await self.repo.activate_subscription(activate_uid, _days_for_period(period), None)
+        try:
+            await self.repo.grant_referral_reward(activate_uid)
+        except Exception:
+            pass
+        return True
+
     async def handle_webhook(self, merchant_id: str | None, secret: str | None, body: dict) -> bool:
         """Process a Platega callback. Returns True if accepted (always answer 200
         so Platega doesn't retry a request we've already understood)."""
