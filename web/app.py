@@ -120,6 +120,7 @@ templates.env.globals["support_email"] = _config.SUPPORT_EMAIL
 templates.env.globals["support_username"] = _config.SUPPORT_USERNAME
 templates.env.globals["tg_bot_id"] = _config.BOT_ID
 templates.env.globals["paywall_enabled"] = _config.PAYWALL_ENABLED and _config.PAYMENTS_ENABLED
+templates.env.globals["web_base"] = _config.WEB_BASE_URL
 templates.env.globals["payments_enabled"] = _config.PAYMENTS_ENABLED
 templates.env.globals["captcha_enabled"] = _config.CAPTCHA_ENABLED
 templates.env.globals["turnstile_site_key"] = _config.TURNSTILE_SITE_KEY
@@ -390,8 +391,13 @@ def _set_session(response: Response, user: dict) -> None:
 
 def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.middleware("http")
-    async def disable_html_cache(request: Request, call_next):
+    async def response_headers(request: Request, call_next):
         response = await call_next(request)
+        # Baseline security headers on every response (HSTS is left to Cloudflare;
+        # X-Frame-Options is intentionally omitted so tutors can embed their /u/ page).
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
         ctype = (response.headers.get("content-type") or "").lower()
         if "text/html" in ctype or response.status_code in {301, 302, 303, 307, 308}:
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -402,6 +408,29 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/robots.txt")
+    async def robots() -> Response:
+        body = (
+            "User-agent: *\n"
+            "Disallow: /tutor\n"
+            "Disallow: /student\n"
+            "Disallow: /admin\n"
+            "Disallow: /auth\n"
+            "Disallow: /payments\n"
+            f"Sitemap: {WEB_BASE_URL.rstrip('/')}/sitemap.xml\n"
+        )
+        return Response(content=body, media_type="text/plain")
+
+    @app.get("/sitemap.xml")
+    async def sitemap() -> Response:
+        base = WEB_BASE_URL.rstrip("/")
+        paths = ["/", "/register", "/login", "/privacy", "/terms", "/contacts"]
+        urls = "".join(f"<url><loc>{base}{p}</loc></url>" for p in paths)
+        xml = ('<?xml version="1.0" encoding="UTF-8"?>'
+               '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+               f"{urls}</urlset>")
+        return Response(content=xml, media_type="application/xml")
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> Response:

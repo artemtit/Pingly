@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pingly — напоминания для репетиторов</title>
   <meta name="description" content="Pingly сам напоминает твоим ученикам о занятиях за 2 часа. Настрой расписание один раз — и всё работает само.">
+  {% set _d = 'Бот сам напоминает ученикам о занятиях за 2 часа. Настрой расписание один раз — и всё работает само.' %}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Pingly">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:title" content="Pingly — напоминания для репетиторов">
+  <meta property="og:description" content="{{ _d }}">
+  <meta property="og:url" content="{{ web_base }}/">
+  <meta property="og:image" content="{{ web_base }}/static/logo-email.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Pingly — напоминания для репетиторов">
+  <meta name="twitter:description" content="{{ _d }}">
+  <meta name="twitter:image" content="{{ web_base }}/static/logo-email.png">
+  <link rel="canonical" href="{{ web_base }}/">
   <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
   <link rel="apple-touch-icon" href="/static/logo-mark.svg">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
