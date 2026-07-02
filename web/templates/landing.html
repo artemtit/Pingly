@@ -23,7 +23,7 @@
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <link rel="manifest" href="/static/manifest.json">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/landing.css?v=17">
+  <link rel="stylesheet" href="/static/landing.css?v=18">
   <script src="/static/landing.js?v=3" defer></script>
 </head>
 <body>
@@ -71,8 +71,6 @@
 
 <section class="hero">
   <div class="hero-halo"></div>
-  <div class="hero-blob hero-blob-1"></div>
-  <div class="hero-blob hero-blob-2"></div>
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <span class="pill">{{ ic('hand', 15) }} Для репетиторов</span>
@@ -131,6 +129,21 @@
   </div>
 </section>
 
+<section id="about" class="section">
+  <div class="wrap about-grid">
+    <div class="about-text" data-reveal>
+      <span class="over">О Pingly</span>
+      <h2>Сервис, который берёт рутину на себя</h2>
+      <p>Pingly — бот и веб-кабинет для репетиторов. Ты ведёшь расписание, учеников и оплаты в одном месте, а Pingly сам пишет ученику перед занятием и показывает, кто подтвердил, а кто отменил.</p>
+    </div>
+    <div class="about-stats" data-reveal style="--d:.1s">
+      <div class="stat-row"><span class="stat-dot" aria-hidden="true"></span><div><b>2 часа</b><p>Напоминание уходит автоматически перед каждым занятием — без твоего участия</p></div></div>
+      <div class="stat-row"><span class="stat-dot" aria-hidden="true"></span><div><b>14 дней</b><p>Бесплатный период, чтобы попробовать на реальном расписании без риска</p></div></div>
+      <div class="stat-row"><span class="stat-dot" aria-hidden="true"></span><div><b>1 клик</b><p>Ученик подтверждает, отменяет или просит перенос одной кнопкой</p></div></div>
+    </div>
+  </div>
+</section>
+
 <section id="how" class="section">
   <div class="wrap">
     <div class="sechead" data-reveal>
@@ -161,14 +174,14 @@
 <section class="section section-alt">
   <div class="wrap">
     <div class="sechead" data-reveal>
-      <span class="over">Почему Pingly</span>
+      <span class="over">Что нас отличает</span>
       <h2>Меньше рутины — больше занятий</h2>
     </div>
-    <div class="grid-2">
-      <div class="lcard feat why" data-reveal data-anim="zap"><span class="feat-ic">{{ ic('zap', 22) }}</span><div><h3>Автонапоминания за 2 часа</h3><p>Бот пишет каждому ученику сам, по расписанию. Ты больше не печатаешь одно и то же.</p></div></div>
-      <div class="lcard feat why" data-reveal data-anim="tap" style="--d:.1s"><span class="feat-ic">{{ ic('click', 22) }}</span><div><h3>Ответ в один тап</h3><p>«Буду» или «Отменяю» — и ты сразу видишь статус. Без переписок.</p></div></div>
-      <div class="lcard feat why" data-reveal data-anim="wobble" style="--d:.2s"><span class="feat-ic">{{ ic('message', 22) }}</span><div><h3>Прямо в мессенджере</h3><p>Никаких отдельных приложений — напоминания приходят туда, где ученики уже сидят. ВКонтакте на подходе.</p></div></div>
-      <div class="lcard feat why" data-reveal data-anim="pop" style="--d:.3s"><span class="feat-ic">{{ ic('shield', 22) }}</span><div><h3>Сделано для репетиторов</h3><p>На русском и под реальные занятия: предметы, цены, ДЗ и переносы — то, чем ты живёшь каждый день.</p></div></div>
+    <div class="principle-list">
+      <div class="principle-row" data-reveal><span class="principle-ic">{{ ic('zap', 20) }}</span><div><h3>Автонапоминания за 2 часа</h3><p>Бот пишет каждому ученику сам, по расписанию. Ты больше не печатаешь одно и то же.</p></div></div>
+      <div class="principle-row" data-reveal style="--d:.06s"><span class="principle-ic">{{ ic('click', 20) }}</span><div><h3>Ответ в один тап</h3><p>«Буду» или «Отменяю» — и ты сразу видишь статус. Без переписок.</p></div></div>
+      <div class="principle-row" data-reveal style="--d:.12s"><span class="principle-ic">{{ ic('message', 20) }}</span><div><h3>Прямо в мессенджере</h3><p>Никаких отдельных приложений — напоминания приходят туда, где ученики уже сидят. ВКонтакте на подходе.</p></div></div>
+      <div class="principle-row" data-reveal style="--d:.18s"><span class="principle-ic">{{ ic('shield', 20) }}</span><div><h3>Сделано для репетиторов</h3><p>На русском и под реальные занятия: предметы, цены, ДЗ и переносы — то, чем ты живёшь каждый день.</p></div></div>
     </div>
   </div>
 </section>
@@ -293,6 +306,14 @@
   <div class="wrap">
     <div class="sechead" data-reveal>
       <span class="over">Отзывы</span>
+      <div class="avatar-collage">
+        <div class="avatar-stack">
+          <span class="av-circle" style="--bg:var(--orange-100);--fg:var(--orange-700)">А</span>
+          <span class="av-circle" style="--bg:#DBEAFE;--fg:#1D4ED8">Е</span>
+          <span class="av-circle" style="--bg:#FCE7F3;--fg:#BE185D">Э</span>
+        </div>
+        <p class="avatar-caption">Уже тестируют репетиторы по математике, английскому и языкам</p>
+      </div>
       <h2>Это нужно реальным репетиторам</h2>
     </div>
     <div class="carousel" data-reveal>
@@ -352,6 +373,14 @@
         <a class="lbtn lbtn-primary lbtn-lg magnetic" href="/register" style="width:100%;">{{ ic('send', 18) }} Попробовать бесплатно</a>
       </div>
     </div>
+  </div>
+</section>
+
+<section class="section made-for">
+  <div class="wrap" data-reveal>
+    <div class="made-badge">{{ ic('hand', 22) }}</div>
+    <h2>Сделано для репетиторов</h2>
+    <p>Не комбайн на все случаи — Pingly решает одну задачу: чтобы ученики не забывали о занятиях.</p>
   </div>
 </section>
 
