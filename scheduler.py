@@ -81,10 +81,13 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
             keyboard = None
             if is_lesson:
                 lesson_id = payload["lesson_id"]
-                keyboard = InlineKeyboardMarkup(inline_keyboard=[[
-                    InlineKeyboardButton(text="✅ Буду", callback_data=f"lesson_confirm:{lesson_id}"),
-                    InlineKeyboardButton(text="❌ Отменяю", callback_data=f"lesson_cancel:{lesson_id}"),
-                ]])
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                    [
+                        InlineKeyboardButton(text="✅ Буду", callback_data=f"lesson_confirm:{lesson_id}"),
+                        InlineKeyboardButton(text="❌ Отменяю", callback_data=f"lesson_cancel:{lesson_id}"),
+                    ],
+                    [InlineKeyboardButton(text="🔄 Прошу перенести", callback_data=f"lesson_reschedule:{lesson_id}")],
+                ])
             elif notification["type"] == "subscription_expiring":
                 keyboard = _sub_link_keyboard()
             try:

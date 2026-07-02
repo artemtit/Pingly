@@ -36,17 +36,24 @@ INVALID_LINK = "Ссылка недействительна. Попроси ре
 
 
 def lesson_keyboard(lesson_id: str) -> dict:
-    """Inline VK keyboard with the same two actions as the Telegram reminder."""
+    """Inline VK keyboard with the same actions as the Telegram reminder."""
     return {
         "inline": True,
-        "buttons": [[
-            {"action": {"type": "callback", "label": "✅ Буду",
-                        "payload": json.dumps({"action": "lesson_confirm", "lesson_id": lesson_id})},
-             "color": "positive"},
-            {"action": {"type": "callback", "label": "❌ Отменяю",
-                        "payload": json.dumps({"action": "lesson_cancel", "lesson_id": lesson_id})},
-             "color": "negative"},
-        ]],
+        "buttons": [
+            [
+                {"action": {"type": "callback", "label": "✅ Буду",
+                            "payload": json.dumps({"action": "lesson_confirm", "lesson_id": lesson_id})},
+                 "color": "positive"},
+                {"action": {"type": "callback", "label": "❌ Отменяю",
+                            "payload": json.dumps({"action": "lesson_cancel", "lesson_id": lesson_id})},
+                 "color": "negative"},
+            ],
+            [
+                {"action": {"type": "callback", "label": "🔄 Прошу перенести",
+                            "payload": json.dumps({"action": "lesson_reschedule", "lesson_id": lesson_id})},
+                 "color": "secondary"},
+            ],
+        ],
     }
 
 
@@ -194,6 +201,27 @@ class VkBot:
             # Notify the tutor (tutors are on Telegram in Фаза 1).
             if lesson and self.tg_bot:
                 target = await services.lessons.cancel_push_target(lesson)
+                if target:
+                    try:
+                        await self.tg_bot.send_message(target[0], target[1])
+                    except Exception:
+                        pass
+            return
+
+        if action == "lesson_reschedule":
+            user = await services.repo.get_user_by_vk_id(int(user_id)) if user_id else None
+            lesson = (
+                await services.lessons.student_request_reschedule(user["id"], lesson_id)
+                if user and lesson_id else None
+            )
+            await self._event_answer(event_id, user_id, peer_id, "Запрос на перенос отправлен")
+            await self.send_message(
+                peer_id,
+                "Хорошо! Репетитор уже в курсе и предложит новое время.",
+            )
+            # Notify the tutor (tutors are on Telegram in Фаза 1).
+            if lesson and self.tg_bot:
+                target = await services.lessons.reschedule_request_push_target(lesson)
                 if target:
                     try:
                         await self.tg_bot.send_message(target[0], target[1])

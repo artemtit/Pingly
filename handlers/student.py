@@ -10,12 +10,13 @@ from application.factory import create_services
 router = Router()
 services = create_services()
 
-# Lightweight, in-memory "awaiting cancel reason" state. The bot is otherwise
+# Lightweight, in-memory "awaiting follow-up text" state. The bot is otherwise
 # stateless (no FSM, per CLAUDE.md) — this is one bounded exception: after a
-# student taps «Отменяю» we wait for a single optional free-text reason, forward
-# it to the tutor, then forget. Lost on restart, which is fine for a 10-min window.
-_awaiting_reason: dict[int, dict] = {}  # tg_user_id -> {tutor_tg_id, name, at}
-_REASON_TTL = 600  # seconds to wait for the reason before giving up
+# student taps «Отменяю» or «Прошу перенести» we wait for a single optional
+# free-text message, forward it to the tutor, then forget. Lost on restart,
+# which is fine for a 10-min window.
+_awaiting_reason: dict[int, dict] = {}  # tg_user_id -> {tutor_tg_id, name, at, kind}
+_REASON_TTL = 600  # seconds to wait for the message before giving up
 
 
 @router.callback_query(F.data.startswith("lesson_confirm:"))
@@ -56,24 +57,56 @@ async def cancel_lesson(callback: CallbackQuery) -> None:
                 "tutor_tg_id": target[0],
                 "name": (lesson.get("student_profiles") or {}).get("name") or "Ученик",
                 "at": time.monotonic(),
+                "kind": "cancel",
+            }
+
+
+@router.callback_query(F.data.startswith("lesson_reschedule:"))
+async def reschedule_lesson(callback: CallbackQuery) -> None:
+    lesson_id = callback.data.split(":")[1]
+    user = await services.accounts.get_by_tg_id(callback.from_user.id)
+    lesson = await services.lessons.student_request_reschedule(user["id"], lesson_id) if user else None
+    await callback.message.edit_text(
+        "Хорошо! Одним сообщением напиши, когда тебе удобно — передам репетитору, "
+        "и он предложит новое время в кабинете."
+    )
+    await callback.answer("Запрос на перенос отправлен")
+    if lesson:
+        target = await services.lessons.reschedule_request_push_target(lesson)
+        if target:
+            try:
+                await callback.bot.send_message(target[0], target[1])
+            except Exception:
+                pass
+            # Wait for an optional free-text time preference and forward it to the tutor.
+            _awaiting_reason[callback.from_user.id] = {
+                "tutor_tg_id": target[0],
+                "name": (lesson.get("student_profiles") or {}).get("name") or "Ученик",
+                "at": time.monotonic(),
+                "kind": "reschedule",
             }
 
 
 @router.message(F.text & ~F.text.startswith("/"))
 async def capture_cancel_reason(message: Message) -> None:
-    """Forward a just-cancelled lesson's reason to the tutor. Only fires for a
-    student who tapped «Отменяю» in the last few minutes; otherwise stays silent
-    so the bot keeps its service-only behaviour."""
+    """Forward a just-cancelled/reschedule-requested lesson's free-text follow-up
+    to the tutor. Only fires for a student who tapped «Отменяю» or «Прошу
+    перенести» in the last few minutes; otherwise stays silent so the bot keeps
+    its service-only behaviour."""
     info = _awaiting_reason.pop(message.from_user.id, None)
     if not info or (time.monotonic() - info["at"] > _REASON_TTL):
         return
-    reason = (message.text or "").strip()[:500]
-    if not reason:
+    text = (message.text or "").strip()[:500]
+    if not text:
         return
+    if info.get("kind") == "reschedule":
+        forward = f"🔄 {info['name']} предлагает время для переноса: «{text}»"
+        ack = "Передал репетитору 🙏"
+    else:
+        forward = f"📝 {info['name']} о причине отмены: «{text}»"
+        ack = "Передал причину репетитору 🙏"
     try:
-        await message.bot.send_message(
-            info["tutor_tg_id"], f"📝 {info['name']} о причине отмены: «{reason}»"
-        )
+        await message.bot.send_message(info["tutor_tg_id"], forward)
     except Exception:
         pass
-    await message.answer("Передал причину репетитору 🙏")
+    await message.answer(ack)
