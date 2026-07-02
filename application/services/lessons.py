@@ -12,7 +12,6 @@ MAX_GENERATED = 60
 RECURRENCE_LABELS = {
     "once": "Разовое",
     "daily": "Каждый день",
-    "weekly": "Каждую неделю",
     "multiple_weekly": "Несколько раз в неделю",
     "every_n_days": "Каждые N дней",
     "every_n_weeks": "Каждые N недель",
