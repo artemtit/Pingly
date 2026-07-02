@@ -23,7 +23,7 @@
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <link rel="manifest" href="/static/manifest.json">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/landing.css?v=16">
+  <link rel="stylesheet" href="/static/landing.css?v=17">
   <script src="/static/landing.js?v=3" defer></script>
 </head>
 <body>
@@ -64,7 +64,7 @@
       <a class="navlink" href="#price">Цена</a>
       <a class="navlink" href="#reviews">Отзывы</a>
       <a class="navlink navlink-login" href="/login">Войти</a>
-      <a class="lbtn lbtn-primary lbtn-sm" href="/register">{{ ic('send', 16) }} Начать<span class="nav-cta-sub"> бесплатно</span></a>
+      <a class="lbtn lbtn-primary lbtn-sm" href="/register">{{ ic('send', 16) }} <span>Начать<span class="nav-cta-sub"> бесплатно</span></span></a>
     </nav>
   </div>
 </header>
@@ -89,12 +89,14 @@
       </div>
     </div>
     <div class="phone-wrap">
-      <div class="phone" id="chatDemo">
+      <div class="phone-frame">
+        <span class="phone-notch" aria-hidden="true"></span>
+        <div class="phone" id="chatDemo">
         <div class="phone-head">
           <img src="/static/logo-mark.svg" width="32" height="32" alt="">
           <div>
             <div class="pn">Pingly</div>
-            <div class="ps">бот · онлайн</div>
+            <div class="ps"><span class="online-dot" aria-hidden="true"></span>бот · онлайн</div>
           </div>
         </div>
         <div class="chat-feed" aria-live="polite">
@@ -123,6 +125,7 @@
           <div><b>Репетитору:</b> <span id="chatNoteText">Маша подтвердила занятие в 15:00.</span></div>
         </div>
         <button type="button" class="chat-replay" id="chatReplay">{{ ic('refresh', 14) }} Показать ещё раз</button>
+        </div>
       </div>
     </div>
   </div>
