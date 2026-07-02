@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import logging
+
 import config
 from application.repositories import PinglyRepository
 from infrastructure import platega
+
+logger = logging.getLogger("pingly.billing")
 
 SUBSCRIPTION_DAYS = 30
 SUBSCRIPTION_DAYS_YEAR = 365
@@ -84,7 +88,17 @@ class BillingService:
                 await self.repo.create_subscription_payment(user["id"], transaction_id, price)
                 break
             except Exception:
+                logger.exception(
+                    "create_subscription_payment attempt %s failed (transaction_id=%s, user_id=%s)",
+                    _attempt + 1, transaction_id, user["id"],
+                )
                 continue
+        else:
+            logger.error(
+                "create_subscription_payment gave up after 3 attempts (transaction_id=%s, user_id=%s) — "
+                "webhook will not find a ledger row for this payment",
+                transaction_id, user["id"],
+            )
         return redirect, None
 
     async def reconcile_on_return(self, user_id: str) -> bool:
@@ -96,6 +110,7 @@ class BillingService:
         try:
             payment = await self.repo.get_latest_pending_payment_for_user(user_id)
         except Exception:
+            logger.exception("get_latest_pending_payment_for_user failed (user_id=%s)", user_id)
             payment = None
         if not payment or not payment.get("transaction_id"):
             return False
@@ -103,6 +118,7 @@ class BillingService:
         try:
             tx = await platega.get_transaction(tid)
         except platega.PlategaError:
+            logger.exception("platega.get_transaction failed (transaction_id=%s)", tid)
             return False
         if str(tx.get("status") or "") != "CONFIRMED":
             return False
@@ -112,6 +128,7 @@ class BillingService:
         try:
             transitioned = await self.repo.confirm_subscription_payment_once(tid)
         except Exception:
+            logger.exception("confirm_subscription_payment_once failed (transaction_id=%s)", tid)
             return False
         if not transitioned:
             return False  # the webhook already activated it — nothing to do
@@ -123,7 +140,7 @@ class BillingService:
         try:
             await self.repo.grant_referral_reward(activate_uid)
         except Exception:
-            pass
+            logger.exception("grant_referral_reward failed (user_id=%s)", activate_uid)
         return True
 
     async def handle_webhook(self, merchant_id: str | None, secret: str | None, body: dict) -> bool:
@@ -141,6 +158,7 @@ class BillingService:
         try:
             payment = await self.repo.get_subscription_payment_by_transaction(transaction_id)
         except Exception:
+            logger.exception("get_subscription_payment_by_transaction failed (transaction_id=%s)", transaction_id)
             payment = None
         # Payload is "<user_id>:<plan>:<period>" (plan/period optional for older
         # payments — they default to a monthly Max charge).
@@ -179,6 +197,7 @@ class BillingService:
             except Exception:
                 # If the ledger is unreachable we cannot guarantee single activation,
                 # so we must not activate. Returning False makes Platega retry later.
+                logger.exception("confirm_subscription_payment_once failed (transaction_id=%s)", transaction_id)
                 return False
             if transitioned:
                 activate_uid = transitioned.get("user_id") or user_id
@@ -190,12 +209,12 @@ class BillingService:
                 try:
                     await self.repo.grant_referral_reward(activate_uid)
                 except Exception:
-                    pass
+                    logger.exception("grant_referral_reward failed (user_id=%s)", activate_uid)
         elif status in ("CANCELED", "CHARGEBACKED"):
             try:
                 await self.repo.mark_subscription_payment(transaction_id, "canceled")
             except Exception:
-                pass
+                logger.exception("mark_subscription_payment(canceled) failed (transaction_id=%s)", transaction_id)
         return True
 
     @staticmethod

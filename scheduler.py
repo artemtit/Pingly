@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -11,6 +12,8 @@ from application.services.accounts import subscription_info
 from application.services.lessons import package_status
 from config import WEB_BASE_URL
 from vk_bot import lesson_keyboard as vk_lesson_keyboard
+
+logger = logging.getLogger("pingly.scheduler")
 
 services = create_services()
 
@@ -55,6 +58,7 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
             try:
                 lesson = await services.repo.get_lesson_by_id(payload["lesson_id"])
             except Exception:
+                logger.exception("get_lesson_by_id failed for lesson_id=%s", payload.get("lesson_id"))
                 lesson = None
             topic = (lesson or {}).get("public_comment")
             if topic:
@@ -70,8 +74,8 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
             try:
                 await vk_bot.send_message(vk_id, text, keyboard=keyboard)
                 delivered = True
-            except Exception as exc:
-                print(f"[vk] send failed: {exc}")
+            except Exception:
+                logger.exception("vk send failed (vk_id=%s, notification_id=%s)", vk_id, notification["id"])
 
         if tg_id:
             keyboard = None
@@ -86,8 +90,8 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
             try:
                 await tg_bot.send_message(tg_id, text, reply_markup=keyboard)
                 delivered = True
-            except Exception as exc:
-                print(f"[tg] send failed: {exc}")
+            except Exception:
+                logger.exception("tg send failed (tg_id=%s, notification_id=%s)", tg_id, notification["id"])
 
         if delivered:
             await services.notifications.mark_sent(notification["id"])

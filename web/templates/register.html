@@ -4,9 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#FBFBFD">
+  <meta name="robots" content="noindex">
   <title>Регистрация — Pingly</title>
   <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
-  <link rel="apple-touch-icon" href="/static/logo-mark.svg">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <link rel="manifest" href="/static/manifest.json">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
   <link rel="stylesheet" href="/static/landing.css?v=15">
   {% if captcha_enabled and turnstile_site_key %}
@@ -44,7 +46,7 @@
         <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" style="margin:4px 0 14px;"></div>
         {% endif %}
         <button class="lbtn lbtn-primary lbtn-lg" type="submit">Создать аккаунт</button>
-        <p class="auth-consent">Создавая аккаунт, вы принимаете <a href="/terms" target="_blank">Пользовательское соглашение</a> и <a href="/privacy" target="_blank">Политику конфиденциальности</a>.</p>
+        <p class="auth-consent">Создавая аккаунт, вы принимаете <a href="/terms" target="_blank" rel="noopener">Пользовательское соглашение</a> и <a href="/privacy" target="_blank" rel="noopener">Политику конфиденциальности</a>.</p>
       </form>
 
       <div class="auth-divider">или</div>

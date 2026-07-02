@@ -37,6 +37,7 @@ _LOGIN_RATE = (10, 300.0)    # per IP / 5 min — password guessing
 _REGISTER_RATE = (5, 900.0)  # per IP / 15 min — signup spam
 _VERIFY_RATE = (10, 600.0)   # per email / 10 min — code guessing
 _RESEND_RATE = (3, 600.0)    # per email / 10 min — email bombing
+_TG_AUTH_RATE = (20, 300.0)  # per IP / 5 min — forged Telegram auth_date/hash guessing
 
 
 def _rate_ok(key: str, max_hits: int, window: float) -> bool:
@@ -566,6 +567,9 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
 
     @app.get("/auth/telegram/callback")
     async def auth_telegram_widget(request: Request) -> Response:
+        ip = request.client.host if request.client else "?"
+        if not _rate_ok(f"tgauth:{ip}", *_TG_AUTH_RATE):
+            return RedirectResponse("/login?error=too_many", status_code=303)
         data = dict(request.query_params)
         # `ref` is not part of Telegram's signed payload — pop it before the
         # hash check. apply_referral is idempotent (one bonus per account), so
@@ -1054,7 +1058,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
                     if refreshed:
                         user = refreshed
             except Exception:
-                pass
+                logging.getLogger("pingly.web").exception("reconcile_on_return failed (user_id=%s)", user["id"])
         profile = await services.public.get_profile(user["id"])
         return templates.TemplateResponse("settings.html", _ctx(
             request, user, "settings", bot_username=_config.BOT_USERNAME,

@@ -67,7 +67,7 @@
         </details>
         {% endif %}
         {% endif %}
-        <form method="post" action="/tutor/lessons/{{ lesson.id }}/delete" onsubmit="return confirm('Удалить занятие из базы?')"><button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red,#ef4444)">{{ ui.icon('trash', 15) }}</button></form>
+        <form method="post" action="/tutor/lessons/{{ lesson.id }}/delete" onsubmit="return confirm('Удалить занятие из базы?')"><button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red,#ef4444)" aria-label="Удалить занятие" title="Удалить занятие">{{ ui.icon('trash', 15) }}</button></form>
       </div>
       {% endif %}
     </div>
