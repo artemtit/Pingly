@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, Response
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -38,6 +38,10 @@ _REGISTER_RATE = (5, 900.0)  # per IP / 15 min — signup spam
 _VERIFY_RATE = (10, 600.0)   # per email / 10 min — code guessing
 _RESEND_RATE = (3, 600.0)    # per email / 10 min — email bombing
 _TG_AUTH_RATE = (20, 300.0)  # per IP / 5 min — forged Telegram auth_date/hash guessing
+
+# Public landing stats: cached in-process so landing traffic never hammers the DB.
+_PUBLIC_STATS: dict[str, float | int | None] = {"value": None, "at": 0.0}
+_PUBLIC_STATS_TTL = 300.0  # seconds
 
 
 def _rate_ok(key: str, max_hits: int, window: float) -> bool:
@@ -421,6 +425,28 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/api/public/stats")
+    async def public_stats() -> Response:
+        """Честный счётчик для лендинга: сколько напоминаний «за 2 часа» реально
+        отправлено ученикам. Значение из БД, никаких выдуманных цифр; кэш 5 минут
+        в памяти + Cache-Control, чтобы лендинговый трафик не ходил в БД."""
+        import time
+        now = time.monotonic()
+        stale = _PUBLIC_STATS["value"] is None or now - float(_PUBLIC_STATS["at"] or 0) > _PUBLIC_STATS_TTL
+        if stale:
+            try:
+                _PUBLIC_STATS["value"] = await services.repo.count_sent_lesson_reminders()
+                _PUBLIC_STATS["at"] = now
+            except Exception:
+                logging.getLogger("pingly.web").warning("public stats unavailable", exc_info=True)
+                if _PUBLIC_STATS["value"] is None:
+                    # Cold failure: no number to show — the landing hides the counter.
+                    return JSONResponse({"reminders_sent": None}, status_code=503,
+                                        headers={"Cache-Control": "no-store"})
+                # Warm failure: keep serving the last known honest value.
+        return JSONResponse({"reminders_sent": _PUBLIC_STATS["value"]},
+                            headers={"Cache-Control": "public, max-age=300"})
 
     @app.get("/robots.txt")
     async def robots() -> Response:

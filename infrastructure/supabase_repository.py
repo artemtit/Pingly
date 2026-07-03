@@ -623,6 +623,19 @@ class SupabasePinglyRepository:
     async def mark_notification_sent(self, notification_id: str) -> None:
         await self._db().table("notifications").update({"status": "sent"}).eq("id", notification_id).execute()
 
+    async def count_sent_lesson_reminders(self) -> int:
+        """Публичный честный счётчик лендинга: сколько напоминаний «за 2 часа»
+        реально доставлено ученикам. Только count, без выгрузки строк."""
+        result = await (
+            self._db().table("notifications")
+            .select("id", count="exact")
+            .eq("type", "lesson_hour_before")
+            .eq("status", "sent")
+            .limit(1)
+            .execute()
+        )
+        return result.count or 0
+
     async def analytics_for_tutor(self, tutor_user_id: str) -> dict[str, Any]:
         students = await self.list_tutor_students(tutor_user_id)
         lessons = await self.list_lessons_for_tutor(tutor_user_id, 1000)

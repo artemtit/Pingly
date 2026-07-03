@@ -1,7 +1,8 @@
 /* ============================================================
    Pingly landing — interactivity
-   Vanilla JS: chat demo, scroll reveal, tabs, mobile menu,
-   magnetic CTA, scroll progress.
+   Vanilla JS: chat demo, scroll reveal, product tour (sticky
+   scene), live stats counter, scrollspy, mobile menu, magnetic
+   CTA, scroll progress.
    All animation honors prefers-reduced-motion.
    ============================================================ */
 (function () {
@@ -240,54 +241,135 @@
     }
   })();
 
-  /* ---------------- Features tabs ---------------- */
-  (function featureTabs() {
-    var bar = document.getElementById('ftabs');
-    if (!bar) return;
-    var tabs = Array.prototype.slice.call(bar.querySelectorAll('.ftab'));
-    var panels = Array.prototype.slice.call(document.querySelectorAll('.fpanel'));
-    var indicator = document.getElementById('ftabInd');
+  /* ---------------- Product tour (sticky scene, scroll-driven) ---------------- */
+  (function productTour() {
+    var tour = document.getElementById('tour');
+    var scene = document.getElementById('tourScene');
+    if (!tour || !scene || !('IntersectionObserver' in window)) return;
+
+    var items = Array.prototype.slice.call(tour.querySelectorAll('.tour-item'));
+    var railFill = document.getElementById('tourRailFill');
+    var mq = window.matchMedia('(min-width: 861px)');
+    var slides = [];
     var current = 0;
 
-    function moveIndicator(tab) {
-      indicator.style.width = tab.offsetWidth + 'px';
-      indicator.style.transform = 'translateX(' + tab.offsetLeft + 'px)';
-    }
-
-    function select(i, focus) {
-      if (i === current) return;
-      var prev = current;
-      current = i;
-      tabs.forEach(function (t, k) {
-        var on = k === i;
-        t.classList.toggle('active', on);
-        t.setAttribute('aria-selected', on ? 'true' : 'false');
-        t.tabIndex = on ? 0 : -1;
+    // Desktop: move each feature's mini-UI into the sticky scene (single source
+    // of truth, no duplicated markup). Mobile: move it back inline.
+    function toScene() {
+      if (slides.length) return;
+      items.forEach(function (item) {
+        var art = item.querySelector('.tour-art');
+        var slide = document.createElement('div');
+        slide.className = 'tour-slide';
+        while (art.firstChild) slide.appendChild(art.firstChild);
+        scene.appendChild(slide);
+        slides.push(slide);
       });
-      panels[prev].classList.remove('active');
-      panels[prev].classList.add('leaving');
-      panels[i].classList.add('active');
-      setTimeout(function () { panels[prev].classList.remove('leaving'); }, 350);
-      moveIndicator(tabs[i]);
-      if (focus) tabs[i].focus();
-      tabs[i].scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+      tour.classList.add('js-tour');
+      setActive(current);
     }
 
-    tabs.forEach(function (tab, i) {
-      tab.addEventListener('click', function () { select(i); });
-    });
-    bar.addEventListener('keydown', function (ev) {
-      if (ev.key !== 'ArrowRight' && ev.key !== 'ArrowLeft') return;
-      ev.preventDefault();
-      var next = ev.key === 'ArrowRight' ? (current + 1) % tabs.length : (current - 1 + tabs.length) % tabs.length;
-      select(next, true);
-    });
-
-    moveIndicator(tabs[0]);
-    window.addEventListener('resize', function () { moveIndicator(tabs[current]); });
-    // fonts can shift widths after first paint
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(function () { moveIndicator(tabs[current]); });
+    function toInline() {
+      if (!slides.length) return;
+      slides.forEach(function (slide, i) {
+        var art = items[i].querySelector('.tour-art');
+        while (slide.firstChild) art.appendChild(slide.firstChild);
+      });
+      slides = [];
+      scene.innerHTML = '';
+      tour.classList.remove('js-tour');
     }
+
+    function setActive(i) {
+      current = i;
+      items.forEach(function (item, k) { item.classList.toggle('active', k === i); });
+      slides.forEach(function (slide, k) { slide.classList.toggle('active', k === i); });
+      if (railFill) railFill.style.transform = 'scaleY(' + ((i + 1) / items.length) + ')';
+    }
+
+    // A narrow band around the viewport middle decides the active step.
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) setActive(items.indexOf(e.target));
+      });
+    }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+    items.forEach(function (item) { io.observe(item); });
+
+    function apply() { if (mq.matches) toScene(); else toInline(); }
+    if (mq.addEventListener) mq.addEventListener('change', apply);
+    else if (mq.addListener) mq.addListener(apply);
+    apply();
+  })();
+
+  /* ---------------- Live reminders counter (honest number from the DB) ---------------- */
+  (function statsCounter() {
+    var box = document.getElementById('proofCounter');
+    var num = document.getElementById('reminderCount');
+    if (!box || !num || !window.fetch) {
+      if (box) { box.hidden = true; }
+      return;
+    }
+    var sep = document.getElementById('proofSep');
+
+    function hide() {
+      box.hidden = true;
+      if (sep) sep.hidden = true;
+    }
+    function fmt(v) { return v.toLocaleString('ru-RU'); }
+    function show(v) {
+      box.classList.remove('loading');
+      if (reduceMotion || !('IntersectionObserver' in window)) {
+        num.textContent = fmt(v);
+        return;
+      }
+      num.textContent = fmt(0);
+      var started = false;
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting || started) return;
+          started = true;
+          io.disconnect();
+          var t0 = null;
+          var tick = function (ts) {
+            if (t0 === null) t0 = ts;
+            var p = Math.min(1, (ts - t0) / 900);
+            var eased = 1 - Math.pow(1 - p, 3);
+            num.textContent = fmt(Math.round(v * eased));
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        });
+      }, { threshold: 0.6 });
+      io.observe(box);
+    }
+
+    // Honest counter: real number or nothing. A hung request drops the skeleton.
+    var failsafe = setTimeout(hide, 6000);
+    fetch('/api/public/stats', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then(function (d) {
+        clearTimeout(failsafe);
+        var v = d && d.reminders_sent;
+        if (typeof v !== 'number' || v < 10) { hide(); return; }
+        show(v);
+      })
+      .catch(function () { clearTimeout(failsafe); hide(); });
+  })();
+
+  /* ---------------- Scrollspy: highlight the current section in the nav ---------------- */
+  (function scrollSpy() {
+    if (!('IntersectionObserver' in window)) return;
+    var links = Array.prototype.slice.call(document.querySelectorAll('.nav-links a.navlink[href^="#"]'));
+    if (!links.length) return;
+    var byId = {};
+    links.forEach(function (link) { byId[link.getAttribute('href').slice(1)] = link; });
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var link = byId[e.target.id]; // sections without a nav link clear the highlight
+        links.forEach(function (l) { l.classList.toggle('active', l === link); });
+      });
+    }, { rootMargin: '-35% 0px -55% 0px', threshold: 0 });
+    Array.prototype.slice.call(document.querySelectorAll('section[id]')).forEach(function (t) { io.observe(t); });
   })();
 })();
