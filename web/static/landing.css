@@ -93,14 +93,14 @@ img { display: block; }
 /* ---------------- Hero ---------------- */
 .hero { position: relative; overflow: hidden; }
 .hero-halo {
-  position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
-  width: 900px; height: 480px; pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(255,237,213,.55) 0%, rgba(255,247,237,0) 70%);
+  position: absolute; top: -220px; left: 50%; transform: translateX(-50%);
+  width: 1100px; height: 520px; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255,237,213,.6) 0%, rgba(255,247,237,0) 72%);
 }
-/* Left-aligned, single-column hero — no split grid, no oversized icon */
+/* Left-aligned text in a capped, page-centered column — no split grid, no oversized icon */
 .hero-left {
   position: relative; display: flex; flex-direction: column; align-items: flex-start;
-  text-align: left; padding: 88px 0 68px;
+  text-align: left; max-width: 620px; margin: 0 auto; padding: 88px 0 68px;
 }
 .pill {
   display: inline-flex; align-items: center; gap: 6px;
