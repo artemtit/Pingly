@@ -97,10 +97,13 @@ img { display: block; }
   width: 900px; height: 480px; pointer-events: none;
   background: radial-gradient(ellipse at center, rgba(255,237,213,.55) 0%, rgba(255,247,237,0) 70%);
 }
-.hero-grid {
-  position: relative; display: grid; grid-template-columns: 1.05fr .95fr;
-  gap: 56px; align-items: center; padding: 72px 0 64px;
+/* Centered, editorial hero — big brand icon, single column, no split grid */
+.hero-center {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  text-align: center; padding: 68px 0 60px;
 }
+.hero-icon-wrap { margin-bottom: 22px; }
+.hero-icon { width: 104px; height: 104px; border-radius: 28px; box-shadow: 0 26px 52px -20px rgb(249 115 22 / .38); }
 .pill {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--orange-100); color: var(--orange-700);
@@ -108,39 +111,27 @@ img { display: block; }
 }
 .pill .ic { width: 15px; height: 15px; }
 .hero h1 {
-  font-size: clamp(2.3rem, 1rem + 4vw, 3.6rem); font-weight: 700;
-  letter-spacing: -.025em; line-height: 1.06; margin-top: 18px; text-wrap: balance;
+  font-size: clamp(2.1rem, 1rem + 3.4vw, 3.2rem); font-weight: 700;
+  letter-spacing: -.025em; line-height: 1.08; margin-top: 16px; max-width: 18ch; text-wrap: balance;
 }
-.hero-sub { font-size: 19px; line-height: 1.6; color: var(--fg2); margin-top: 18px; max-width: 480px; }
-.hero-cta { display: flex; gap: 12px; margin-top: 30px; flex-wrap: wrap; }
-.hero-note { display: flex; align-items: center; gap: 8px; margin-top: 18px; color: var(--fg3); font-size: 14px; flex-wrap: wrap; }
+.hero-sub { font-size: 18px; line-height: 1.6; color: var(--fg2); margin-top: 16px; max-width: 480px; }
+.hero-cta { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; justify-content: center; }
+.hero-note { display: flex; align-items: center; gap: 8px; margin-top: 18px; color: var(--fg3); font-size: 14px; flex-wrap: wrap; justify-content: center; }
 .hero-note .dot { color: var(--gray-300); }
-/* staggered entrance for hero copy */
-.js .hero-copy > * { animation: rise .7s var(--ease-out) backwards; }
-.js .hero-copy .pill      { animation-delay: .05s; }
-.js .hero-copy h1         { animation-delay: .12s; }
-.js .hero-copy .hero-sub  { animation-delay: .22s; }
-.js .hero-copy .hero-cta  { animation-delay: .32s; }
-.js .hero-copy .hero-note { animation-delay: .42s; }
-.js .phone-wrap { animation: rise .8s var(--ease-out) .25s backwards; }
+/* staggered entrance */
+.js .hero-center > * { animation: rise .7s var(--ease-out) backwards; }
+.js .hero-icon-wrap { animation-delay: .02s; }
+.js .hero-center .pill      { animation-delay: .08s; }
+.js .hero-center h1         { animation-delay: .14s; }
+.js .hero-center .hero-sub  { animation-delay: .22s; }
+.js .hero-center .hero-cta  { animation-delay: .3s; }
+.js .hero-center .hero-note { animation-delay: .38s; }
 
-/* ---------------- Phone: live chat demo ---------------- */
-.phone-wrap { display: flex; justify-content: center; }
-/* Dark device bezel around the white "screen" — reads as an actual phone
-   instead of a flat white card. */
-.phone-frame {
-  position: relative; width: min(100%, 348px);
-  padding: 26px 11px 18px; border-radius: 44px;
-  background: linear-gradient(155deg, #333846 0%, #14161d 100%);
-  box-shadow: 0 32px 70px -26px rgba(15,23,42,.4), inset 0 0 0 1px rgba(255,255,255,.06);
-}
-.phone-notch {
-  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-  width: 68px; height: 7px; border-radius: 999px; background: rgba(255,255,255,.16);
-}
+/* ---------------- Phone: live chat demo (flat card, no device bezel) ---------------- */
+.phone-wrap { display: flex; justify-content: center; margin-top: 40px; }
 .phone {
-  width: 100%; background: #fff; border-radius: 26px; padding: 16px;
-  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  width: min(100%, 340px); background: #fff; border-radius: 26px; padding: 16px;
+  box-shadow: 0 24px 54px -30px rgba(15,23,42,.28), 0 1px 2px rgba(0,0,0,.04);
 }
 .phone-head {
   display: flex; align-items: center; gap: 9px;
@@ -548,7 +539,6 @@ img { display: block; }
 /* ---------------- Responsive ---------------- */
 @media (max-width: 860px) {
   .wrap { padding: 0 16px; }
-  .hero-grid { grid-template-columns: 1fr; gap: 28px; padding: 34px 0 28px; }
   .grid-3, .grid-2 { grid-template-columns: 1fr; gap: 16px; }
   .about-grid { grid-template-columns: 1fr; gap: 32px; text-align: center; }
   .about-text p { margin-left: auto; margin-right: auto; }
@@ -557,26 +547,24 @@ img { display: block; }
   .nav-links a.navlink:not(.navlink-login) { display: none; }
   .nav-links { gap: 14px; }
   .steps-line { display: none; }
-  .phone-frame { width: min(100%, 320px); padding: 22px 10px 16px; border-radius: 38px; }
   .chat-feed { height: 218px; }
-  .hero-copy { text-align: center; }
-  .hero-copy .pill { margin-inline: auto; }
+  .hero-center { padding: 40px 0 32px; }
+  .hero-icon { width: 84px; height: 84px; border-radius: 22px; }
+  .hero-icon-wrap { margin-bottom: 18px; }
   .hero h1 {
     font-size: clamp(1.7rem, 7vw, 2.45rem);
     line-height: 1.03;
     max-width: 14ch;
-    margin-inline: auto;
   }
   .hero-sub {
     font-size: 16px;
     line-height: 1.52;
     margin-top: 14px;
     max-width: 34ch;
-    margin-inline: auto;
   }
-  .hero-cta { margin-top: 20px; justify-content: center; }
+  .hero-cta { margin-top: 20px; }
   .hero-cta .lbtn { width: 100%; }
-  .hero-note { margin-top: 14px; font-size: 12.5px; justify-content: center; }
+  .hero-note { margin-top: 14px; font-size: 12.5px; }
   .pill { font-size: 12.5px; padding: 6px 12px; }
   .lcard { padding: 20px; border-radius: 20px; }
   .lcard h3 { font-size: 18px; margin-top: 14px; }
@@ -605,11 +593,9 @@ img { display: block; }
   .nav-cta-sub { display: none; }
   .lbtn { height: 42px; font-size: 15px; padding: 0 16px; }
   .lbtn-lg { height: 48px; font-size: 16px; }
-  .hero-copy { display: grid; gap: 8px; }
   .hero-note { gap: 6px; }
   .hero-note .dot { margin: 0 1px; }
-  .phone-frame { width: min(100%, 292px); padding: 20px 9px 14px; border-radius: 34px; }
-  .phone { padding: 14px; border-radius: 22px; }
+  .phone { width: min(100%, 292px); padding: 14px; border-radius: 22px; }
   .phone-head { margin: -14px -14px 10px; padding: 12px 14px 10px; }
   .chat-feed { height: 202px; gap: 8px; }
   .chat-bubble { font-size: 13px; }
