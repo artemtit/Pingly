@@ -1,7 +1,7 @@
 /* ============================================================
    Pingly landing — interactivity
-   Vanilla JS: chat demo, scroll reveal, tabs, carousel,
-   tilt, magnetic CTA, scroll progress.
+   Vanilla JS: chat demo, scroll reveal, tabs, mobile menu,
+   magnetic CTA, scroll progress.
    All animation honors prefers-reduced-motion.
    ============================================================ */
 (function () {
@@ -64,49 +64,39 @@
     }
   }
 
-  /* ---------------- Step number tick (00 → NN) ---------------- */
-  document.querySelectorAll('.step-n[data-target]').forEach(function (el) {
-    var target = parseInt(el.getAttribute('data-target'), 10);
-    if (reduceMotion || !('IntersectionObserver' in window)) return;
-    var card = el.closest('[data-reveal]') || el;
-    var tickIO = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (!e.isIntersecting) return;
-        tickIO.disconnect();
-        var cur = 0;
-        var iv = setInterval(function () {
-          cur++;
-          el.textContent = (cur < 10 ? '0' : '') + cur;
-          if (cur >= target) clearInterval(iv);
-        }, 180);
-      });
-    }, { threshold: 0.4 });
-    tickIO.observe(card);
-  });
+  /* ---------------- Mobile menu (burger + fullscreen overlay) ---------------- */
+  (function mobileMenu() {
+    var burger = document.getElementById('navBurger');
+    var menu = document.getElementById('navMenu');
+    if (!burger || !menu) return;
+    var open = false;
 
-  /* ---------------- 3D tilt on step cards ---------------- */
-  if (!reduceMotion && !isTouch) {
-    document.querySelectorAll('[data-tilt]').forEach(function (card) {
-      var rect = null;
-      card.addEventListener('mouseenter', function () {
-        rect = card.getBoundingClientRect();
-        card.style.willChange = 'transform';
-      });
-      card.addEventListener('mousemove', function (ev) {
-        if (!rect) rect = card.getBoundingClientRect();
-        var px = (ev.clientX - rect.left) / rect.width - 0.5;
-        var py = (ev.clientY - rect.top) / rect.height - 0.5;
-        card.style.transform =
-          'perspective(700px) rotateY(' + (px * 5).toFixed(2) + 'deg)' +
-          ' rotateX(' + (-py * 5).toFixed(2) + 'deg) translateY(-2px)';
-      });
-      card.addEventListener('mouseleave', function () {
-        rect = null;
-        card.style.transform = '';
-        card.style.willChange = '';
-      });
+    function setOpen(value, restoreFocus) {
+      open = value;
+      burger.setAttribute('aria-expanded', value ? 'true' : 'false');
+      burger.setAttribute('aria-label', value ? 'Закрыть меню' : 'Открыть меню');
+      menu.hidden = !value;
+      document.body.style.overflow = value ? 'hidden' : '';
+      if (value) {
+        var first = menu.querySelector('a');
+        if (first) first.focus();
+      } else if (restoreFocus) {
+        burger.focus();
+      }
+    }
+
+    burger.addEventListener('click', function () { setOpen(!open, true); });
+    menu.addEventListener('click', function (ev) {
+      var link = ev.target && ev.target.closest ? ev.target.closest('a') : null;
+      if (link) setOpen(false, false);
     });
-  }
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && open) setOpen(false, true);
+    });
+    window.addEventListener('resize', function () {
+      if (open && window.innerWidth > 860) setOpen(false, false);
+    });
+  })();
 
   /* ---------------- Magnetic CTA buttons ---------------- */
   if (!reduceMotion && !isTouch) {
@@ -298,59 +288,6 @@
     // fonts can shift widths after first paint
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(function () { moveIndicator(tabs[current]); });
-    }
-  })();
-
-  /* ---------------- Reviews carousel ---------------- */
-  (function carousel() {
-    var track = document.getElementById('carTrack');
-    if (!track) return;
-    var slides = Array.prototype.slice.call(track.children);
-    var dots = Array.prototype.slice.call(document.querySelectorAll('.car-dot'));
-    var root = track.closest('.carousel');
-    var current = 0;
-    var timer = null;
-
-    function go(i) {
-      current = (i + slides.length) % slides.length;
-      track.style.transform = 'translateX(-' + current * 100 + '%)';
-      slides.forEach(function (s, k) {
-        s.classList.toggle('active', k === current);
-        s.setAttribute('aria-hidden', k === current ? 'false' : 'true');
-      });
-      dots.forEach(function (d, k) { d.classList.toggle('active', k === current); });
-    }
-
-    function start() {
-      if (reduceMotion || timer) return;
-      timer = setInterval(function () { go(current + 1); }, 5000);
-    }
-    function stop() {
-      if (timer) { clearInterval(timer); timer = null; }
-    }
-
-    dots.forEach(function (d, k) {
-      d.addEventListener('click', function () { stop(); go(k); start(); });
-    });
-    root.addEventListener('mouseenter', stop);
-    root.addEventListener('mouseleave', start);
-    root.addEventListener('focusin', stop);
-    root.addEventListener('focusout', start);
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden) stop(); else start();
-    });
-
-    go(0);
-    // autoplay only while the carousel is actually on screen
-    if ('IntersectionObserver' in window) {
-      var carIO = new IntersectionObserver(function (entries) {
-        entries.forEach(function (e) {
-          if (e.isIntersecting) start(); else stop();
-        });
-      }, { threshold: 0.3 });
-      carIO.observe(root);
-    } else {
-      start();
     }
   })();
 })();
