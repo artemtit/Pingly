@@ -26,8 +26,8 @@
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <link rel="manifest" href="/static/manifest.json">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/landing.css?v=23">
-  <script src="/static/landing.js?v=5" defer></script>
+  <link rel="stylesheet" href="/static/landing.css?v=24">
+  <script src="/static/landing.js?v=6" defer></script>
 </head>
 <body>
 
@@ -87,7 +87,10 @@
 </div>
 
 <section class="hero">
-  <div class="hero-halo"></div>
+  <div class="hero-halo" aria-hidden="true"></div>
+  <div class="hero-dots" aria-hidden="true"></div>
+  <div class="hero-light" aria-hidden="true"></div>
+  <div class="hero-noise" aria-hidden="true"></div>
   <div class="wrap hero-grid">
     <div class="hero-left">
       <span class="pill">{{ ic('zap', 15) }} Напоминания в Telegram — автоматически</span>
@@ -108,7 +111,15 @@
       </div>
     </div>
     <div class="hero-right">
-      <div class="phone" id="chatDemo">
+      <div class="hero-device">
+        <div class="float-card float-when" id="floatWhen" aria-hidden="true">{{ ic('bell', 14) }} <span>за 2 часа до занятия</span></div>
+        <div class="float-card float-push" id="floatPush" aria-hidden="true">
+          <span class="float-push-ic">{{ ic('check', 13) }}</span>
+          <span class="float-push-text"><b id="floatPushTitle">Маша подтвердила</b><i>уведомление репетитору</i></span>
+        </div>
+        <div class="device">
+          <span class="device-speaker" aria-hidden="true"></span>
+          <div class="phone" id="chatDemo">
         <div class="phone-head">
           <img src="/static/logo-mark.svg" width="32" height="32" alt="">
           <div>
@@ -142,6 +153,8 @@
           <div><b>Репетитору:</b> <span id="chatNoteText">Маша подтвердила занятие в 15:00.</span></div>
         </div>
         <button type="button" class="chat-replay" id="chatReplay">{{ ic('refresh', 14) }} Показать ещё раз</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

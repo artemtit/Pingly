@@ -65,6 +65,7 @@ img { display: block; }
   transition: transform .18s var(--ease-out), filter var(--l-dur-fast) var(--ease-out), background var(--l-dur-fast), box-shadow .2s var(--ease-out);
 }
 .lbtn:hover { filter: brightness(.98); transform: translateY(-1px); }
+.lbtn:active { transform: translateY(0); filter: brightness(.96); }
 .lbtn-lg { height: 52px; padding: 0 26px; font-size: 17px; }
 .lbtn-sm { height: 38px; padding: 0 16px; font-size: 15px; }
 .lbtn-primary { background: linear-gradient(180deg, var(--orange-500), var(--orange-600)); color: #fff; box-shadow: var(--l-shadow-brand); }
@@ -159,14 +160,31 @@ img { display: block; }
 
 /* ---------------- Hero (55/45 split: text + live chat demo) ---------------- */
 .hero { position: relative; overflow: hidden; }
+/* layered background: halo + masked dot grid + radial light + gradient noise,
+   all extremely subtle, all inert */
 .hero-halo {
   position: absolute; top: -220px; left: 50%; transform: translateX(-50%);
   width: 1100px; height: 520px; pointer-events: none;
   background: radial-gradient(ellipse at center, rgba(255,237,213,.75) 0%, rgba(255,247,237,0) 72%);
 }
+.hero-dots {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(15,23,42,.05) 1px, transparent 1.4px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 62% 18%, #000, transparent 74%);
+  mask-image: radial-gradient(ellipse 90% 70% at 62% 18%, #000, transparent 74%);
+}
+.hero-light {
+  position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 42% 52% at 72% 28%, rgba(255,237,213,.5), transparent 70%);
+}
+.hero-noise {
+  position: absolute; inset: 0; pointer-events: none; opacity: .028;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23n)"/></svg>');
+}
 .hero-grid {
   position: relative; display: grid; grid-template-columns: 55fr 45fr;
-  gap: 48px; align-items: center; padding-top: 72px; padding-bottom: 72px;
+  gap: 64px; align-items: center; padding-top: 88px; padding-bottom: 88px;
 }
 .hero-left {
   position: relative; display: flex; flex-direction: column; align-items: flex-start;
@@ -190,18 +208,78 @@ img { display: block; }
 .hero-micro .ic { color: var(--success); }
 .hero-trust { display: flex; align-items: center; gap: 12px; margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--gray-100); }
 .hero-trust p { font-size: 14px; line-height: 1.45; color: var(--fg2); max-width: 300px; }
-/* staggered entrance */
+/* staggered entrance: headline → sub → CTA → phone (floating cards follow the demo) */
 .js .hero-left > * { animation: rise .7s var(--ease-out) backwards; }
-.js .hero-left .pill       { animation-delay: .04s; }
-.js .hero-left h1          { animation-delay: .1s; }
-.js .hero-left .hero-sub   { animation-delay: .18s; }
-.js .hero-left .hero-cta   { animation-delay: .26s; }
-.js .hero-left .hero-micro { animation-delay: .32s; }
-.js .hero-left .hero-trust { animation-delay: .4s; }
-.js .hero-right { animation: rise .7s var(--ease-out) .3s backwards; }
+.js .hero-left .pill       { animation-delay: .05s; }
+.js .hero-left h1          { animation-delay: .12s; }
+.js .hero-left .hero-sub   { animation-delay: .2s; }
+.js .hero-left .hero-cta   { animation-delay: .28s; }
+.js .hero-left .hero-micro { animation-delay: .34s; }
+.js .hero-left .hero-trust { animation-delay: .42s; }
+.js .hero-right { animation: rise .7s var(--ease-out) .38s backwards; }
+
+/* ---------------- Device: premium hardware frame around the demo ---------------- */
+/* fixed wrapper width: the frame hugs the 340px screen (340 + 2×10 pad + 2×1 border) */
+.hero-device { position: relative; width: min(100%, 362px); }
+.device {
+  position: relative; width: 100%; border-radius: 38px; padding: 22px 10px 12px;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, #2E3542, #171B24 32%, #0C0F16) padding-box,
+    linear-gradient(155deg, rgba(255,255,255,.55), rgba(255,255,255,.14) 28%, rgba(255,255,255,.05) 55%, rgba(255,255,255,.32)) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.18),
+    0 2px 4px rgba(15,23,42,.18),
+    0 34px 64px -28px rgba(15,23,42,.42);
+}
+/* soft orange glow reflected under the device */
+.device::after {
+  content: ""; position: absolute; left: 10%; right: 10%; bottom: -30px; height: 40px;
+  border-radius: 50%; filter: blur(16px); z-index: -1;
+  background: radial-gradient(ellipse at center, rgba(249,115,22,.3), transparent 70%);
+}
+.device-speaker {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  width: 46px; height: 4px; border-radius: 999px; background: rgba(255,255,255,.16);
+}
+.device .phone { width: 100%; box-shadow: none; }
+/* static screen reflection */
+.device .phone::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(115deg, rgba(255,255,255,.14), rgba(255,255,255,0) 30%);
+}
+
+/* ---------------- Floating contextual cards (driven by the demo) ---------------- */
+.float-card {
+  position: absolute; z-index: 2; display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.94);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  border: 1px solid rgba(17,24,39,.06); border-radius: 12px;
+  padding: 8px 12px; box-shadow: var(--l-shadow-2);
+  font-size: 13px; font-weight: 600; color: var(--fg1);
+  white-space: nowrap; pointer-events: none;
+  opacity: 0;
+  transform: translate(var(--fx, 0px), calc(var(--fy, 0px) + 8px)) scale(.96);
+  transition: opacity var(--l-dur-base) var(--ease-out), transform var(--l-dur-base) var(--ease-out);
+}
+.float-card.show { opacity: 1; transform: translate(var(--fx, 0px), var(--fy, 0px)) scale(1); }
+/* anchored to the device edges: a small 18px lip overlaps the bezel, never the screen text */
+.float-when { top: 118px; right: calc(100% - 18px); color: var(--fg2); }
+.float-when .ic { color: var(--orange-600); }
+.float-push { top: 30px; left: calc(100% - 18px); align-items: flex-start; }
+.float-push-ic {
+  width: 22px; height: 22px; flex-shrink: 0; border-radius: 50%;
+  background: var(--color-success-light); color: var(--success-text);
+  display: flex; align-items: center; justify-content: center; margin-top: 1px;
+}
+.float-push.cancel .float-push-ic { background: var(--gray-100); color: var(--fg3); }
+.float-push-text { display: flex; flex-direction: column; line-height: 1.3; }
+.float-push-text b { font-size: 13px; font-weight: 600; }
+.float-push-text i { font-style: normal; font-size: 11px; font-weight: 500; color: var(--fg3); }
 
 /* ---------------- Phone: live chat demo (flat card, no device bezel) ---------------- */
 .phone {
+  position: relative;
   width: min(100%, 340px); background: #fff; border-radius: var(--l-radius-lg); padding: 16px;
   box-shadow: var(--l-shadow-3);
 }
@@ -652,7 +730,13 @@ img { display: block; }
   padding: 16px; font-size: 15px; font-weight: 600; margin-top: 22px; }
 
 /* ---------------- Responsive ---------------- */
+@media (max-width: 1140px) {
+  /* narrower split: not enough air around the device — drop the cards, keep the demo */
+  .float-card { display: none; }
+}
+
 @media (max-width: 860px) {
+  .device { border-radius: 34px; padding: 20px 8px 10px; }
   .wrap { padding: 0 16px; }
   .grid-3, .grid-2 { grid-template-columns: 1fr; gap: 16px; }
   .section { padding: 48px 0; }

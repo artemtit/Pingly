@@ -133,6 +133,37 @@
     }
   }
 
+  /* ---------------- Hero parallax: contextual cards only, ±6px max ----------------
+     Disabled for touch devices and prefers-reduced-motion. */
+  if (!reduceMotion && !isTouch) {
+    (function heroParallax() {
+      var hero = document.querySelector('.hero');
+      var cards = Array.prototype.slice.call(document.querySelectorAll('.float-card'));
+      if (!hero || !cards.length) return;
+      var ticking = false, px = 0, py = 0;
+      var apply = function () {
+        ticking = false;
+        cards.forEach(function (card, i) {
+          var k = i === 0 ? 12 : -10; // opposite drift; ±0.5 * k = 6px max
+          card.style.setProperty('--fx', (px * k).toFixed(1) + 'px');
+          card.style.setProperty('--fy', (py * k * 0.7).toFixed(1) + 'px');
+        });
+      };
+      hero.addEventListener('mousemove', function (ev) {
+        var r = hero.getBoundingClientRect();
+        px = ev.clientX / r.width - 0.5;
+        py = (ev.clientY - r.top) / r.height - 0.5;
+        if (!ticking) { ticking = true; requestAnimationFrame(apply); }
+      }, { passive: true });
+      hero.addEventListener('mouseleave', function () {
+        cards.forEach(function (card) {
+          card.style.setProperty('--fx', '0px');
+          card.style.setProperty('--fy', '0px');
+        });
+      });
+    })();
+  }
+
   /* ---------------- Hero chat demo ---------------- */
   (function chatDemo() {
     var demo = document.getElementById('chatDemo');
@@ -149,6 +180,10 @@
     var noteText = document.getElementById('chatNoteText');
     var noteCard = steps.notify;
     var replay = document.getElementById('chatReplay');
+    // floating contextual cards around the device — driven by the demo state
+    var floatWhen = document.getElementById('floatWhen');
+    var floatPush = document.getElementById('floatPush');
+    var floatPushTitle = document.getElementById('floatPushTitle');
     var timers = [];
     var answered = false;
 
@@ -156,6 +191,8 @@
     function clearTimers() { timers.forEach(clearTimeout); timers = []; }
     function show(name) { if (steps[name]) steps[name].classList.add('show'); }
     function hide(name) { if (steps[name]) steps[name].classList.remove('show'); }
+    function floatShow(el) { if (el) el.classList.add('show'); }
+    function floatHide(el) { if (el) el.classList.remove('show'); }
 
     function answer(choice) {
       if (answered) return;
@@ -174,11 +211,14 @@
         ? 'Маша подтвердила занятие в 15:00.'
         : 'Маша отменила занятие в 15:00 — слот свободен.';
       noteCard.classList.toggle('cancel', !yes);
+      if (floatPushTitle) floatPushTitle.textContent = yes ? 'Маша подтвердила' : 'Маша отменила';
+      if (floatPush) floatPush.classList.toggle('cancel', !yes);
 
       later(function () { show('reply'); }, 350);
       later(function () { show('typing2'); }, 1100);
       later(function () { hide('typing2'); show('final'); }, 2100);
       later(function () { show('notify'); }, 2900);
+      later(function () { floatShow(floatPush); }, 3100);
       later(function () { replay.classList.add('show'); }, 3600);
     }
 
@@ -191,12 +231,17 @@
       btnYes.classList.remove('pressed', 'pulse');
       btnNo.classList.remove('pressed', 'pulse');
       noteCard.classList.remove('cancel');
+      floatHide(floatWhen);
+      floatHide(floatPush);
+      if (floatPush) floatPush.classList.remove('cancel');
+      if (floatPushTitle) floatPushTitle.textContent = 'Маша подтвердила';
     }
 
     function play() {
       reset();
       later(function () { show('typing1'); }, 500);
       later(function () { hide('typing1'); show('msg1'); }, 1700);
+      later(function () { floatShow(floatWhen); }, 1950);
       later(function () {
         show('actions');
         btnYes.classList.add('pulse');
@@ -211,6 +256,8 @@
       btnYes.classList.add('pressed');
       btnYes.disabled = btnNo.disabled = true;
       replay.classList.add('show');
+      floatShow(floatWhen);
+      floatShow(floatPush);
     }
 
     btnYes.addEventListener('click', function () { answer('yes'); });
