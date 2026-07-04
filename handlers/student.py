@@ -6,6 +6,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 
 from application.factory import create_services
+from infrastructure.openmodel import complete as _ai_complete
 
 router = Router()
 services = create_services()
@@ -87,6 +88,39 @@ async def reschedule_lesson(callback: CallbackQuery) -> None:
             }
 
 
+# Extract the essence of the student's free text for the tutor notification.
+# The summary must add nothing the student didn't say — extraction only.
+_SUMMARY_SYSTEMS = {
+    "reschedule": (
+        "Ученик написал, когда ему удобно перенести занятие с репетитором. "
+        "Извлеки желаемое время максимально кратко, как пометку в календаре "
+        "(примеры: «чт, после 16:00», «на выходные», «завтра утром»). "
+        "Если конкретного времени нет — перескажи суть просьбы в 2–5 словах. "
+        "Ничего не добавляй от себя. Ответь ТОЛЬКО короткой фразой на русском, "
+        "без кавычек и пояснений."
+    ),
+    "cancel": (
+        "Ученик написал причину отмены занятия с репетитором. "
+        "Сформулируй её кратко, в 2–5 словах (примеры: «болеет», «уезжает с родителями», "
+        "«не успел сделать ДЗ»). Ничего не добавляй от себя. "
+        "Ответь ТОЛЬКО короткой фразой на русском, без кавычек и пояснений."
+    ),
+}
+
+
+async def _summarize_reply(kind: str, text: str) -> str | None:
+    """One-line AI summary of the student's follow-up, or None (caller falls back
+    to forwarding the raw text as before)."""
+    out = await _ai_complete(_SUMMARY_SYSTEMS[kind], text, max_tokens=400)
+    if not out:
+        return None
+    out = out.strip().strip('"«»').splitlines()[0].strip()
+    # A "summary" longer than the original adds noise, not signal.
+    if not out or len(out) > 80 or len(out) > len(text) + 10:
+        return None
+    return out
+
+
 @router.message(F.text & ~F.text.startswith("/"))
 async def capture_cancel_reason(message: Message) -> None:
     """Forward a just-cancelled/reschedule-requested lesson's free-text follow-up
@@ -99,14 +133,20 @@ async def capture_cancel_reason(message: Message) -> None:
     text = (message.text or "").strip()[:500]
     if not text:
         return
-    if info.get("kind") == "reschedule":
+    kind = "reschedule" if info.get("kind") == "reschedule" else "cancel"
+    # Ack the student right away — the AI call below may take a few seconds.
+    await message.answer("Передал репетитору 🙏" if kind == "reschedule" else "Передал причину репетитору 🙏")
+
+    summary = await _summarize_reply(kind, text)
+    if summary and kind == "reschedule":
+        forward = f"🔄 {info['name']} просит перенос: {summary}\n💬 «{text}»"
+    elif summary:
+        forward = f"📝 {info['name']} отменяет: {summary}\n💬 «{text}»"
+    elif kind == "reschedule":
         forward = f"🔄 {info['name']} предлагает время для переноса: «{text}»"
-        ack = "Передал репетитору 🙏"
     else:
         forward = f"📝 {info['name']} о причине отмены: «{text}»"
-        ack = "Передал причину репетитору 🙏"
     try:
         await message.bot.send_message(info["tutor_tg_id"], forward)
     except Exception:
         pass
-    await message.answer(ack)
