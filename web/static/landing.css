@@ -1006,3 +1006,33 @@ img { display: block; }
 input, textarea, select { caret-color: #F97316; }
 a, button, summary, label { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* ── Dark theme for standalone auth / error pages ──────────────────────────
+   login, register, verify, 404, 500 load landing.css but, unlike the marketing
+   landing, honour the theme saved in the cabinet — an inline <head> script sets
+   data-theme="dark". Text and borders flip via design-tokens.css; here we only
+   recolour the hardcoded light surfaces. The marketing landing never sets
+   data-theme, so it stays light regardless of this block. */
+[data-theme="dark"] .auth-page {
+  background:
+    radial-gradient(ellipse 40rem 30rem at 12% -6%, rgba(249, 115, 22, .10), transparent 60%),
+    radial-gradient(ellipse 38rem 30rem at 88% 4%, rgba(59, 130, 246, .10), transparent 60%),
+    radial-gradient(ellipse 44rem 34rem at 50% 116%, rgba(168, 85, 247, .10), transparent 60%),
+    linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
+}
+[data-theme="dark"] .auth-page::before {
+  background-image: radial-gradient(rgba(148, 163, 184, .07) 1px, transparent 1.4px);
+}
+[data-theme="dark"] .auth-card {
+  background: #1E293B;
+  box-shadow: 0 20px 45px -22px rgba(0, 0, 0, .6);
+}
+[data-theme="dark"] .auth-input { background: #0F172A; }
+[data-theme="dark"] .auth-input:focus { box-shadow: 0 0 0 3px rgb(249 115 22 / .22); }
+[data-theme="dark"] .lbtn-ghost {
+  background: #1E293B; color: var(--fg1); border-color: var(--gray-200);
+}
+[data-theme="dark"] .lbtn-ghost:hover { background: #243044; }
+[data-theme="dark"] .auth-note {
+  background: rgba(249, 115, 22, .10); border-color: rgba(249, 115, 22, .28); color: var(--fg1);
+}

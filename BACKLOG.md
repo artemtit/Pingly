@@ -32,9 +32,9 @@
 
 ## 🎨 Дизайн
 
-- [ ] **D1 🔴 Статусы ДЗ — сырые английские enum'ы** («submitted», «reviewed») в `web/templates/homework_tutor.html:60`, `homework_student.html:16`, `student_card.html:207`. Применить существующий `ui.status_badge()` из `macros.html:54` с русскими подписями.
-- [ ] **D2 🔴 Две пустые иконки в админке**: `web/templates/admin/overview.html:24-25` зовёт `ui.icon('russian-ruble')` и `ui.icon('gauge')`, которых нет в карте иконок `macros.html` → пустые SVG у KPI «MRR» и «Конверсия». Добавить пути в карту.
-- [ ] **D3 🔴 Логин/регистрация/verify/404/500 игнорируют тёмную тему** — standalone-страницы без early-init скрипта `data-theme` из `base.html`, форс-светлые. Добавить init-скрипт и тёмные стили.
+- [x] **D1 🔴 Статусы ДЗ — сырые английские enum'ы** ✅ (макрос `ui.hw_status_badge`, задеплоено) («submitted», «reviewed») в `web/templates/homework_tutor.html:60`, `homework_student.html:16`, `student_card.html:207`. Применить существующий `ui.status_badge()` из `macros.html:54` с русскими подписями.
+- [x] **D2 🔴 Две пустые иконки в админке** ✅ (добавлены russian-ruble/gauge в карту, задеплоено): `web/templates/admin/overview.html:24-25` зовёт `ui.icon('russian-ruble')` и `ui.icon('gauge')`, которых нет в карте иконок `macros.html` → пустые SVG у KPI «MRR» и «Конверсия». Добавить пути в карту.
+- [x] **D3 🔴 Логин/регистрация/verify/404/500 игнорируют тёмную тему** ✅ (init-скрипт + тёмный блок в landing.css, проверено на проде) — standalone-страницы без early-init скрипта `data-theme` из `base.html`, форс-светлые. Добавить init-скрипт и тёмные стили.
 - [ ] **D4 🟡 Нативные `confirm()`/`alert()`** на удалении/отмене (`calendar.html:59,70`, `schedule.html:92`, `homework_tutor.html:26,87`, `student.html:39,49`, `admin/broadcast.html:63`) — не темизируются, выбиваются из языка интерфейса. Заменить на существующие модалки (как на students).
 - [ ] **D5 🟡 Сегментированные радио-пилюли недоступны с клавиатуры** — `<input type="radio">` скрыты атрибутом `hidden` (`requests.html:60-64`, `admin/broadcast.html:31-35`). Сделать visually-hidden + focus-стили — стрелки заработают.
 - [ ] **D6 🟡 Таблица админки репетиторов режется на телефоне** — 8 колонок без `.table-scroll` при `overflow-x:hidden` у main (`admin/tutors.html:24-77`, `web/static/app.css:717`). Обернуть в скролл-контейнер.
