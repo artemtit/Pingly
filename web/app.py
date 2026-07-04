@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -17,6 +19,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 import config as _config
 from application.factory import create_services
 from infrastructure import captcha as _captcha
+from infrastructure.openmodel import complete as _openmodel_complete
 from application.services.accounts import subscription_info as _subscription_info
 from config import WEB_BASE_URL, WEB_SECRET
 from web.calendar_view import STATUS_LABELS, build_calendar, parse_anchor
@@ -696,17 +699,19 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         lessons = await services.lessons.list_tutor_calendar(user["id"])
         homework = await services.homework.list_for_tutor(user["id"])
         analytics = await services.analytics.tutor_dashboard(user["id"])
+        finance = await services.lessons.finance_overview(user["id"])
         now = datetime.now(timezone.utc).isoformat()
         upcoming = [l for l in lessons if l.get("status") in ("scheduled", "confirmed", "reschedule_requested") and (l.get("starts_at") or "") >= now][:6]
         pending_hw = [h for h in homework if h.get("status") == "submitted"]
-        finance = await services.lessons.finance_overview(user["id"])
         all_requests = await services.public.list_requests(user["id"])
         new_requests = [r for r in all_requests if r.get("status") == "new"]
+        ai_summary = await _build_tutor_ai_summary(user["id"], students, lessons, finance) if students else None
         return templates.TemplateResponse("tutor.html", _ctx(
             request, user, "overview",
             students=students, analytics=analytics,
             upcoming=upcoming, pending_hw=pending_hw,
             finance=finance, new_requests=new_requests,
+            ai_summary=ai_summary,
         ))
 
     @app.get("/tutor/students", response_class=HTMLResponse)
@@ -1208,6 +1213,28 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     # In-memory per-tutor usage: user_id -> [day "YYYY-MM-DD", count, last monotonic].
     # Resets on restart — acceptable for a soft daily cap.
     _ai_usage: dict[str, list] = {}
+    _ai_summary_cache: dict[str, list] = {}
+    _AI_SUMMARY_TTL = 300.0
+    _AI_ANALYTICS_HINTS = (
+        "кто чаще",
+        "кто переносит",
+        "какие ученики",
+        "сколько занятий",
+        "сколько уроков",
+        "у кого падает",
+        "кого стоит предупредить",
+        "сводк",
+        "статист",
+        "аналит",
+        "отчёт",
+        "отчет",
+        "не платил",
+        "не платили",
+        "задолж",
+        "долг",
+        "явка",
+        "посещаемост",
+    )
 
     _AI_SYSTEM = (
         "Ты — встроенный ИИ-помощник сервиса Pingly (pingly-app.ru). "
@@ -1226,6 +1253,230 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         "Если не знаешь ответа про Pingly — скажи честно и направь в поддержку: Настройки → Поддержка.\n\n"
         "Стиль: по-русски, кратко и по делу. Простой текст без Markdown-заголовков; списки — с дефисами."
     )
+
+    def _ai_parse_dt(raw: object) -> datetime | None:
+        try:
+            return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        except Exception:
+            return None
+
+    def _ai_is_analytics_question(text: str) -> bool:
+        low = f" {text.lower()} "
+        if any(marker in low for marker in ("сводк", "статист", "аналит", "отчет", "отчёт", "задолж", "посещаемост", "явка")):
+            return True
+        interrogative = any(marker in low for marker in ("кто ", "какие ", "сколько ", "у кого ", "кого ", "как часто "))
+        return interrogative and any(marker in low for marker in _AI_ANALYTICS_HINTS)
+
+    def _ai_attendance_rate(completed: int, cancelled: int) -> int | None:
+        total = completed + cancelled
+        if not total:
+            return None
+        return round(completed / total * 100)
+
+    def _ai_format_dt(raw: datetime | None) -> str:
+        if not raw:
+            return "—"
+        return raw.astimezone(_MSK).strftime("%d.%m")
+
+    def _build_tutor_ai_snapshot(students: list[dict], lessons: list[dict], finance: dict) -> dict[str, object]:
+        now = datetime.now(timezone.utc)
+        window_recent = now - timedelta(days=30)
+        window_prev = now - timedelta(days=60)
+        student_names = {str(s.get("id") or ""): (s.get("name") or "Ученик") for s in students}
+        per_student: dict[str, dict[str, object]] = {}
+        month_counts: Counter[str] = Counter()
+
+        def get_row(lesson: dict) -> dict[str, object]:
+            sid = str(lesson.get("student_id") or "")
+            profile = lesson.get("student_profiles") or {}
+            name = profile.get("name") or student_names.get(sid) or "Ученик"
+            key = sid or name
+            row = per_student.get(key)
+            if row is None:
+                row = {
+                    "student_id": sid,
+                    "name": name,
+                    "total": 0,
+                    "completed": 0,
+                    "cancelled": 0,
+                    "reschedule_requested": 0,
+                    "rescheduled": 0,
+                    "paid": 0,
+                    "unpaid_count": 0,
+                    "unpaid_sum": 0,
+                    "last_lesson_at": None,
+                    "last_reschedule_at": None,
+                    "last_unpaid_at": None,
+                    "recent_completed": 0,
+                    "recent_cancelled": 0,
+                    "prev_completed": 0,
+                    "prev_cancelled": 0,
+                }
+                per_student[key] = row
+            return row
+
+        for lesson in lessons:
+            started = _ai_parse_dt(lesson.get("starts_at"))
+            if not started:
+                continue
+            month_counts[started.astimezone(_MSK).strftime("%Y-%m")] += 1
+            row = get_row(lesson)
+            status = str(lesson.get("status") or "")
+            row["total"] = int(row["total"]) + 1
+            row["last_lesson_at"] = started if not row["last_lesson_at"] or started > row["last_lesson_at"] else row["last_lesson_at"]
+            if status == "completed":
+                row["completed"] = int(row["completed"]) + 1
+            elif status == "cancelled":
+                row["cancelled"] = int(row["cancelled"]) + 1
+            elif status == "reschedule_requested":
+                row["reschedule_requested"] = int(row["reschedule_requested"]) + 1
+                row["last_reschedule_at"] = started if not row["last_reschedule_at"] or started > row["last_reschedule_at"] else row["last_reschedule_at"]
+            elif status == "rescheduled":
+                row["rescheduled"] = int(row["rescheduled"]) + 1
+
+            if started <= now:
+                if started >= window_recent:
+                    if status == "completed":
+                        row["recent_completed"] = int(row["recent_completed"]) + 1
+                    elif status == "cancelled":
+                        row["recent_cancelled"] = int(row["recent_cancelled"]) + 1
+                elif started >= window_prev:
+                    if status == "completed":
+                        row["prev_completed"] = int(row["prev_completed"]) + 1
+                    elif status == "cancelled":
+                        row["prev_cancelled"] = int(row["prev_cancelled"]) + 1
+
+            if status == "completed" and not lesson.get("paid"):
+                price = int(lesson.get("price") or 0)
+                row["unpaid_count"] = int(row["unpaid_count"]) + 1
+                row["unpaid_sum"] = int(row["unpaid_sum"]) + price
+                row["last_unpaid_at"] = started if not row["last_unpaid_at"] or started > row["last_unpaid_at"] else row["last_unpaid_at"]
+            elif lesson.get("paid"):
+                row["paid"] = int(row["paid"]) + 1
+
+        def sort_key_name(item: dict[str, object]) -> tuple[int, str]:
+            return (-int(item.get("count") or 0), str(item.get("name") or ""))
+
+        reschedules = sorted(
+            [
+                {
+                    "name": row["name"],
+                    "count": int(row["reschedule_requested"]) + int(row["rescheduled"]),
+                    "last": row["last_reschedule_at"],
+                }
+                for row in per_student.values()
+                if int(row["reschedule_requested"]) + int(row["rescheduled"])
+            ],
+            key=sort_key_name,
+        )
+        debts = [
+            {
+                "name": item.get("name") or "Ученик",
+                "unpaid_sum": int(item.get("unpaid_sum") or 0),
+                "unpaid_count": int(item.get("unpaid_count") or 0),
+                "last_unpaid_at": per_student.get(str(item.get("student_id") or item.get("name") or ""), {}).get("last_unpaid_at"),
+            }
+            for item in (finance.get("students") or [])
+            if int(item.get("unpaid_sum") or 0) > 0
+        ]
+        attendance = []
+        for row in per_student.values():
+            recent_rate = _ai_attendance_rate(int(row["recent_completed"]), int(row["recent_cancelled"]))
+            prev_rate = _ai_attendance_rate(int(row["prev_completed"]), int(row["prev_cancelled"]))
+            if recent_rate is None or prev_rate is None:
+                continue
+            if int(row["recent_completed"]) + int(row["recent_cancelled"]) < 3:
+                continue
+            if int(row["prev_completed"]) + int(row["prev_cancelled"]) < 3:
+                continue
+            attendance.append({
+                "name": row["name"],
+                "recent_rate": recent_rate,
+                "prev_rate": prev_rate,
+                "delta": recent_rate - prev_rate,
+            })
+        attendance.sort(key=lambda item: (item["delta"], -item["prev_rate"], item["name"]))
+
+        month_series = sorted(month_counts.items())[-18:]
+        snapshot_lines = [
+            f"Ученики: {len(students)}",
+            f"Уроки всего: {len(lessons)}",
+            f"Уроки по месяцам: " + (", ".join(f"{month}={count}" for month, count in month_series) or "нет данных"),
+            f"Переносы: " + (", ".join(
+                f"{item['name']} — {item['count']} (последний { _ai_format_dt(item['last']) })"
+                for item in reschedules[:5]
+            ) or "нет"),
+            f"Долги: " + (", ".join(
+                f"{item['name']} — {item['unpaid_sum']} ₽ ({item['unpaid_count']} урок{'' if item['unpaid_count'] == 1 else 'ов'}, последний { _ai_format_dt(item['last_unpaid_at']) })"
+                for item in debts[:5]
+            ) or "нет"),
+            f"Посещаемость просела: " + (", ".join(
+                f"{item['name']} {item['prev_rate']}% → {item['recent_rate']}% ({item['delta']:+d} п.п.)"
+                for item in attendance[:5]
+            ) or "нет"),
+        ]
+        return {
+            "students_count": len(students),
+            "lessons_count": len(lessons),
+            "month_counts": month_series,
+            "reschedules": reschedules,
+            "debts": debts,
+            "attendance": attendance,
+            "snapshot_text": "\n".join(snapshot_lines),
+        }
+
+    def _ai_fallback_summary(snapshot: dict[str, object]) -> str:
+        parts: list[str] = []
+        reschedules = snapshot.get("reschedules") or []
+        debts = snapshot.get("debts") or []
+        attendance = snapshot.get("attendance") or []
+        if reschedules:
+            top = reschedules[0]
+            parts.append(f"Чаще всех переносит: {top['name']} — {top['count']}")
+        if debts:
+            top = debts[0]
+            parts.append(f"По долгам в приоритете: {top['name']} — {top['unpaid_sum']} ₽")
+        if attendance:
+            top = attendance[0]
+            parts.append(f"Просела явка: {top['name']} {top['prev_rate']}% → {top['recent_rate']}%")
+        if not parts:
+            parts.append("Пока мало данных для сводки. Добавь учеников и занятия — здесь появятся сигналы.")
+        return "\n".join(f"• {line}" for line in parts[:3])
+
+    async def _build_tutor_ai_summary(tutor_user_id: str, students: list[dict], lessons: list[dict], finance: dict) -> str:
+        cache_sig = [
+            len(students),
+            len(lessons),
+            int(finance.get("total_unpaid") or 0),
+            int(finance.get("month_earned") or 0),
+        ]
+        cached = _ai_summary_cache.get(tutor_user_id)
+        if cached and time.monotonic() - float(cached[0]) < _AI_SUMMARY_TTL and cached[1:5] == cache_sig:
+            return str(cached[5])
+
+        snapshot = _build_tutor_ai_snapshot(students, lessons, finance)
+        if _config.AI_ENABLED and _config.OPENMODEL_API_KEY:
+            system = (
+                "Ты готовишь короткую ИИ-сводку для главного экрана кабинета репетитора Pingly. "
+                "Ответ нужен на русском, без заголовков, 3 коротких пункта максимум. "
+                "Используй только данные ниже, ничего не выдумывай. "
+                "Если данных мало, скажи об этом прямо."
+            )
+            user_text = (
+                snapshot["snapshot_text"]
+                + "\n\nСделай сводку на сегодня: кто чаще переносит, у кого долг, у кого падает посещаемость."
+            )
+            try:
+                reply = await _openmodel_complete(system, user_text, max_tokens=220, timeout=10.0)
+            except Exception:
+                reply = None
+            if reply and reply.strip():
+                summary = reply.strip()
+                _ai_summary_cache[tutor_user_id] = [time.monotonic(), *cache_sig, summary]
+                return summary
+        summary = _ai_fallback_summary(snapshot)
+        _ai_summary_cache[tutor_user_id] = [time.monotonic(), *cache_sig, summary]
+        return summary
 
     @app.post("/api/ai/chat")
     async def ai_chat(request: Request, user: dict = Depends(current_user)) -> Response:
@@ -1249,6 +1500,18 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         if not msgs or msgs[-1]["role"] != "user":
             raise HTTPException(status_code=400)
 
+        use_analytics = _ai_is_analytics_question(msgs[-1]["content"])
+        analytics_block = ""
+        if use_analytics:
+            try:
+                students = await services.students.list_students_by_user(user["id"])
+                lessons = await services.repo.list_lessons_for_tutor(user["id"], 1000)
+                finance = await services.lessons.finance_overview(user["id"])
+                snapshot = _build_tutor_ai_snapshot(students, lessons, finance)
+                analytics_block = "\n\nДАННЫЕ КАБИНЕТА:\n" + str(snapshot["snapshot_text"])
+            except Exception:
+                logging.getLogger("pingly.web").warning("ai chat: failed to build analytics snapshot", exc_info=True)
+
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         rec = _ai_usage.get(user["id"])
         if not rec or rec[0] != today:
@@ -1263,12 +1526,19 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
 
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
+                system_prompt = _AI_SYSTEM.format(name=user.get("full_name") or "репетитор")
+                if analytics_block:
+                    system_prompt += (
+                        "\n\nЕсли вопрос про статистику, переносы, долги или посещаемость, "
+                        "используй только блок ДАННЫЕ КАБИНЕТА ниже и не выдумывай."
+                        + analytics_block
+                    )
                 resp = await client.post(
                     f"{_config.OPENMODEL_BASE_URL}/v1/messages",
                     headers={"x-api-key": _config.OPENMODEL_API_KEY, "anthropic-version": "2023-06-01"},
                     json={
                         "model": _config.OPENMODEL_MODEL,
-                        "system": _AI_SYSTEM.format(name=user.get("full_name") or "репетитор"),
+                        "system": system_prompt,
                         "messages": msgs,
                         "max_tokens": 1500,
                     },

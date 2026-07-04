@@ -22,7 +22,12 @@
     "Составь план занятия",
     "Придумай домашнее задание",
     "Напиши сообщение ученику",
-    "Как работает Pingly?"
+    "Как работает Pingly?",
+    "Кто чаще переносит занятия?",
+    "Какие ученики давно не платили?",
+    "Сколько занятий было в июне?",
+    "У кого падает посещаемость?",
+    "Кого стоит предупредить о задолженности?"
   ];
 
   var history = [];
@@ -56,7 +61,7 @@
     "</div>" +
     '<div class="ai-msgs" aria-live="polite"></div>' +
     '<form class="ai-form">' +
-      '<textarea class="ai-input" rows="1" placeholder="Спроси о чём угодно…" aria-label="Сообщение помощнику"></textarea>' +
+      '<textarea class="ai-input" rows="1" placeholder="Спроси про уроки, учеников или статистику…" aria-label="Сообщение помощнику"></textarea>' +
       '<button type="submit" class="ai-send" aria-label="Отправить">' + SEND + "</button>" +
     "</form>";
 
@@ -81,7 +86,7 @@
   function renderWelcome() {
     var w = document.createElement("div");
     w.className = "ai-msg ai-assistant";
-    w.textContent = "Привет! Помогу с планом занятия, домашкой, сообщением ученику — или расскажу, как что работает в Pingly.";
+    w.textContent = "Привет! Помогу с планом занятия, домашкой, сообщением ученику, статистикой кабинета — или расскажу, как что работает в Pingly.";
     msgsEl.appendChild(w);
     var chips = document.createElement("div");
     chips.className = "ai-chips";

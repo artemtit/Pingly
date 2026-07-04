@@ -73,6 +73,17 @@
 </section>
 {% endif %}
 
+{% if ai_summary %}
+<section class="card" style="margin-top: 18px;">
+  <div class="card-head">
+    <h2 class="h2-ico">{{ ui.icon('sparkles') }} ИИ-сводка</h2>
+    <span class="muted">по текущим данным кабинета</span>
+  </div>
+  <div class="muted" style="white-space: pre-line; line-height: 1.6;">{{ ai_summary }}</div>
+  <div class="muted" style="margin-top: 12px;">Подробно спроси в помощнике ниже: кто переносит, у кого долг, что с явкой.</div>
+</section>
+{% endif %}
+
 <section class="grid two" style="margin-top: 18px;">
   <div class="card">
     <div class="card-head"><h2 class="h2-ico">{{ ui.icon('calendar-check') }} Ближайшие занятия</h2><a class="link-btn" href="/tutor/calendar">Календарь →</a></div>
