@@ -114,11 +114,16 @@
 
 @media (max-width: 860px) {
   /* keep clear of the floating bottom nav */
-  .ai-fab { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); right: 14px; }
+  .ai-fab {
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    right: 14px;
+    z-index: 90;
+  }
   .ai-panel {
     right: 12px; left: 12px; width: auto;
     bottom: calc(78px + env(safe-area-inset-bottom, 0px));
     height: min(540px, calc(100dvh - 150px));
+    z-index: 90;
   }
 }
 
