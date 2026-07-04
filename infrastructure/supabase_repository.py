@@ -70,7 +70,10 @@ class SupabasePinglyRepository:
         return user
 
     async def get_user_by_email(self, email: str) -> dict[str, Any] | None:
-        result = await self._db().table("users").select("*").ilike("email", email).execute()
+        # Exact match, not ilike: callers already lowercase the email, and ilike
+        # would treat % / _ in the input as SQL wildcards (a crafted email could
+        # match a different account's row).
+        result = await self._db().table("users").select("*").eq("email", (email or "").strip().lower()).execute()
         return _one(result)
 
     async def set_verification_code(self, user_id: str, code: str, expires_at: str) -> None:
@@ -685,10 +688,13 @@ class SupabasePinglyRepository:
         return _one(result)
 
     async def get_tutor_profile_by_slug(self, slug: str) -> dict[str, Any] | None:
+        # Exact match, not ilike: stored slugs are already normalized to lowercase
+        # [a-z0-9-], so we lowercase the lookup here. ilike would let % / _ in the
+        # URL act as wildcards (e.g. /u/% would match the first enabled profile).
         result = await (
             self._db().table("tutor_profiles")
             .select("*, users(full_name)")
-            .ilike("slug", slug)
+            .eq("slug", (slug or "").strip().lower())
             .execute()
         )
         return _one(result)
