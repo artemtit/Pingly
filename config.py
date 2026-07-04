@@ -83,3 +83,12 @@ VK_GROUP_ID: int = int(os.getenv("VK_GROUP_ID", "0") or 0)  # filled at startup 
 # VK ID login for tutors (Фаза 2 — OAuth app, separate from the community bot).
 VK_APP_ID: str = os.getenv("VK_APP_ID", "")
 VK_APP_SECRET: str = os.getenv("VK_APP_SECRET", "")
+
+# AI assistant in the tutor cabinet. Calls the OpenModel gateway
+# (Anthropic Messages format: POST {base}/v1/messages, header x-api-key).
+# Off until the key is set — the chat button is not rendered while disabled.
+AI_ENABLED: bool = os.getenv("AI_ENABLED", "0") == "1"
+OPENMODEL_API_KEY: str = os.getenv("OPENMODEL_API_KEY", "")
+OPENMODEL_MODEL: str = os.getenv("OPENMODEL_MODEL", "deepseek-v4-flash")
+OPENMODEL_BASE_URL: str = os.getenv("OPENMODEL_BASE_URL", "https://api.openmodel.ai")
+AI_DAILY_LIMIT: int = int(os.getenv("AI_DAILY_LIMIT", "40"))  # requests per tutor per day

@@ -166,4 +166,10 @@ document.addEventListener('keydown', function(e){
 });
 </script>
 
+{% if ai_enabled and user.role == 'tutor' %}
+<div id="ai-assistant"></div>
+<link rel="stylesheet" href="/static/assistant.css?v=1">
+<script src="/static/assistant.js?v=1" defer></script>
+{% endif %}
+
 {% endblock %}

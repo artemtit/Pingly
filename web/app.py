@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timedelta, timezone
+
+import httpx
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -203,6 +206,7 @@ def _plan_locked(user: dict | None, section: str) -> bool:
 
 
 templates.env.globals["vk_enabled"] = _config.VK_ENABLED
+templates.env.globals["ai_enabled"] = _config.AI_ENABLED and bool(_config.OPENMODEL_API_KEY)
 # Read at call time: VK_GROUP_ID is resolved from the token at startup.
 templates.env.globals["vk_invite_base"] = lambda: f"https://vk.me/club{_config.VK_GROUP_ID}"
 templates.env.globals["plans_enabled"] = _config.PLANS_ENABLED
@@ -1199,6 +1203,90 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
                 f"🆘 Поддержка Pingly\n\nОт: {who} ({role}, {contact})\nID: {acct_id}\n\n{text[:3000]}",
             )
         return RedirectResponse(f"{base}?saved=support", status_code=303)
+
+    # ---------------- AI assistant (tutor cabinet) ----------------
+    # In-memory per-tutor usage: user_id -> [day "YYYY-MM-DD", count, last monotonic].
+    # Resets on restart — acceptable for a soft daily cap.
+    _ai_usage: dict[str, list] = {}
+
+    _AI_SYSTEM = (
+        "Ты — встроенный ИИ-помощник сервиса Pingly (pingly-app.ru). "
+        "Пользователь — репетитор по имени {name}.\n\n"
+        "Чем помогаешь:\n"
+        "- составить план занятия, домашнее задание, объяснение темы, мини-тест;\n"
+        "- сформулировать сообщение ученику или родителю (напоминание, перенос, оплата);\n"
+        "- ответить на вопросы про сам Pingly.\n\n"
+        "Факты о Pingly (не выдумывай сверх этого):\n"
+        "- Pingly сам шлёт ученикам напоминание за 2 часа до занятия в Telegram или ВКонтакте; "
+        "ученик отвечает «Буду / Отменяю / Прошу перенести», репетитор видит статусы на сайте.\n"
+        "- Разделы кабинета: Обзор, Ученики, Календарь, Расписание, Задания (ДЗ), Финансы, "
+        "Заявки (запись с публичной страницы), Настройки.\n"
+        "- Ученика добавляют на сайте и отправляют ему ссылку-приглашение в бота.\n"
+        "- Подписка: 14 дней бесплатно, дальше 990 ₽/мес.\n"
+        "Если не знаешь ответа про Pingly — скажи честно и направь в поддержку: Настройки → Поддержка.\n\n"
+        "Стиль: по-русски, кратко и по делу. Простой текст без Markdown-заголовков; списки — с дефисами."
+    )
+
+    @app.post("/api/ai/chat")
+    async def ai_chat(request: Request, user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        if not (_config.AI_ENABLED and _config.OPENMODEL_API_KEY):
+            raise HTTPException(status_code=503)
+        try:
+            body = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=400) from exc
+        raw = body.get("messages")
+        if not isinstance(raw, list):
+            raise HTTPException(status_code=400)
+        msgs = []
+        for m in raw[-10:]:
+            if not isinstance(m, dict):
+                continue
+            role, content = m.get("role"), (m.get("content") or "").strip()
+            if role in ("user", "assistant") and content:
+                msgs.append({"role": role, "content": content[:4000]})
+        if not msgs or msgs[-1]["role"] != "user":
+            raise HTTPException(status_code=400)
+
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        rec = _ai_usage.get(user["id"])
+        if not rec or rec[0] != today:
+            rec = [today, 0, 0.0]
+        if rec[1] >= _config.AI_DAILY_LIMIT:
+            return JSONResponse({"error": "Дневной лимит помощника исчерпан — продолжим завтра."}, status_code=429)
+        if time.monotonic() - rec[2] < 2.0:
+            return JSONResponse({"error": "Слишком часто — подожди пару секунд."}, status_code=429)
+        rec[1] += 1
+        rec[2] = time.monotonic()
+        _ai_usage[user["id"]] = rec
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(
+                    f"{_config.OPENMODEL_BASE_URL}/v1/messages",
+                    headers={"x-api-key": _config.OPENMODEL_API_KEY, "anthropic-version": "2023-06-01"},
+                    json={
+                        "model": _config.OPENMODEL_MODEL,
+                        "system": _AI_SYSTEM.format(name=user.get("full_name") or "репетитор"),
+                        "messages": msgs,
+                        "max_tokens": 1500,
+                    },
+                )
+        except httpx.HTTPError:
+            logging.getLogger("pingly.web").warning("ai chat: openmodel request failed", exc_info=True)
+            return JSONResponse({"error": "Не получилось связаться с помощником — попробуй ещё раз."}, status_code=502)
+        if resp.status_code != 200:
+            logging.getLogger("pingly.web").warning("ai chat: openmodel returned %s: %s", resp.status_code, resp.text[:300])
+            return JSONResponse({"error": "Помощник сейчас недоступен — попробуй позже."}, status_code=502)
+        data = resp.json()
+        # The model may emit thinking blocks first — keep only text blocks.
+        text = "\n".join(
+            b.get("text", "") for b in data.get("content", []) if isinstance(b, dict) and b.get("type") == "text"
+        ).strip()
+        if not text:
+            return JSONResponse({"error": "Пустой ответ — попробуй переформулировать."}, status_code=502)
+        return JSONResponse({"reply": text})
 
     @app.post("/settings/name")
     async def update_name(full_name: str = Form(...), user: dict = Depends(current_user)) -> Response:
