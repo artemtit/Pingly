@@ -13,7 +13,7 @@
   <div class="card hw-card status-{{ hw.status }}">
     <div class="hw-head">
       <strong>{{ hw.title }}</strong>
-      <span class="badge {{ hw.status }}">{{ hw.status }}</span>
+      {{ ui.hw_status_badge(hw.status) }}
     </div>
     {% if hw.description %}<p class="muted">{{ hw.description }}</p>{% endif %}
     {% if hw.due_at %}<p class="muted">{{ ui.icon('clock', 14) }} Дедлайн: {{ hw.due_at[:16].replace("T", " ") }}</p>{% endif %}

@@ -204,7 +204,7 @@ function copyInvite(id, btn){
           {% for item in homework %}
           <tr>
             <td>{{ item.title }}</td>
-            <td><span class="badge {{ item.status }}">{{ item.status }}</span></td>
+            <td>{{ ui.hw_status_badge(item.status) }}</td>
             <td class="muted">{{ item.tutor_comment or item.description or "—" }}</td>
           </tr>
           {% else %}

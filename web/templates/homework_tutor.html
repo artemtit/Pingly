@@ -57,7 +57,7 @@
       <div class="hw-item">
         <div class="hw-head">
           <strong>{{ hw.title }}</strong>
-          <span class="badge {{ hw.status }}">{{ hw.status }}</span>
+          {{ ui.hw_status_badge(hw.status) }}
         </div>
         <div class="muted">{{ hw.student_profiles.name if hw.student_profiles else "Ученик" }}{% if hw.description %} · {{ hw.description }}{% endif %}</div>
         {% if hw.status == "submitted" %}
