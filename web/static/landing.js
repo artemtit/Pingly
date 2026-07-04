@@ -10,6 +10,7 @@
 
   var doc = document.documentElement;
   doc.classList.add('js');
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var isTouch = window.matchMedia('(hover: none)').matches;
@@ -77,6 +78,17 @@
     });
     window.addEventListener('resize', function () {
       if (open && window.innerWidth > 860) setOpen(false, false);
+    });
+    window.addEventListener('pageshow', function (ev) {
+      setOpen(false, false);
+      var navEntry = performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
+      if (location.pathname === '/' && !location.hash && (ev.persisted || (navEntry && navEntry.type === 'back_forward'))) {
+        window.scrollTo(0, 0);
+      }
+    });
+    window.addEventListener('pagehide', function () {
+      if (open) setOpen(false, false);
+      document.body.style.overflow = '';
     });
   })();
 
