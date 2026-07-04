@@ -705,7 +705,8 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         pending_hw = [h for h in homework if h.get("status") == "submitted"]
         all_requests = await services.public.list_requests(user["id"])
         new_requests = [r for r in all_requests if r.get("status") == "new"]
-        ai_summary = await _build_tutor_ai_summary(user["id"], students, lessons, finance) if students else None
+        # Temporarily disabled on the dashboard; keep the code path ready for re-enable.
+        ai_summary = None
         return templates.TemplateResponse("tutor.html", _ctx(
             request, user, "overview",
             students=students, analytics=analytics,
