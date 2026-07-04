@@ -155,20 +155,25 @@
 </div>
 <script>
 function toggleMore(){
-  document.getElementById('more-sheet').classList.toggle('open');
-  document.getElementById('more-backdrop').classList.toggle('open');
+  var sheet = document.getElementById('more-sheet');
+  var backdrop = document.getElementById('more-backdrop');
+  var open = !sheet.classList.contains('open');
+  sheet.classList.toggle('open', open);
+  backdrop.classList.toggle('open', open);
+  document.body.classList.toggle('more-open', open);
 }
 document.addEventListener('keydown', function(e){
   if (e.key === 'Escape') {
     document.getElementById('more-sheet').classList.remove('open');
     document.getElementById('more-backdrop').classList.remove('open');
+    document.body.classList.remove('more-open');
   }
 });
 </script>
 
 {% if ai_enabled and user.role == 'tutor' %}
 <div id="ai-assistant"></div>
-<link rel="stylesheet" href="/static/assistant.css?v=2">
+<link rel="stylesheet" href="/static/assistant.css?v=3">
 <script src="/static/assistant.js?v=3" defer></script>
 {% endif %}
 
