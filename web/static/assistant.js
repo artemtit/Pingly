@@ -15,6 +15,8 @@
     '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
   var SEND =
     '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>';
+  var NEW_CHAT =
+    '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>';
 
   var SUGGESTIONS = [
     "Составь план занятия",
@@ -49,6 +51,7 @@
     '<div class="ai-head">' +
       '<span class="ai-head-ic">' + SPARKLES + "</span>" +
       '<div class="ai-head-txt"><b>Помощник</b><span>план урока · ДЗ · сообщение ученику</span></div>' +
+      '<button type="button" class="ai-new" aria-label="Новый чат" title="Новый чат">' + NEW_CHAT + "</button>" +
       '<button type="button" class="ai-close" aria-label="Закрыть">' + CLOSE + "</button>" +
     "</div>" +
     '<div class="ai-msgs" aria-live="polite"></div>' +
@@ -161,7 +164,18 @@
     if (on) { renderHistory(); input.focus(); }
   }
 
+  function newChat() {
+    if (pending) return;
+    history = [];
+    try { sessionStorage.removeItem(HISTORY_KEY); } catch (e) {}
+    renderHistory();
+    input.value = "";
+    autosize();
+    input.focus();
+  }
+
   fab.addEventListener("click", function () { toggle(true); });
+  panel.querySelector(".ai-new").addEventListener("click", newChat);
   panel.querySelector(".ai-close").addEventListener("click", function () { toggle(false); });
   form.addEventListener("submit", function (e) { e.preventDefault(); send(); });
   input.addEventListener("input", autosize);
