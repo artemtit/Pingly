@@ -898,8 +898,25 @@ img { display: block; }
   .cta-band .wrap { padding: 48px 16px; }
   .cta-band p { font-size: 16px; line-height: 1.5; }
   .cta-bell { display: none; }
-  .foot .wrap { padding: 28px 16px; flex-direction: column; align-items: flex-start; }
-  .foot-links { gap: 14px 18px; flex-wrap: wrap; }
+  .foot .wrap {
+    padding: 24px 16px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+  .foot-brand { align-items: center; gap: 6px; }
+  .foot-brand p { font-size: 12.5px; line-height: 1.45; }
+  .foot-links {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    max-width: 320px;
+    line-height: 1.45;
+  }
+  .foot-links a { font-size: 13px; }
+  .foot-copy { font-size: 12.5px; }
 }
 
 @media (max-width: 640px) {
@@ -925,6 +942,7 @@ img { display: block; }
   .mini-day { min-height: 52px; padding: 7px 1px 5px; }
   .mini-row { font-size: 13px; }
   .price-amount .n { font-size: 38px; }
+  .foot-links { max-width: 280px; gap: 8px 14px; }
 }
 
 @media (max-width: 640px) {
