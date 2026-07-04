@@ -1,8 +1,8 @@
 /* ============================================================
    Pingly landing — interactivity
    Vanilla JS: chat demo, scroll reveal, product tour (sticky
-   scene), live stats counter, scrollspy, mobile menu, magnetic
-   CTA, scroll progress.
+   scene), autopilot day timeline, live stats counter,
+   scrollspy, mobile menu, magnetic CTA.
    All animation honors prefers-reduced-motion.
    ============================================================ */
 (function () {
@@ -13,25 +13,6 @@
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var isTouch = window.matchMedia('(hover: none)').matches;
-
-  /* ---------------- Scroll progress bar ---------------- */
-  var progressFill = document.getElementById('scrollProgress');
-  if (progressFill) {
-    var progressTicking = false;
-    var updateProgress = function () {
-      var max = doc.scrollHeight - window.innerHeight;
-      var p = max > 0 ? window.scrollY / max : 0;
-      progressFill.style.transform = 'scaleX(' + Math.min(1, Math.max(0, p)) + ')';
-      progressTicking = false;
-    };
-    window.addEventListener('scroll', function () {
-      if (!progressTicking) {
-        progressTicking = true;
-        requestAnimationFrame(updateProgress);
-      }
-    }, { passive: true });
-    updateProgress();
-  }
 
   /* ---------------- Nav shadow on scroll ---------------- */
   var nav = document.querySelector('.nav');
@@ -346,6 +327,45 @@
     if (mq.addEventListener) mq.addEventListener('change', apply);
     else if (mq.addListener) mq.addListener(apply);
     apply();
+  })();
+
+  /* ---------------- Autopilot: day timeline fills as it scrolls into view ----------------
+     IntersectionObserver ratio → --fill custom property (no scroll listeners).
+     The fill is monotonic (never rewinds); each stop lights up once the line
+     reaches its dot. Reduced motion / no IO: everything fully drawn. */
+  (function autopilot() {
+    var day = document.getElementById('autoDay');
+    if (!day) return;
+    var stops = Array.prototype.slice.call(day.querySelectorAll('.auto-stop'));
+    // dot positions along the track (fractions of its length), with a lead-in
+    var marks = [0.15, 0.48, 0.8];
+
+    function complete() {
+      day.style.setProperty('--fill', '1');
+      stops.forEach(function (s) { s.classList.add('on'); });
+    }
+
+    if (reduceMotion || !('IntersectionObserver' in window)) {
+      complete();
+      return;
+    }
+
+    var thresholds = [];
+    for (var i = 0; i <= 20; i++) thresholds.push(i / 20);
+    var current = 0;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        // the line completes once ~85% of the timeline is visible
+        var p = Math.min(1, e.intersectionRatio / 0.85);
+        if (p <= current) return;
+        current = p;
+        day.style.setProperty('--fill', p.toFixed(2));
+        stops.forEach(function (s, k) { if (p >= marks[k]) s.classList.add('on'); });
+        if (p >= 1) io.disconnect();
+      });
+    }, { threshold: thresholds });
+    io.observe(day);
   })();
 
   /* ---------------- Live reminders counter (honest number from the DB) ---------------- */

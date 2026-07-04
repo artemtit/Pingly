@@ -25,9 +25,12 @@
   <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <link rel="manifest" href="/static/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@700;800&display=swap">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/landing.css?v=24">
-  <script src="/static/landing.js?v=6" defer></script>
+  <link rel="stylesheet" href="/static/landing.css?v=25">
+  <script src="/static/landing.js?v=7" defer></script>
 </head>
 <body>
 
@@ -54,8 +57,6 @@
 {%- macro ic(name, size=22, sw=2) -%}
 <svg class="ic" width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="{{ sw }}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ I.get(name, '') | safe }}</svg>
 {%- endmacro -%}
-
-<div class="scroll-progress" aria-hidden="true"><div class="scroll-progress-fill" id="scrollProgress"></div></div>
 
 <header class="nav">
   <div class="nav-inner">
@@ -101,14 +102,6 @@
         <a class="lbtn lbtn-ghost lbtn-lg" href="#how">Как это работает</a>
       </div>
       <p class="hero-micro">{{ ic('check', 15) }} 14 дней бесплатно · карта не нужна</p>
-      <div class="hero-trust">
-        <div class="avatar-stack" aria-hidden="true">
-          <span class="av-circle" style="--bg:var(--orange-100);--fg:var(--orange-700)">А</span>
-          <span class="av-circle" style="--bg:#DBEAFE;--fg:#1D4ED8">Е</span>
-          <span class="av-circle" style="--bg:#FCE7F3;--fg:#BE185D">Э</span>
-        </div>
-        <p>Уже пользуются репетиторы по математике, английскому и языкам</p>
-      </div>
     </div>
     <div class="hero-right">
       <div class="hero-device">
@@ -128,6 +121,7 @@
           </div>
         </div>
         <div class="chat-feed" aria-live="polite">
+          <div class="chat-day" aria-hidden="true">Сегодня</div>
           <div class="chat-row" data-step="typing1">
             <div class="chat-typing"><span></span><span></span><span></span></div>
           </div>
@@ -238,6 +232,9 @@
         <h3>Бот напомнит сам</h3>
         <p>За 2 часа ученик получит напоминание с кнопками «Буду» и «Отменяю».</p>
       </div>
+    </div>
+    <div class="steps-cta" data-reveal>
+      <a class="lbtn lbtn-ghost" href="/register">Настроить за 5 минут →</a>
     </div>
   </div>
 </section>
@@ -379,6 +376,48 @@
   </div>
 </section>
 
+<section class="autopilot" aria-labelledby="autoTitle">
+  <div class="auto-dots" aria-hidden="true"></div>
+  <div class="auto-glow" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="sechead sechead-dark" data-reveal>
+      <span class="over">Автопилот</span>
+      <h2 id="autoTitle">Работает, пока ты ведёшь занятия</h2>
+      <p class="sechead-sub">Расписание задано один раз. Дальше Pingly сам пишет каждому ученику за 2 часа, собирает ответы и присылает тебе итог.</p>
+    </div>
+    <div class="auto-day" id="autoDay" data-reveal>
+      <div class="auto-track" aria-hidden="true"><span class="auto-track-fill"></span></div>
+      <ol class="auto-stops">
+        <li class="auto-stop">
+          <span class="auto-dot" aria-hidden="true"></span>
+          <div class="auto-card">
+            <span class="auto-time">13:00</span>
+            <p class="auto-what">{{ ic('bell', 15) }} Напоминание Маше — занятие в&nbsp;15:00</p>
+            <span class="auto-status ok">{{ ic('check', 12) }} Маша: буду</span>
+          </div>
+        </li>
+        <li class="auto-stop">
+          <span class="auto-dot" aria-hidden="true"></span>
+          <div class="auto-card">
+            <span class="auto-time">15:00</span>
+            <p class="auto-what">{{ ic('bell', 15) }} Напоминание Диме — занятие в&nbsp;17:00</p>
+            <span class="auto-status wait">{{ ic('repeat', 12) }} Дима: просит перенос</span>
+          </div>
+        </li>
+        <li class="auto-stop">
+          <span class="auto-dot" aria-hidden="true"></span>
+          <div class="auto-card">
+            <span class="auto-time">17:00</span>
+            <p class="auto-what">{{ ic('bell', 15) }} Напоминание Соне — занятие в&nbsp;19:00</p>
+            <span class="auto-status ok">{{ ic('check', 12) }} Соня: буду</span>
+          </div>
+        </li>
+      </ol>
+      <p class="auto-outro">Вечером у тебя готовый итог: кто был, кто перенёс и кто ещё не оплатил. <b>Ты не написал ни одного сообщения.</b></p>
+    </div>
+  </div>
+</section>
+
 <section id="reviews" class="section section-alt">
   <div class="wrap">
     <div class="sechead" data-reveal>
@@ -479,6 +518,8 @@
 </section>
 
 <section class="cta-band">
+  <div class="cta-glow" aria-hidden="true"></div>
+  <span class="cta-bell" aria-hidden="true">{{ ic('bell', 230, 1.2) }}</span>
   <div class="wrap" data-reveal>
     <h2>Сегодня вечером можно никому не писать</h2>
     <p>Сделано для репетиторов. Настройка — 5 минут. Первые 14 дней — бесплатно.</p>
@@ -488,7 +529,10 @@
 
 <footer class="foot">
   <div class="wrap">
-    <img src="/static/logo.svg" height="28" alt="Pingly">
+    <div class="foot-brand">
+      <img src="/static/logo.svg" height="28" alt="Pingly">
+      <p>Напоминания для репетиторов</p>
+    </div>
     <div class="foot-links">
       <a href="#how">Как это работает</a>
       <a href="#price">Цена</a>
