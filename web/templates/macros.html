@@ -58,11 +58,12 @@
 {% endmacro %}
 
 {% macro hw_status_badge(status) %}
-{%- set hw_labels = {
-  'new':         '🆕 Новое',
-  'in_progress': '🟡 В работе',
-  'submitted':   '🟠 На проверке',
-  'reviewed':    '✅ Проверено',
+{%- set hw_meta = {
+  'new':         ('sparkles',     'Новое'),
+  'in_progress': ('clock',        'В работе'),
+  'submitted':   ('inbox',        'На проверке'),
+  'reviewed':    ('circle-check', 'Проверено'),
 } -%}
-<span class="badge {{ status }}">{{ hw_labels.get(status, status) }}</span>
+{%- set meta = hw_meta.get(status, ('file-text', status)) -%}
+<span class="badge {{ status }}">{{ icon(meta[0], 14) }}{{ meta[1] }}</span>
 {% endmacro %}

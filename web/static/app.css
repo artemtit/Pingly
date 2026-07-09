@@ -214,7 +214,8 @@ h2 { font-size: 20px; letter-spacing: -.02em; margin-bottom: 14px; }
 .link-danger:hover { opacity: .8; }
 
 /* ---------------- badges ---------------- */
-.badge { display: inline-flex; align-items: center; padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.badge .ic { width: 14px; height: 14px; flex: 0 0 auto; vertical-align: 0; }
 .scheduled, .new { background: var(--color-info-light); color: var(--info-text); }
 .completed, .reviewed, .confirmed { background: var(--color-success-light); color: var(--success-text); }
 .rescheduled, .submitted, .in_progress, .reschedule_requested { background: var(--color-warning-light); color: var(--warning-text); }
