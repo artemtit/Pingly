@@ -7,7 +7,15 @@
     <h1>{{ ui.icon('wallet', 24) }} Оплаты</h1>
     <p class="muted">Считается по проведённым занятиям. Отмечай оплату — Pingly покажет, кто сколько должен.</p>
   </div>
-  <a class="btn btn-secondary btn-sm" href="/tutor/finance.csv" title="Скачать таблицу для Excel">{{ ui.icon('file-text', 15) }} Скачать CSV</a>
+  <div class="csv-export" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <label class="sr-only" for="csv-period">Период выгрузки</label>
+    <select class="input" id="csv-period" aria-label="Период выгрузки" style="width:auto;padding-top:7px;padding-bottom:7px;">
+      <option value="month">За месяц</option>
+      <option value="quarter">За квартал</option>
+      <option value="all" selected>За всё время</option>
+    </select>
+    <button type="button" class="btn btn-secondary btn-sm" id="csv-download" title="Скачать таблицу для Excel">{{ ui.icon('file-text', 15) }} Скачать CSV</button>
+  </div>
 </div>
 
 <section class="fin-top" style="margin-bottom:18px;">
@@ -109,6 +117,30 @@
 <script>
 (function(){
   var data = JSON.parse(document.getElementById('fin-data').textContent);
+
+  /* ---- CSV download: fetch as a blob so we stay on the page (no blank tab),
+       let the user pick a period, and confirm with a toast ---- */
+  (function(){
+    var btn = document.getElementById('csv-download');
+    var sel = document.getElementById('csv-period');
+    if (!btn || !sel) return;
+    btn.addEventListener('click', function(){
+      var period = sel.value || 'all';
+      btn.classList.add('btn-loading'); btn.disabled = true;
+      fetch('/tutor/finance.csv?period=' + encodeURIComponent(period), { credentials: 'same-origin' })
+        .then(function(r){ if (!r.ok) throw 0; return r.blob(); })
+        .then(function(blob){
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url; a.download = 'pingly-finance-' + period + '.csv';
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+          pingly.toast('Файл скачивается — открой его в Excel или Google Таблицах', 'success');
+        })
+        .catch(function(){ pingly.toast('Не удалось скачать файл — попробуй ещё раз', 'error', true); })
+        .then(function(){ btn.classList.remove('btn-loading'); btn.disabled = false; });
+    });
+  }());
 
   /* ---- sparkline: income by month, redrawn when the period changes ---- */
   var ns = 'http://www.w3.org/2000/svg';

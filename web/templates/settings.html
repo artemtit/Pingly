@@ -83,7 +83,7 @@
 
   <div class="card">
     <h2>{{ ui.icon('globe', 18) }} Часовой пояс</h2>
-    <p class="muted" style="margin-bottom:10px;">Время занятий и напоминаний показывается в этом поясе. Выбери свой — если ты не в Москве.</p>
+    <p class="muted" style="margin-bottom:10px;">Время занятий и напоминаний показывается в этом поясе.</p>
     <form method="post" action="/settings/timezone" class="form">
       <label>Пояс
         <select class="input" name="tz_offset" onchange="this.form.submit()">
@@ -93,19 +93,6 @@
           {% endfor %}
         </select></label>
       <noscript><button class="btn btn-secondary btn-sm" type="submit" style="margin-top:8px;">Сохранить</button></noscript>
-    </form>
-  </div>
-
-  <div class="card">
-    <h2>{{ ui.icon('moon', 18) }} Тихие часы</h2>
-    <form method="post" action="/settings/notifications" class="form">
-      <label class="settings-row" style="cursor:pointer;">
-        <span>Не беспокоить ночью <span class="muted">(22:00–08:00 МСК)</span></span>
-        <input type="checkbox" name="quiet_hours" value="on" onchange="this.form.submit()"
-          {% if user.notify_quiet_hours %}checked{% endif %}>
-      </label>
-      <p class="muted" style="margin: 10px 0 0;">Ночные несрочные уведомления (домашки, абонементы, подписка) придут утром в 08:00. Напоминания о занятиях приходят всегда — их время важно.</p>
-      <noscript><button class="btn btn-secondary" type="submit" style="margin-top:10px;">Сохранить</button></noscript>
     </form>
   </div>
 
@@ -247,10 +234,6 @@
 
   <div class="card" style="border-color: var(--color-error);">
     <h2 style="color: var(--color-error);">{{ ui.icon('trash', 16) }} Опасная зона</h2>
-    {% if user.role == 'tutor' %}
-    <p class="muted" style="margin-bottom:10px;">Скачай копию всех своих данных (аккаунт, ученики, занятия, ДЗ, финансы) одним файлом.</p>
-    <a class="btn btn-secondary btn-sm" href="/tutor/data.json" style="margin-bottom:18px;">{{ ui.icon('save', 15) }} Скачать мои данные (JSON)</a>
-    {% endif %}
     <p class="muted" style="margin:0 0 10px;">Удаление аккаунта необратимо: {% if user.role == 'tutor' %}вместе с ним удаляются все твои ученики, занятия, домашки и история.{% else %}все твои данные будут стёрты.{% endif %} Восстановить не получится.</p>
     <form method="post" action="/account/delete" class="form" data-confirm="Аккаунт и все связанные данные будут стёрты без возможности восстановить." data-confirm-title="Удалить аккаунт навсегда?" data-confirm-ok="Удалить навсегда" data-confirm-danger>
       <label>Для подтверждения введи слово <strong>удалить</strong>

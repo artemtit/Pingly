@@ -528,6 +528,62 @@ class LessonService:
             "total_unpaid": total_unpaid,
         }
 
+    async def finance_export(self, tutor_user_id: str, period: str = "all") -> dict:
+        """Per-student billing for a CSV export, filtered to a period so the totals
+        stay internally consistent (unlike the dashboard, which mixes all-time
+        student sums with this-month income). period ∈ {month, quarter, all}; the
+        window is computed in the tutor's own timezone."""
+        period = period if period in ("month", "quarter", "all") else "all"
+        offset = await self._tutor_offset(tutor_user_id)
+        tz = tz_from_offset(offset)
+        now = datetime.now(tz)
+        since: datetime | None = None
+        if period == "month":
+            since = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        elif period == "quarter":
+            # Start of the month two back → the current + previous two months.
+            y, m = now.year, now.month - 2
+            while m <= 0:
+                m += 12
+                y -= 1
+            since = now.replace(year=y, month=m, day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        lessons = await self.repo.list_lessons_for_tutor(tutor_user_id, 1000)
+        by_student: dict[str, dict] = {}
+        totals = {"lessons": 0, "paid_sum": 0, "unpaid_sum": 0, "unpaid_count": 0}
+        for l in lessons:
+            if l.get("status") != LessonStatus.COMPLETED.value:
+                continue
+            started = _parse_package_dt(l.get("starts_at"))
+            if since is not None and (started is None or started.astimezone(tz) < since):
+                continue
+            sid = l.get("student_id") or "—"
+            name = (l.get("student_profiles") or {}).get("name") or "Ученик"
+            row = by_student.setdefault(sid, {
+                "student_id": sid, "name": name,
+                "lessons": 0, "paid_sum": 0, "unpaid_sum": 0, "unpaid_count": 0,
+            })
+            price = l.get("price") or 0
+            row["lessons"] += 1
+            totals["lessons"] += 1
+            if l.get("paid"):
+                row["paid_sum"] += price
+                totals["paid_sum"] += price
+            else:
+                row["unpaid_sum"] += price
+                row["unpaid_count"] += 1
+                totals["unpaid_sum"] += price
+                totals["unpaid_count"] += 1
+        students = sorted(by_student.values(), key=lambda r: (-r["unpaid_sum"], r["name"].lower()))
+        labels = {"month": "текущий месяц", "quarter": "последние 3 месяца", "all": "всё время"}
+        return {
+            "students": students,
+            "totals": totals,
+            "period": period,
+            "period_label": labels[period],
+            "generated": now.strftime("%d.%m.%Y"),
+        }
+
     async def list_student_history(self, student_user_id: str) -> dict:
         """Past lessons for a student + simple counters."""
         lessons = await self.repo.list_lessons_for_student_user(student_user_id, 1000)

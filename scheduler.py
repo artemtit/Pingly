@@ -29,33 +29,8 @@ _PACKAGE_MILESTONES = (1, 0)
 # wording is considered untrustworthy (e.g. after a server downtime).
 _REMINDER_STALE_AFTER = timedelta(minutes=15)
 
-# F10 quiet hours: 22:00–08:00 in the recipient's own timezone. Non-urgent
-# notifications that come due at night are deferred to 08:00 local. Time-critical
-# lesson reminders always go — a "занятие через 2 часа" held till morning is useless.
-_QUIET_START = 22
-_QUIET_END = 8
-
 # Local hour at which the morning digest goes out (in each tutor's own timezone).
 _DIGEST_LOCAL_HOUR = 9
-_URGENT_TYPES = {
-    "lesson_hour_before", "lesson_second_ping", "lesson_day_before",
-    "tutor_unconfirmed", "lesson_reschedule_request", "lesson_rescheduled",
-}
-
-
-def _quiet_deferral(user: dict, ntype: str, now: datetime) -> datetime | None:
-    """If the recipient enabled quiet hours and it's night in their timezone, return
-    the UTC time to defer a non-urgent notification to (next 08:00 local); else None."""
-    if ntype in _URGENT_TYPES or not user.get("notify_quiet_hours"):
-        return None
-    tz = tz_from_offset(user.get("tz_offset_minutes") or DEFAULT_TZ_OFFSET)
-    local = now.astimezone(tz)
-    if not (local.hour >= _QUIET_START or local.hour < _QUIET_END):
-        return None
-    target = local.replace(hour=_QUIET_END, minute=0, second=0, microsecond=0)
-    if local.hour >= _QUIET_START:  # late evening → deliver tomorrow morning
-        target += timedelta(days=1)
-    return target.astimezone(timezone.utc)
 
 
 def _plural_lessons(n: int) -> str:
@@ -92,13 +67,6 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
         vk_id = user.get("vk_id")
         tg_id = user.get("tg_id")
         if not tg_id and not vk_id:
-            continue
-
-        # F10: hold non-urgent notifications that come due at night until morning
-        # if the recipient turned on quiet hours. Lesson reminders are exempt.
-        defer_to = _quiet_deferral(user, notification["type"], datetime.now(timezone.utc))
-        if defer_to is not None:
-            await services.repo.reschedule_notification(notification["id"], defer_to)
             continue
 
         payload = notification.get("payload") or {}

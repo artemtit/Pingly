@@ -165,20 +165,6 @@ function copyInvite(id, btn){
         </div>
       </form>
     </div>
-
-    <div class="card" id="notes">
-      <div class="card-head"><h2>{{ ui.icon('file-pen', 18) }} Заметки репетитора</h2>
-        {% if saved == 'note' %}<span class="save-ok" data-autohide>{{ ui.icon('check', 14) }} Сохранено</span>{% endif %}
-      </div>
-      <form method="post" action="/tutor/students/{{ student.id }}/note" class="form locked" onsubmit="saving(this)">
-        <textarea name="note" placeholder="Личные заметки: сильные стороны, что повторить, договорённости...">{{ note }}</textarea>
-        <div class="edit-actions">
-          <button type="button" class="btn btn-secondary edit-toggle" onclick="enableEdit(this)">{{ ui.icon('pencil', 15) }} Изменить</button>
-          <button type="submit" class="btn btn-primary edit-save">Сохранить заметку</button>
-          <button type="button" class="btn btn-ghost edit-cancel" onclick="location.reload()">Отмена</button>
-        </div>
-      </form>
-    </div>
   </div>
 
   <div class="stack">
@@ -220,6 +206,20 @@ function copyInvite(id, btn){
           </tbody>
         </table>
       </div>
+    </div>
+
+    <div class="card" id="notes">
+      <div class="card-head"><h2>{{ ui.icon('file-pen', 18) }} Заметки репетитора</h2>
+        {% if saved == 'note' %}<span class="save-ok" data-autohide>{{ ui.icon('check', 14) }} Сохранено</span>{% endif %}
+      </div>
+      <form method="post" action="/tutor/students/{{ student.id }}/note" class="form locked" onsubmit="saving(this)">
+        <textarea name="note" placeholder="Личные заметки: сильные стороны, что повторить, договорённости...">{{ note }}</textarea>
+        <div class="edit-actions">
+          <button type="button" class="btn btn-secondary edit-toggle" onclick="enableEdit(this)">{{ ui.icon('pencil', 15) }} Изменить</button>
+          <button type="submit" class="btn btn-primary edit-save">Сохранить заметку</button>
+          <button type="button" class="btn btn-ghost edit-cancel" onclick="location.reload()">Отмена</button>
+        </div>
+      </form>
     </div>
   </div>
 </section>

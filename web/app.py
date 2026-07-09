@@ -80,23 +80,32 @@ def _build_ics(lessons: list[dict]) -> str:
     return "\r\n".join(lines) + "\r\n"
 
 
-def _build_finance_csv(overview: dict) -> str:
-    """F11: per-student billing as a CSV (`;`-separated + UTF-8 BOM so Russian
-    Excel opens Cyrillic and columns correctly)."""
+def _build_finance_csv(data: dict) -> str:
+    """Per-student billing as a CSV (`;`-separated + UTF-8 BOM so Russian Excel
+    opens Cyrillic and columns correctly). `data` comes from
+    LessonService.finance_export — students filtered to a period, with a matching
+    ИТОГО row so the totals are internally consistent."""
     import csv
     import io
     buf = io.StringIO()
-    buf.write("﻿")
+    buf.write("﻿")  # UTF-8 BOM
     writer = csv.writer(buf, delimiter=";")
+    writer.writerow(["Отчёт по оплатам — Pingly"])
+    writer.writerow([f"Период: {data.get('period_label', 'всё время')}"])
+    writer.writerow([f"Сформирован: {data.get('generated', '')}"])
+    writer.writerow([])
     writer.writerow(["Ученик", "Проведено занятий", "Оплачено, ₽", "Не оплачено, ₽", "Неоплаченных занятий"])
-    for s in overview.get("students", []):
+    for s in data.get("students", []):
         writer.writerow([
             s.get("name", ""), s.get("lessons", 0), s.get("paid_sum", 0),
             s.get("unpaid_sum", 0), s.get("unpaid_count", 0),
         ])
+    totals = data.get("totals") or {}
     writer.writerow([])
-    writer.writerow(["Заработано за месяц, ₽", overview.get("month_earned", 0)])
-    writer.writerow(["Всего не оплачено, ₽", overview.get("total_unpaid", 0)])
+    writer.writerow([
+        "ИТОГО", totals.get("lessons", 0), totals.get("paid_sum", 0),
+        totals.get("unpaid_sum", 0), totals.get("unpaid_count", 0),
+    ])
     return buf.getvalue()
 
 # Simple in-memory rate limiter for the unauthenticated booking endpoint. The app
@@ -993,13 +1002,16 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         )
 
     @app.get("/tutor/finance.csv")
-    async def tutor_finance_csv(user: dict = Depends(current_user)) -> Response:
+    async def tutor_finance_csv(period: str = "all", user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
-        overview = await services.lessons.finance_overview(user["id"])
+        if _plan_locked(user, "finance"):
+            raise HTTPException(status_code=403)
+        data = await services.lessons.finance_export(user["id"], period)
+        fname = f"pingly-finance-{data['period']}.csv"
         return Response(
-            content=_build_finance_csv(overview),
+            content=_build_finance_csv(data),
             media_type="text/csv; charset=utf-8",
-            headers={"Content-Disposition": 'attachment; filename="pingly-finance.csv"'},
+            headers={"Content-Disposition": f'attachment; filename="{fname}"'},
         )
 
     @app.get("/tutor/schedule", response_class=HTMLResponse)
@@ -1760,39 +1772,12 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
         return RedirectResponse(f"{base}?saved=name", status_code=303)
 
-    @app.post("/settings/notifications")
-    async def update_notifications(quiet_hours: str = Form(default=""), user: dict = Depends(current_user)) -> Response:
-        # Unchecked checkboxes aren't submitted, so absence == off.
-        await services.accounts.set_quiet_hours(user["id"], quiet_hours == "on")
-        base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
-        return RedirectResponse(f"{base}?saved=notifications", status_code=303)
-
     @app.post("/settings/timezone")
     async def update_timezone(tz_offset: str = Form(default=""), user: dict = Depends(current_user)) -> Response:
         # normalize_offset clamps anything unexpected back to Москва.
         await services.accounts.set_timezone(user["id"], normalize_offset(tz_offset))
         base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
         return RedirectResponse(f"{base}?saved=timezone", status_code=303)
-
-    @app.get("/tutor/data.json")
-    async def tutor_data_export(user: dict = Depends(current_user)) -> Response:
-        # F12: 152-ФЗ data portability — a full machine-readable dump of the
-        # tutor's own data (account, students, lessons, homework, finance).
-        _require(user, "tutor")
-        import json
-        data = {
-            "exported_at": datetime.now(timezone.utc).isoformat(),
-            "account": {k: user.get(k) for k in ("id", "full_name", "email", "tg_id", "tg_username", "role", "created_at")},
-            "students": await services.students.list_students_by_user(user["id"]),
-            "lessons": await services.lessons.list_tutor_calendar(user["id"]),
-            "homework": await services.homework.list_for_tutor(user["id"]),
-            "finance": await services.lessons.finance_overview(user["id"]),
-        }
-        body = json.dumps(data, ensure_ascii=False, indent=2, default=str)
-        return Response(
-            content=body, media_type="application/json; charset=utf-8",
-            headers={"Content-Disposition": 'attachment; filename="pingly-data.json"'},
-        )
 
     @app.post("/account/delete")
     async def delete_account(confirm: str = Form(default=""), user: dict = Depends(current_user)) -> Response:
