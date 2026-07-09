@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from application.repositories import PinglyRepository
+from application.services.lessons import _fmt_dt_msk
 from domain import HomeworkStatus, NotificationType
 
 
@@ -23,7 +24,27 @@ class HomeworkService:
                 title,
                 {"homework_id": homework["id"]},
             )
+            # F7: remind the student ~1 day before the deadline (if the tutor set
+            # one and it's far enough away that a "срок завтра" nudge makes sense).
+            await self._schedule_due_reminder(student["user_id"], homework, due_at)
         return homework
+
+    async def _schedule_due_reminder(self, student_user_id: str, homework: dict, due_at: datetime | None) -> None:
+        if not due_at:
+            return
+        if due_at.tzinfo is None:
+            due_at = due_at.replace(tzinfo=timezone.utc)
+        send_at = due_at - timedelta(days=1)
+        if send_at <= datetime.now(timezone.utc):
+            return
+        await self.repo.create_notification(
+            student_user_id,
+            NotificationType.HOMEWORK_DUE_SOON.value,
+            "📚 Скоро дедлайн по домашке",
+            f"Не забудь про «{homework['title']}» — сдать до {_fmt_dt_msk(due_at)}.",
+            {"homework_id": homework["id"]},
+            send_at,
+        )
 
     async def list_for_tutor(self, tutor_user_id: str) -> list[dict]:
         return await self.repo.list_homework_for_tutor(tutor_user_id)

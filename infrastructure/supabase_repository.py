@@ -801,6 +801,16 @@ class SupabasePinglyRepository:
         )
         return [u for u in result.data if u.get("trial_ends_at") and u.get("tg_id")]
 
+    async def list_tutor_users(self) -> list[dict[str, Any]]:
+        """All tutors with a linked Telegram — for the morning digest job."""
+        result = await (
+            self._db().table("users")
+            .select("*")
+            .eq("role", "tutor")
+            .execute()
+        )
+        return [u for u in result.data if u.get("tg_id")]
+
     async def get_user_by_referral_code(self, code: str) -> dict[str, Any] | None:
         result = await self._db().table("users").select("*").eq("referral_code", code).execute()
         return _one(result)

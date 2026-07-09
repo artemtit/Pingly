@@ -28,6 +28,21 @@ _PACKAGE_MILESTONES = (1, 0)
 # wording is considered untrustworthy (e.g. after a server downtime).
 _REMINDER_STALE_AFTER = timedelta(minutes=15)
 
+# Moscow time (UTC+3, no DST) — the digest groups lessons by the tutor's day.
+_MSK = timezone(timedelta(hours=3))
+
+
+def _plural_lessons(n: int) -> str:
+    """Russian plural for 'занятие': 1 занятие, 2–4 занятия, 5+ занятий."""
+    if 11 <= n % 100 <= 14:
+        return "занятий"
+    d = n % 10
+    if d == 1:
+        return "занятие"
+    if 2 <= d <= 4:
+        return "занятия"
+    return "занятий"
+
 
 def _parse_dt(raw: object) -> datetime | None:
     if not raw:
@@ -55,15 +70,16 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
 
         payload = notification.get("payload") or {}
 
-        # "Tutor unconfirmed" nudge: only fire if the student still hasn't
-        # confirmed/cancelled. Otherwise quietly drop it.
-        if notification["type"] == "tutor_unconfirmed":
+        # "Tutor unconfirmed" nudge and the student's 30-min second ping both
+        # only fire if the student still hasn't confirmed/cancelled. Otherwise
+        # quietly drop them (a confirmed lesson needs no more nagging).
+        if notification["type"] in ("tutor_unconfirmed", "lesson_second_ping"):
             lesson_id = payload.get("lesson_id")
             if not lesson_id or not await services.lessons.lesson_is_unconfirmed(lesson_id):
                 await services.notifications.mark_sent(notification["id"])
                 continue
 
-        is_lesson = bool(payload.get("lesson_id")) and notification["type"] in {"lesson_day_before", "lesson_hour_before"}
+        is_lesson = bool(payload.get("lesson_id")) and notification["type"] in {"lesson_day_before", "lesson_hour_before", "lesson_second_ping"}
 
         title = notification["title"]
         lesson = None
@@ -182,6 +198,46 @@ async def enqueue_subscription_reminders() -> None:
         )
 
 
+async def enqueue_morning_digests() -> None:
+    """Each morning send the tutor a summary of the day's lessons ("Сегодня N
+    занятий: …"). Fires at 06:00 UTC (09:00 MSK). Dedup per (tutor, date) via the
+    notifications table so a restart can't double-send."""
+    tutors = await services.repo.list_tutor_users()
+    now = datetime.now(timezone.utc)
+    day = now.astimezone(_MSK).date()
+    # The tutor's MSK day expressed as a UTC window.
+    day_start = datetime(day.year, day.month, day.day, tzinfo=_MSK).astimezone(timezone.utc)
+    day_end = day_start + timedelta(days=1)
+    date_key = day.isoformat()
+    for tutor in tutors:
+        recent = await services.repo.list_notifications_for_user(tutor["id"], 30)
+        if any(
+            n.get("type") == "daily_digest" and (n.get("payload") or {}).get("date") == date_key
+            for n in recent
+        ):
+            continue
+        lessons = await services.repo.list_lessons_for_tutor(tutor["id"], 1000)
+        today = []
+        for lesson in lessons:
+            if lesson.get("status") in ("cancelled", "reschedule_requested"):
+                continue
+            starts = _parse_dt(lesson.get("starts_at"))
+            if starts and day_start <= starts < day_end:
+                today.append((starts, lesson))
+        if not today:
+            continue
+        today.sort(key=lambda t: t[0])
+        lines = [
+            f"• {starts.astimezone(_MSK):%H:%M} — {(l.get('student_profiles') or {}).get('name') or 'Ученик'}"
+            for starts, l in today
+        ]
+        count = len(today)
+        body = f"Сегодня у тебя {count} {_plural_lessons(count)}:\n" + "\n".join(lines)
+        await services.repo.create_notification(
+            tutor["id"], "daily_digest", "☀️ План на день", body, {"date": date_key},
+        )
+
+
 async def enqueue_package_reminders() -> None:
     """Alert the tutor (and student) once when a lesson package runs low (1 left)
     or out (0 left). Remaining is computed; dedup per package cycle + milestone via
@@ -267,4 +323,7 @@ def create_scheduler(bot: Bot, vk_bot=None) -> AsyncIOScheduler:
         enqueue_package_reminders, "interval", hours=12,
         next_run_time=datetime.now() + timedelta(seconds=45),
     )
+    # Morning digest: 06:00 UTC = 09:00 MSK. Cron (not interval) so it lands at a
+    # predictable, humane hour instead of drifting with restarts.
+    scheduler.add_job(enqueue_morning_digests, "cron", hour=6, minute=0)
     return scheduler

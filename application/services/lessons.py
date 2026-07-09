@@ -235,6 +235,19 @@ class LessonService:
                     {"lesson_id": lesson["id"]},
                     send_at,
                 )
+            # F4: a gentle second ping 30 min before — but only if the student
+            # still hasn't tapped «Буду»/«Отменяю». The scheduler drops it when
+            # the lesson is already confirmed/cancelled (see lesson_second_ping).
+            second_at = starts_at - timedelta(minutes=30)
+            if second_at > now:
+                await self.repo.create_notification(
+                    student_user_id,
+                    NotificationType.LESSON_SECOND_PING.value,
+                    "⏰ Занятие уже скоро",
+                    f"Через 30 минут занятие ({_fmt_dt_msk(starts_at)}). Нажми «Буду» или «Отменяю».",
+                    {"lesson_id": lesson["id"]},
+                    second_at,
+                )
         # Nudge the tutor 1h before (after the student got the 2h reminder) if
         # the lesson still isn't confirmed. The scheduler drops it if the lesson
         # was already confirmed/cancelled. Skipped if the lesson is sooner than 1h.
