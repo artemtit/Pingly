@@ -92,7 +92,7 @@
       <div class="userbox-actions">
         <button class="link-btn" onclick="startPinglyTour()" title="Показать обзор кабинета">Обзор</button>
         <span>·</span>
-        <a href="/logout">Выйти</a>
+        <a href="/logout" data-post>Выйти</a>
         <span>·</span>
         <button class="link-btn theme-toggle" onclick="toggleTheme()" title="Тёмная тема" aria-label="Переключить тёмную тему" style="line-height:0;">{{ icon('moon', 16) }}</button>
       </div>
@@ -151,7 +151,7 @@
   <a href="/student/settings" class="{{ 'active' if active == 'settings' }}">{{ icon('settings') }} Настройки</a>
   {% endif %}
   <div class="more-sheet-sep"></div>
-  <a href="/logout" class="more-logout">{{ icon('log-out') }} Выйти</a>
+  <a href="/logout" class="more-logout" data-post>{{ icon('log-out') }} Выйти</a>
 </div>
 <script>
 function toggleMore(){

@@ -133,6 +133,42 @@ def _rate_ok(key: str, max_hits: int, window: float) -> bool:
     return True
 
 
+def _client_ip(request: Request) -> str:
+    """Real client IP for rate-limiting. Behind Cloudflare→nginx, request.client.host
+    is the proxy, so every user would share one bucket (S7). Prefer Cloudflare's
+    CF-Connecting-IP (set by CF, forwarded by nginx), then the first X-Forwarded-For
+    hop, then the socket peer as a last resort."""
+    cf = request.headers.get("cf-connecting-ip")
+    if cf:
+        return cf.strip()
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "?"
+
+
+def _csrf_origin_ok(request: Request) -> bool:
+    """CSRF defense (S8): for state-changing requests, require the Origin/Referer to
+    match our own host. Combined with the session cookie's SameSite=Lax, this blocks
+    cross-site form/fetch attacks without a per-form token. If neither header is
+    present (rare for real browser POSTs) we allow — SameSite=Lax is the backstop."""
+    src = request.headers.get("origin") or request.headers.get("referer")
+    if not src:
+        return True
+    try:
+        src_host = urlparse(src).netloc.lower()
+    except ValueError:
+        return False
+    allowed = {"pingly-app.ru", "www.pingly-app.ru"}
+    host = (request.headers.get("host") or "").lower()
+    if host:
+        allowed.add(host)
+    wb = urlparse(WEB_BASE_URL).netloc.lower()
+    if wb:
+        allowed.add(wb)
+    return src_host in allowed
+
+
 def _ru_weekday(dt_str: str) -> str:
     try:
         dt = datetime.fromisoformat(str(dt_str).replace("Z", "+00:00"))
@@ -486,6 +522,19 @@ def _set_session(response: Response, user: dict) -> None:
 
 
 def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
+    # S8: reject cross-site state-changing requests (Origin/Referer must be ours).
+    # Webhooks under /payments/ are exempt — they're server-to-server with their own
+    # signature check and legitimately carry no browser Origin.
+    _CSRF_EXEMPT_PREFIXES = ("/payments/",)
+
+    @app.middleware("http")
+    async def csrf_guard(request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH", "DELETE") \
+                and not request.url.path.startswith(_CSRF_EXEMPT_PREFIXES) \
+                and not _csrf_origin_ok(request):
+            return JSONResponse({"detail": "CSRF check failed"}, status_code=403)
+        return await call_next(request)
+
     @app.middleware("http")
     async def response_headers(request: Request, call_next):
         response = await call_next(request)
@@ -494,6 +543,19 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+        # S10: clickjacking + baseline CSP. Public tutor pages (/u/<slug>) are the
+        # one place we WANT embeddable (tutors paste them into their sites), so they
+        # keep frame-ancestors *; everything else is frame-denied. We deliberately
+        # do NOT restrict script-src: the cabinet leans on many inline scripts and
+        # on* handlers, so a strict script CSP would break it without a big refactor.
+        # frame-ancestors / object-src / base-uri are safe wins with no such risk.
+        if request.url.path.startswith("/u/"):
+            response.headers.setdefault(
+                "Content-Security-Policy", "frame-ancestors *; base-uri 'self'; object-src 'none'")
+        else:
+            response.headers.setdefault("X-Frame-Options", "DENY")
+            response.headers.setdefault(
+                "Content-Security-Policy", "frame-ancestors 'none'; base-uri 'self'; object-src 'none'")
         ctype = (response.headers.get("content-type") or "").lower()
         if "text/html" in ctype or response.status_code in {301, 302, 303, 307, 308}:
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -585,7 +647,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
 
     @app.post("/login")
     async def login_submit(request: Request, email: str = Form(...), password: str = Form(...)) -> Response:
-        ip = request.client.host if request.client else "?"
+        ip = _client_ip(request)
         if not _rate_ok(f"login:{ip}", *_LOGIN_RATE):
             return RedirectResponse("/login?error=too_many", status_code=303)
         user = await services.web_auth.login_email(email, password)
@@ -613,8 +675,8 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
     ) -> Response:
         from urllib.parse import quote
-        ip = request.client.host if request.client else None
-        if not _rate_ok(f"reg:{ip or '?'}", *_REGISTER_RATE):
+        ip = _client_ip(request)
+        if not _rate_ok(f"reg:{ip}", *_REGISTER_RATE):
             return RedirectResponse(f"/register?error={quote('Слишком много попыток. Попробуй позже.')}", status_code=303)
         if _config.CAPTCHA_ENABLED:
             if not await _captcha.verify_turnstile(cf_turnstile_response, ip):
@@ -672,7 +734,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
 
     @app.get("/auth/telegram/callback")
     async def auth_telegram_widget(request: Request) -> Response:
-        ip = request.client.host if request.client else "?"
+        ip = _client_ip(request)
         if not _rate_ok(f"tgauth:{ip}", *_TG_AUTH_RATE):
             return RedirectResponse("/login?error=too_many", status_code=303)
         data = dict(request.query_params)
@@ -689,9 +751,10 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         _set_session(response, user)
         return response
 
-    @app.get("/auth/telegram/link")
+    @app.post("/auth/telegram/link")
     async def auth_telegram_link(request: Request, user: dict = Depends(current_user)) -> Response:
-        data = dict(request.query_params)
+        form = await request.form()
+        data = {k: str(v) for k, v in form.items()}
         ok, err = await services.web_auth.link_telegram(user["id"], data)
         base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
         if not ok:
@@ -699,7 +762,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             return RedirectResponse(f"{base}?error={quote(err or 'Не удалось подключить Telegram')}", status_code=303)
         return RedirectResponse(f"{base}?saved=tg", status_code=303)
 
-    @app.get("/logout")
+    @app.post("/logout")
     async def logout() -> Response:
         response = RedirectResponse("/", status_code=303)
         response.delete_cookie("pingly_session")
@@ -737,7 +800,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         preferred_time: str = Form(""),
         comment: str = Form(""),
     ) -> Response:
-        client_ip = request.client.host if request.client else "?"
+        client_ip = _client_ip(request)
         if not _rate_ok(f"book:{client_ip}:{slug}", _BOOK_RATE_MAX, _BOOK_RATE_WINDOW):
             return RedirectResponse(f"/u/{slug}?sent=1", status_code=303)
         request_row = await services.public.create_booking(slug, name, contact, preferred_time, comment)
@@ -1766,7 +1829,16 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         if not text:
             return RedirectResponse("/admin/broadcast?result=empty", status_code=303)
         targets = await services.admin.broadcast_targets(audience)
+        # S12: audit trail — who blasted whom, when, and what (message truncated).
+        # Goes to journalctl so a hijacked admin session leaves a durable record.
+        logging.getLogger("pingly.admin").warning(
+            "BROADCAST by user=%s tg=@%s audience=%s recipients=%d text=%r",
+            user.get("id"), user.get("tg_username") or "-", audience, len(targets), text[:120],
+        )
         stats = await _broadcast_telegram(targets, text)
+        logging.getLogger("pingly.admin").warning(
+            "BROADCAST done by user=%s sent=%s failed=%s", user.get("id"), stats["sent"], stats["failed"],
+        )
         return RedirectResponse(
             f"/admin/broadcast?result={stats['sent']}-{stats['failed']}", status_code=303,
         )

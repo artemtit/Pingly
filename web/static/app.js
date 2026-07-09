@@ -276,6 +276,20 @@
     });
   }, true);
 
+  // Turn <a href="/x" data-post> into a same-origin POST (S8): lets us keep
+  // logout etc. as normal-looking links while sending them as CSRF-safe POSTs.
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[data-post]');
+    if (!a) return;
+    e.preventDefault();
+    var f = document.createElement('form');
+    f.method = 'post';
+    f.action = a.getAttribute('href') || a.getAttribute('data-post');
+    f.style.display = 'none';
+    document.body.appendChild(f);
+    f.submit();
+  });
+
   /* ---------------- Password show/hide toggle (D7) ----------------
      Adds an eye button to any <input type="password" data-toggle>. */
   function initPasswordToggles() {

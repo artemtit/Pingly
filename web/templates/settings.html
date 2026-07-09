@@ -63,7 +63,17 @@
         data-request-access="write"></script>
     </div>
     <script>
-      function onTgLink(u){ window.location.href = "/auth/telegram/link?" + new URLSearchParams(u).toString(); }
+      function onTgLink(u){
+        // POST the signed Telegram payload (S8: /auth/telegram/link is POST-only now).
+        var f = document.createElement("form");
+        f.method = "post"; f.action = "/auth/telegram/link"; f.style.display = "none";
+        Object.keys(u).forEach(function(k){
+          var i = document.createElement("input");
+          i.type = "hidden"; i.name = k; i.value = u[k];
+          f.appendChild(i);
+        });
+        document.body.appendChild(f); f.submit();
+      }
     </script>
     {% else %}
     <p class="muted">Подключение появится после настройки бота.</p>

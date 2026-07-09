@@ -65,8 +65,8 @@ class WebAuthService:
             return None, "Укажи имя"
         if "@" not in email or "." not in email.split("@")[-1]:
             return None, "Похоже, email введён неверно"
-        if len(password) < 6:
-            return None, "Пароль должен быть не короче 6 символов"
+        if len(password) < 8:
+            return None, "Пароль должен быть не короче 8 символов"
         existing = await self.repo.get_user_by_email(email)
         if existing:
             return None, "Аккаунт с таким email уже есть — войди"

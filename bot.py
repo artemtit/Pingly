@@ -36,6 +36,11 @@ async def start_web() -> None:
             host=config.WEB_HOST,
             port=config.WEB_PORT,
             log_level="info",
+            # S7: trust the X-Forwarded-* set by our local nginx so request.client
+            # reflects the real client, not 127.0.0.1. (Rate-limiting additionally
+            # prefers Cloudflare's CF-Connecting-IP — see web.app._client_ip.)
+            proxy_headers=True,
+            forwarded_allow_ips="127.0.0.1",
         )
     )
     await server.serve()
