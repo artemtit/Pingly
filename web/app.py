@@ -32,6 +32,71 @@ templates.env.globals["role_label"] = lambda r: "Репетитор" if r == "tu
 _DAYS_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 _MSK = timezone(timedelta(hours=3))
 
+
+def _ics_escape(text: str) -> str:
+    """Escape a value for an iCalendar TEXT field (RFC 5545)."""
+    return (text or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+
+def _ics_dt(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _build_ics(lessons: list[dict]) -> str:
+    """F11: the tutor's lessons as an iCalendar feed they can import into Google
+    Calendar / Apple Calendar. Times are emitted in UTC (Z), so any client shows
+    them in the viewer's own zone correctly."""
+    now = datetime.now(timezone.utc)
+    lines = [
+        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Pingly//Calendar//RU",
+        "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:Pingly — занятия",
+    ]
+    for lesson in lessons:
+        if lesson.get("status") == "cancelled":
+            continue
+        raw = lesson.get("starts_at")
+        if not raw:
+            continue
+        try:
+            start = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        end = start + timedelta(minutes=int(lesson.get("duration_minutes") or 60))
+        name = (lesson.get("student_profiles") or {}).get("name") or "Ученик"
+        lines += [
+            "BEGIN:VEVENT",
+            f"UID:{lesson.get('id')}@pingly-app.ru",
+            f"DTSTAMP:{_ics_dt(now)}",
+            f"DTSTART:{_ics_dt(start)}",
+            f"DTEND:{_ics_dt(end)}",
+            f"SUMMARY:{_ics_escape('Занятие — ' + name)}",
+        ]
+        if lesson.get("public_comment"):
+            lines.append(f"DESCRIPTION:{_ics_escape(lesson['public_comment'])}")
+        lines += ["STATUS:" + ("CONFIRMED" if lesson.get("status") == "confirmed" else "TENTATIVE"), "END:VEVENT"]
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(lines) + "\r\n"
+
+
+def _build_finance_csv(overview: dict) -> str:
+    """F11: per-student billing as a CSV (`;`-separated + UTF-8 BOM so Russian
+    Excel opens Cyrillic and columns correctly)."""
+    import csv
+    import io
+    buf = io.StringIO()
+    buf.write("﻿")
+    writer = csv.writer(buf, delimiter=";")
+    writer.writerow(["Ученик", "Проведено занятий", "Оплачено, ₽", "Не оплачено, ₽", "Неоплаченных занятий"])
+    for s in overview.get("students", []):
+        writer.writerow([
+            s.get("name", ""), s.get("lessons", 0), s.get("paid_sum", 0),
+            s.get("unpaid_sum", 0), s.get("unpaid_count", 0),
+        ])
+    writer.writerow([])
+    writer.writerow(["Заработано за месяц, ₽", overview.get("month_earned", 0)])
+    writer.writerow(["Всего не оплачено, ₽", overview.get("total_unpaid", 0)])
+    return buf.getvalue()
+
 # Simple in-memory rate limiter for the unauthenticated booking endpoint. The app
 # runs as a single uvicorn process, so a process-local window is enough to stop a
 # client from flooding the requests table / a tutor's Telegram.
@@ -807,6 +872,26 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         # students feed the quick-add ("+" on an empty cell) modal
         students = await services.students.list_students_by_user(user["id"])
         return templates.TemplateResponse("calendar.html", _ctx(request, user, "calendar", cal=cal, base="/tutor/calendar", students=students))
+
+    @app.get("/tutor/calendar.ics")
+    async def tutor_calendar_ics(user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        lessons = await services.lessons.list_tutor_calendar(user["id"])
+        return Response(
+            content=_build_ics(lessons),
+            media_type="text/calendar; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="pingly-calendar.ics"'},
+        )
+
+    @app.get("/tutor/finance.csv")
+    async def tutor_finance_csv(user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        overview = await services.lessons.finance_overview(user["id"])
+        return Response(
+            content=_build_finance_csv(overview),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="pingly-finance.csv"'},
+        )
 
     @app.get("/tutor/schedule", response_class=HTMLResponse)
     async def tutor_schedule(request: Request, user: dict = Depends(current_user)) -> Response:
