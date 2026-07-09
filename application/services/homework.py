@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from application.repositories import PinglyRepository
-from application.services.lessons import _fmt_dt_msk
+from application.services.lessons import _fmt_dt_local
+from application.services.timezones import DEFAULT_TZ_OFFSET
 from domain import HomeworkStatus, NotificationType
 
 
@@ -26,10 +27,12 @@ class HomeworkService:
             )
             # F7: remind the student ~1 day before the deadline (if the tutor set
             # one and it's far enough away that a "срок завтра" nudge makes sense).
-            await self._schedule_due_reminder(student["user_id"], homework, due_at)
+            tutor = await self.repo.get_user_by_id(tutor_user_id)
+            offset = int((tutor or {}).get("tz_offset_minutes") or DEFAULT_TZ_OFFSET)
+            await self._schedule_due_reminder(student["user_id"], homework, due_at, offset)
         return homework
 
-    async def _schedule_due_reminder(self, student_user_id: str, homework: dict, due_at: datetime | None) -> None:
+    async def _schedule_due_reminder(self, student_user_id: str, homework: dict, due_at: datetime | None, offset: int = DEFAULT_TZ_OFFSET) -> None:
         if not due_at:
             return
         if due_at.tzinfo is None:
@@ -41,7 +44,7 @@ class HomeworkService:
             student_user_id,
             NotificationType.HOMEWORK_DUE_SOON.value,
             "📚 Скоро дедлайн по домашке",
-            f"Не забудь про «{homework['title']}» — сдать до {_fmt_dt_msk(due_at)}.",
+            f"Не забудь про «{homework['title']}» — сдать до {_fmt_dt_local(due_at, offset)}.",
             {"homework_id": homework["id"]},
             send_at,
         )

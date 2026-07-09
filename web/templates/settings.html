@@ -72,6 +72,21 @@
   </div>
 
   <div class="card">
+    <h2>{{ ui.icon('globe', 18) }} Часовой пояс</h2>
+    <p class="muted" style="margin-bottom:10px;">Время занятий и напоминаний показывается в этом поясе. Выбери свой — если ты не в Москве.</p>
+    <form method="post" action="/settings/timezone" class="form">
+      <label>Пояс
+        <select class="input" name="tz_offset" onchange="this.form.submit()">
+          {% set cur = user.tz_offset_minutes if user.tz_offset_minutes is not none else 180 %}
+          {% for offset, label in tz_choices %}
+          <option value="{{ offset }}" {% if offset == cur %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select></label>
+      <noscript><button class="btn btn-secondary btn-sm" type="submit" style="margin-top:8px;">Сохранить</button></noscript>
+    </form>
+  </div>
+
+  <div class="card">
     <h2>{{ ui.icon('moon', 18) }} Тихие часы</h2>
     <form method="post" action="/settings/notifications" class="form">
       <label class="settings-row" style="cursor:pointer;">

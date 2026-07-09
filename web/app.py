@@ -21,6 +21,9 @@ from application.factory import create_services
 from infrastructure import captcha as _captcha
 from infrastructure.openmodel import complete as _openmodel_complete
 from application.services.accounts import subscription_info as _subscription_info
+from application.services.timezones import (
+    TZ_CHOICES, current_tz, normalize_offset, set_current_offset,
+)
 from config import WEB_BASE_URL, WEB_SECRET
 from web.calendar_view import STATUS_LABELS, build_calendar, parse_anchor
 
@@ -30,7 +33,6 @@ templates.env.globals["status_labels"] = STATUS_LABELS
 templates.env.globals["role_label"] = lambda r: "Репетитор" if r == "tutor" else "Ученик"
 
 _DAYS_RU = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
-_MSK = timezone(timedelta(hours=3))
 
 
 def _ics_escape(text: str) -> str:
@@ -134,7 +136,7 @@ def _rate_ok(key: str, max_hits: int, window: float) -> bool:
 def _ru_weekday(dt_str: str) -> str:
     try:
         dt = datetime.fromisoformat(str(dt_str).replace("Z", "+00:00"))
-        return _DAYS_RU[dt.astimezone(_MSK).weekday()]
+        return _DAYS_RU[dt.astimezone(current_tz()).weekday()]
     except Exception:
         return ""
 
@@ -142,7 +144,7 @@ def _ru_weekday(dt_str: str) -> str:
 def _fmt_msk(dt_str: str, fmt: str = "%d.%m %H:%M") -> str:
     try:
         dt = datetime.fromisoformat(str(dt_str).replace("Z", "+00:00"))
-        return dt.astimezone(_MSK).strftime(fmt)
+        return dt.astimezone(current_tz()).strftime(fmt)
     except Exception:
         return str(dt_str)[:16].replace("T", " ")
 
@@ -362,6 +364,8 @@ async def current_user(request: Request) -> dict:
     user = await services.accounts.get_user(user_id)
     if not user:
         raise HTTPException(status_code=401)
+    # F6: pin this request's display/parse timezone to the tutor's setting.
+    set_current_offset(user.get("tz_offset_minutes"))
     return user
 
 
@@ -376,7 +380,10 @@ async def _user_from_cookie(request: Request) -> dict | None:
     except (BadSignature, SignatureExpired):
         return None
     try:
-        return await services.accounts.get_user(user_id)
+        user = await services.accounts.get_user(user_id)
+        if user:
+            set_current_offset(user.get("tz_offset_minutes"))
+        return user
     except Exception:
         return None
 
@@ -409,7 +416,7 @@ def _parse_local(raw: str) -> datetime | None:
     if len(raw) == 16:  # YYYY-MM-DDTHH:MM
         raw += ":00"
     try:
-        return datetime.fromisoformat(raw).replace(tzinfo=_MSK).astimezone(timezone.utc)
+        return datetime.fromisoformat(raw).replace(tzinfo=current_tz()).astimezone(timezone.utc)
     except ValueError:
         return None
 
@@ -928,7 +935,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         topic = comment.strip()[:500] or None
         if recurrence == "once":
             day = lesson_date.strip() or datetime.now(timezone.utc).date().isoformat()
-            starts_at = datetime.fromisoformat(f"{day}T{time_norm}:00").replace(tzinfo=_MSK).astimezone(timezone.utc)
+            starts_at = datetime.fromisoformat(f"{day}T{time_norm}:00").replace(tzinfo=current_tz()).astimezone(timezone.utc)
             await services.lessons.create_one_time_lesson(user["id"], student_id, starts_at, public_comment=topic)
         else:
             wd = weekdays or None
@@ -1024,7 +1031,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         # plus a flat payment history for the per-student expandable timeline —
         # all derived from lessons already fetched, no extra queries
         ru_months = ["", "янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
-        now_msk = datetime.now(_MSK)
+        now_msk = datetime.now(current_tz())
         month_keys = []
         y, m = now_msk.year, now_msk.month
         for _ in range(6):
@@ -1039,7 +1046,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             if l.get("status") != "completed":
                 continue
             try:
-                dt = datetime.fromisoformat(str(l["starts_at"]).replace("Z", "+00:00")).astimezone(_MSK)
+                dt = datetime.fromisoformat(str(l["starts_at"]).replace("Z", "+00:00")).astimezone(current_tz())
             except (ValueError, KeyError):
                 continue
             price = l.get("price") or 0
@@ -1185,6 +1192,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             request, user, "settings", bot_username=_config.BOT_USERNAME,
             profile=profile, web_base=WEB_BASE_URL, referral_code=user.get("referral_code"),
             saved=saved, error=error, paid=paid, upgrade=upgrade, locked=locked, price=_config.SUBSCRIPTION_PRICE_RUB,
+            tz_choices=TZ_CHOICES,
         ))
 
     # ---------------- STUDENT ----------------
@@ -1362,7 +1370,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     def _ai_format_dt(raw: datetime | None) -> str:
         if not raw:
             return "—"
-        return raw.astimezone(_MSK).strftime("%d.%m")
+        return raw.astimezone(current_tz()).strftime("%d.%m")
 
     def _build_tutor_ai_snapshot(students: list[dict], lessons: list[dict], finance: dict) -> dict[str, object]:
         now = datetime.now(timezone.utc)
@@ -1405,7 +1413,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             started = _ai_parse_dt(lesson.get("starts_at"))
             if not started:
                 continue
-            month_counts[started.astimezone(_MSK).strftime("%Y-%m")] += 1
+            month_counts[started.astimezone(current_tz()).strftime("%Y-%m")] += 1
             row = get_row(lesson)
             status = str(lesson.get("status") or "")
             row["total"] = int(row["total"]) + 1
@@ -1657,6 +1665,13 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
         return RedirectResponse(f"{base}?saved=notifications", status_code=303)
 
+    @app.post("/settings/timezone")
+    async def update_timezone(tz_offset: str = Form(default=""), user: dict = Depends(current_user)) -> Response:
+        # normalize_offset clamps anything unexpected back to Москва.
+        await services.accounts.set_timezone(user["id"], normalize_offset(tz_offset))
+        base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
+        return RedirectResponse(f"{base}?saved=timezone", status_code=303)
+
     @app.get("/tutor/data.json")
     async def tutor_data_export(user: dict = Depends(current_user)) -> Response:
         # F12: 152-ФЗ data portability — a full machine-readable dump of the
@@ -1696,7 +1711,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/student/settings", response_class=HTMLResponse)
     async def student_settings(request: Request, saved: str | None = None, error: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "student")
-        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings", bot_username=_config.BOT_USERNAME, saved=saved, error=error))
+        return templates.TemplateResponse("settings.html", _ctx(request, user, "settings", bot_username=_config.BOT_USERNAME, saved=saved, error=error, tz_choices=TZ_CHOICES))
 
     # ---------------- Admin panel (users.is_admin only) ----------------
     @app.get("/admin", response_class=HTMLResponse)

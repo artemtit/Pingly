@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from application.repositories import PinglyRepository
+from application.services.timezones import DEFAULT_TZ_OFFSET, tz_from_offset
 from domain import LessonStatus, NotificationType
 
 # How far ahead recurring lessons are pre-generated.
@@ -28,24 +29,20 @@ _MONTHS_RU = [
     "июля", "августа", "сентября", "октября", "ноября", "декабря",
 ]
 
-# Moscow time — UTC+3, no DST. All user-facing time formatting goes through here.
-_MSK = timezone(timedelta(hours=3))
+def _fmt_dt_local(dt: datetime, offset: int = DEFAULT_TZ_OFFSET) -> str:
+    """Format a UTC datetime in the tutor's timezone for user-facing messages."""
+    local = dt.astimezone(tz_from_offset(offset))
+    return f"{local.day} {_MONTHS_RU[local.month - 1]} в {local:%H:%M}"
 
 
-def _to_msk(dt: datetime) -> datetime:
-    return dt.astimezone(_MSK)
+# Back-compat alias — historical name kept so other modules importing it still work.
+_fmt_dt_msk = _fmt_dt_local
 
 
-def _fmt_dt_msk(dt: datetime) -> str:
-    """Format a UTC datetime as Moscow time for user-facing messages."""
-    msk = _to_msk(dt)
-    return f"{msk.day} {_MONTHS_RU[msk.month - 1]} в {msk:%H:%M}"
-
-
-def _fmt_when_ru(starts_at: str) -> str:
+def _fmt_when_ru(starts_at: str, offset: int = DEFAULT_TZ_OFFSET) -> str:
     try:
         dt = datetime.fromisoformat(str(starts_at).replace("Z", "+00:00"))
-        return _fmt_dt_msk(dt)
+        return _fmt_dt_local(dt, offset)
     except Exception:
         return str(starts_at)[:16].replace("T", " ")
 
@@ -101,6 +98,14 @@ class LessonService:
     def __init__(self, repo: PinglyRepository) -> None:
         self.repo = repo
 
+    async def _tutor_offset(self, tutor_user_id: str | None) -> int:
+        """F6: the tutor's timezone offset (minutes), for time wording in reminders
+        and pushes. Falls back to Москва (UTC+3) when unset."""
+        if not tutor_user_id:
+            return DEFAULT_TZ_OFFSET
+        tutor = await self.repo.get_user_by_id(tutor_user_id)
+        return int((tutor or {}).get("tz_offset_minutes") or DEFAULT_TZ_OFFSET)
+
     # ---- creation -------------------------------------------------------
     async def create_recurring_lesson(self, tutor_tg_id: int, student_id: str, day_of_week: int, lesson_time: str, duration_minutes: int = 60) -> dict:
         tutor = await self.repo.get_user_by_tg_id(tutor_tg_id)
@@ -119,7 +124,8 @@ class LessonService:
         if not student:
             raise PermissionError("Student does not belong to tutor")
         lesson = await self.repo.create_lesson(tutor_user_id, student_id, starts_at, public_comment=public_comment)
-        await self._schedule_lesson_notifications(lesson, starts_at, student.get("name"))
+        offset = int(tutor.get("tz_offset_minutes") or DEFAULT_TZ_OFFSET)
+        await self._schedule_lesson_notifications(lesson, starts_at, student.get("name"), offset)
         return lesson
 
     async def create_schedule(
@@ -155,10 +161,11 @@ class LessonService:
             weekdays=weekdays or [day_of_week],
             start_date=anchor.date().isoformat(),
         )
-        await self._generate_lessons(tutor_user_id, student_id, rule, public_comment=public_comment)
+        offset = int(tutor.get("tz_offset_minutes") or DEFAULT_TZ_OFFSET)
+        await self._generate_lessons(tutor_user_id, student_id, rule, public_comment=public_comment, offset=offset)
         return rule
 
-    def _occurrences(self, recurrence: str, weekdays: list[int], interval_n: int, lesson_time: str, start: datetime) -> list[datetime]:
+    def _occurrences(self, recurrence: str, weekdays: list[int], interval_n: int, lesson_time: str, start: datetime, offset: int = DEFAULT_TZ_OFFSET) -> list[datetime]:
         hour, minute = _parse_time(lesson_time)
         now = datetime.now(timezone.utc)
         horizon = now + timedelta(days=HORIZON_DAYS)
@@ -167,8 +174,8 @@ class LessonService:
         interval_n = max(interval_n, 1)
 
         def at(d: datetime) -> datetime:
-            # hour/minute are Moscow time — subtract 3h to store as UTC
-            return d.replace(hour=hour, minute=minute, second=0, microsecond=0) - timedelta(hours=3)
+            # hour/minute are the tutor's local time — subtract their offset to store UTC
+            return d.replace(hour=hour, minute=minute, second=0, microsecond=0) - timedelta(minutes=offset)
 
         if recurrence == "daily":
             cursor = at(start)
@@ -197,7 +204,7 @@ class LessonService:
                         out.append(occ)
         return sorted(set(out))[:MAX_GENERATED]
 
-    async def _generate_lessons(self, tutor_user_id: str, student_id: str, rule: dict, public_comment: str | None = None) -> list[dict]:
+    async def _generate_lessons(self, tutor_user_id: str, student_id: str, rule: dict, public_comment: str | None = None, offset: int = DEFAULT_TZ_OFFSET) -> list[dict]:
         weekdays = rule.get("weekdays") or [rule["day_of_week"]]
         if isinstance(weekdays, str):
             import json
@@ -208,6 +215,7 @@ class LessonService:
             int(rule.get("interval_n", 1)),
             rule["lesson_time"],
             datetime.now(timezone.utc),
+            offset,
         )
         student = await self.repo.get_student_for_tutor(tutor_user_id, student_id)
         student_name = (student or {}).get("name")
@@ -215,10 +223,10 @@ class LessonService:
         for starts_at in occurrences:
             lesson = await self.repo.create_lesson(tutor_user_id, student_id, starts_at, schedule_rule_id=rule["id"], public_comment=public_comment)
             lessons.append(lesson)
-            await self._schedule_lesson_notifications(lesson, starts_at, student_name)
+            await self._schedule_lesson_notifications(lesson, starts_at, student_name, offset)
         return lessons
 
-    async def _schedule_lesson_notifications(self, lesson: dict, starts_at: datetime, student_name: str | None = None) -> None:
+    async def _schedule_lesson_notifications(self, lesson: dict, starts_at: datetime, student_name: str | None = None, offset: int = DEFAULT_TZ_OFFSET) -> None:
         now = datetime.now(timezone.utc)
         student_user_id = lesson.get("student_user_id")
         if student_user_id:
@@ -231,7 +239,7 @@ class LessonService:
                     student_user_id,
                     NotificationType.LESSON_HOUR_BEFORE.value,
                     "⏰ Занятие через 2 часа",
-                    f"Занятие начнётся {_fmt_dt_msk(starts_at)}",
+                    f"Занятие начнётся {_fmt_dt_local(starts_at, offset)}",
                     {"lesson_id": lesson["id"]},
                     send_at,
                 )
@@ -244,7 +252,7 @@ class LessonService:
                     student_user_id,
                     NotificationType.LESSON_SECOND_PING.value,
                     "⏰ Занятие уже скоро",
-                    f"Через 30 минут занятие ({_fmt_dt_msk(starts_at)}). Нажми «Буду» или «Отменяю».",
+                    f"Через 30 минут занятие ({_fmt_dt_local(starts_at, offset)}). Нажми «Буду» или «Отменяю».",
                     {"lesson_id": lesson["id"]},
                     second_at,
                 )
@@ -260,7 +268,7 @@ class LessonService:
                     tutor_user_id,
                     NotificationType.TUTOR_UNCONFIRMED.value,
                     "❓ Занятие пока не подтверждено",
-                    f"До занятия ({_fmt_dt_msk(starts_at)}) меньше часа, а {who} ещё не нажал(а) «Буду». Стоит написать.",
+                    f"До занятия ({_fmt_dt_local(starts_at, offset)}) меньше часа, а {who} ещё не нажал(а) «Буду». Стоит написать.",
                     {"lesson_id": lesson["id"]},
                     send_at,
                 )
@@ -316,14 +324,15 @@ class LessonService:
         }
         lesson = await self.repo.update_lesson_fields(lesson_id, patch, tutor_user_id)
         if lesson and lesson.get("student_user_id"):
+            offset = await self._tutor_offset(tutor_user_id)
             await self.repo.create_notification(
                 lesson["student_user_id"],
                 NotificationType.LESSON_RESCHEDULED.value,
                 "🔄 Занятие перенесено",
-                f"Новое время: {_fmt_dt_msk(new_starts_at)}",
+                f"Новое время: {_fmt_dt_local(new_starts_at, offset)}",
                 {"lesson_id": lesson_id},
             )
-            await self._schedule_lesson_notifications(lesson, new_starts_at, (existing.get("student_profiles") or {}).get("name"))
+            await self._schedule_lesson_notifications(lesson, new_starts_at, (existing.get("student_profiles") or {}).get("name"), offset)
         return lesson
 
     # ---- series actions -------------------------------------------------
@@ -352,13 +361,14 @@ class LessonService:
             return 0
         hour, minute = _parse_time(new_time)
         await self.repo.update_schedule_rule(rule_id, {"lesson_time": f"{hour:02d}:{minute:02d}:00"}, tutor_user_id)
+        offset = await self._tutor_offset(tutor_user_id)
         now = datetime.now(timezone.utc)
         future = await self.repo.list_future_lessons_for_rule(rule_id, now, tutor_user_id)
         count = 0
         student_user_id = None
         for lesson in future:
             old = datetime.fromisoformat(lesson["starts_at"].replace("Z", "+00:00"))
-            new_dt = old.replace(hour=hour, minute=minute, second=0, microsecond=0) - timedelta(hours=3)
+            new_dt = old.replace(hour=hour, minute=minute, second=0, microsecond=0) - timedelta(minutes=offset)
             await self.repo.update_lesson_fields(lesson["id"], {"starts_at": new_dt.isoformat(), "rescheduled_from": lesson["starts_at"]}, tutor_user_id)
             student_user_id = lesson.get("student_user_id") or student_user_id
             count += 1
@@ -395,7 +405,7 @@ class LessonService:
         if not tg_id:
             return None
         name = (lesson.get("student_profiles") or {}).get("name") or "Ученик"
-        when = _fmt_when_ru(lesson.get("starts_at", ""))
+        when = _fmt_when_ru(lesson.get("starts_at", ""), int((tutor or {}).get("tz_offset_minutes") or DEFAULT_TZ_OFFSET))
         return tg_id, f"✅ {name} подтвердил(а) занятие {when}."
 
     async def student_request_reschedule(self, student_user_id: str, lesson_id: str) -> dict | None:
@@ -425,7 +435,7 @@ class LessonService:
         if not tg_id:
             return None
         name = (lesson.get("student_profiles") or {}).get("name") or "Ученик"
-        when = _fmt_when_ru(lesson.get("starts_at", ""))
+        when = _fmt_when_ru(lesson.get("starts_at", ""), int((tutor or {}).get("tz_offset_minutes") or DEFAULT_TZ_OFFSET))
         message = (
             f"🟠 {name} просит перенести занятие {when}.\n\n"
             "Напиши ученику и поставь новое время в кабинете."
@@ -517,7 +527,7 @@ class LessonService:
         if not tg_id:
             return None
         name = (lesson.get("student_profiles") or {}).get("name") or "Ученик"
-        when = _fmt_when_ru(lesson.get("starts_at", ""))
+        when = _fmt_when_ru(lesson.get("starts_at", ""), int((tutor or {}).get("tz_offset_minutes") or DEFAULT_TZ_OFFSET))
         message = (
             f"🔔 {name} отменил(а) занятие {when}.\n\n"
             "Напиши ученику, чтобы договориться о переносе."

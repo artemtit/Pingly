@@ -84,3 +84,7 @@ class AccountService:
         """F12: erase a plain (non-tutor) account. Tutor accounts go through
         StudentService.delete_tutor_account, which also tears down their students."""
         await self.repo.delete_user(user_id)
+
+    async def set_timezone(self, user_id: str, offset_minutes: int) -> None:
+        """F6: set the user's timezone (UTC offset in minutes)."""
+        await self.repo.set_tz_offset(user_id, offset_minutes)

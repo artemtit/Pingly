@@ -11,6 +11,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from application.factory import create_services
 from application.services.accounts import subscription_info
 from application.services.lessons import package_status
+from application.services.timezones import DEFAULT_TZ_OFFSET, tz_from_offset
 from config import WEB_BASE_URL
 from vk_bot import lesson_keyboard as vk_lesson_keyboard
 
@@ -28,14 +29,14 @@ _PACKAGE_MILESTONES = (1, 0)
 # wording is considered untrustworthy (e.g. after a server downtime).
 _REMINDER_STALE_AFTER = timedelta(minutes=15)
 
-# Moscow time (UTC+3, no DST) — the digest groups lessons by the tutor's day.
-_MSK = timezone(timedelta(hours=3))
-
-# F10 quiet hours: 22:00–08:00 MSK. Non-urgent notifications that come due at
-# night are deferred to 08:00 MSK. Time-critical lesson reminders always go —
-# a "занятие через 2 часа" held till morning would be useless.
+# F10 quiet hours: 22:00–08:00 in the recipient's own timezone. Non-urgent
+# notifications that come due at night are deferred to 08:00 local. Time-critical
+# lesson reminders always go — a "занятие через 2 часа" held till morning is useless.
 _QUIET_START = 22
 _QUIET_END = 8
+
+# Local hour at which the morning digest goes out (in each tutor's own timezone).
+_DIGEST_LOCAL_HOUR = 9
 _URGENT_TYPES = {
     "lesson_hour_before", "lesson_second_ping", "lesson_day_before",
     "tutor_unconfirmed", "lesson_reschedule_request", "lesson_rescheduled",
@@ -43,15 +44,16 @@ _URGENT_TYPES = {
 
 
 def _quiet_deferral(user: dict, ntype: str, now: datetime) -> datetime | None:
-    """If the recipient enabled quiet hours and it's night in MSK, return the UTC
-    time to defer a non-urgent notification to (next 08:00 MSK); else None."""
+    """If the recipient enabled quiet hours and it's night in their timezone, return
+    the UTC time to defer a non-urgent notification to (next 08:00 local); else None."""
     if ntype in _URGENT_TYPES or not user.get("notify_quiet_hours"):
         return None
-    msk = now.astimezone(_MSK)
-    if not (msk.hour >= _QUIET_START or msk.hour < _QUIET_END):
+    tz = tz_from_offset(user.get("tz_offset_minutes") or DEFAULT_TZ_OFFSET)
+    local = now.astimezone(tz)
+    if not (local.hour >= _QUIET_START or local.hour < _QUIET_END):
         return None
-    target = msk.replace(hour=_QUIET_END, minute=0, second=0, microsecond=0)
-    if msk.hour >= _QUIET_START:  # late evening → deliver tomorrow morning
+    target = local.replace(hour=_QUIET_END, minute=0, second=0, microsecond=0)
+    if local.hour >= _QUIET_START:  # late evening → deliver tomorrow morning
         target += timedelta(days=1)
     return target.astimezone(timezone.utc)
 
@@ -230,23 +232,27 @@ async def enqueue_subscription_reminders() -> None:
 
 
 async def enqueue_morning_digests() -> None:
-    """Each morning send the tutor a summary of the day's lessons ("Сегодня N
-    занятий: …"). Fires at 06:00 UTC (09:00 MSK). Dedup per (tutor, date) via the
-    notifications table so a restart can't double-send."""
+    """Send each tutor a summary of the day's lessons ("Сегодня N занятий: …") at
+    09:00 in THEIR timezone. Runs hourly and fires per tutor only when it's their
+    9 AM; dedup per (tutor, date) via the notifications table (restart-safe)."""
     tutors = await services.repo.list_tutor_users()
     now = datetime.now(timezone.utc)
-    day = now.astimezone(_MSK).date()
-    # The tutor's MSK day expressed as a UTC window.
-    day_start = datetime(day.year, day.month, day.day, tzinfo=_MSK).astimezone(timezone.utc)
-    day_end = day_start + timedelta(days=1)
-    date_key = day.isoformat()
     for tutor in tutors:
+        tz = tz_from_offset(tutor.get("tz_offset_minutes") or DEFAULT_TZ_OFFSET)
+        local = now.astimezone(tz)
+        if local.hour != _DIGEST_LOCAL_HOUR:
+            continue
+        day = local.date()
+        date_key = day.isoformat()
         recent = await services.repo.list_notifications_for_user(tutor["id"], 30)
         if any(
             n.get("type") == "daily_digest" and (n.get("payload") or {}).get("date") == date_key
             for n in recent
         ):
             continue
+        # The tutor's local day expressed as a UTC window.
+        day_start = datetime(day.year, day.month, day.day, tzinfo=tz).astimezone(timezone.utc)
+        day_end = day_start + timedelta(days=1)
         lessons = await services.repo.list_lessons_for_tutor(tutor["id"], 1000)
         today = []
         for lesson in lessons:
@@ -259,7 +265,7 @@ async def enqueue_morning_digests() -> None:
             continue
         today.sort(key=lambda t: t[0])
         lines = [
-            f"• {starts.astimezone(_MSK):%H:%M} — {(l.get('student_profiles') or {}).get('name') or 'Ученик'}"
+            f"• {starts.astimezone(tz):%H:%M} — {(l.get('student_profiles') or {}).get('name') or 'Ученик'}"
             for starts, l in today
         ]
         count = len(today)
@@ -354,7 +360,8 @@ def create_scheduler(bot: Bot, vk_bot=None) -> AsyncIOScheduler:
         enqueue_package_reminders, "interval", hours=12,
         next_run_time=datetime.now() + timedelta(seconds=45),
     )
-    # Morning digest: 06:00 UTC = 09:00 MSK. Cron (not interval) so it lands at a
-    # predictable, humane hour instead of drifting with restarts.
-    scheduler.add_job(enqueue_morning_digests, "cron", hour=6, minute=0)
+    # Morning digest runs hourly (top of the hour); the job itself fires per tutor
+    # only when it's 09:00 in that tutor's timezone, so everyone gets it in the
+    # morning regardless of where they are.
+    scheduler.add_job(enqueue_morning_digests, "cron", minute=0)
     return scheduler

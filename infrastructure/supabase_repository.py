@@ -615,7 +615,7 @@ class SupabasePinglyRepository:
     async def list_due_notifications(self, now: datetime, limit: int = 100) -> list[dict[str, Any]]:
         result = await (
             self._db().table("notifications")
-            .select("*, users(tg_id, vk_id, tg_blocked_at, notify_quiet_hours)")
+            .select("*, users(tg_id, vk_id, tg_blocked_at, notify_quiet_hours, tz_offset_minutes)")
             .eq("status", "pending")
             .lte("scheduled_for", now.isoformat())
             .limit(limit)
@@ -635,6 +635,11 @@ class SupabasePinglyRepository:
     async def set_notify_quiet_hours(self, user_id: str, enabled: bool) -> None:
         await self._db().table("users").update(
             {"notify_quiet_hours": enabled}
+        ).eq("id", user_id).execute()
+
+    async def set_tz_offset(self, user_id: str, minutes: int) -> None:
+        await self._db().table("users").update(
+            {"tz_offset_minutes": minutes}
         ).eq("id", user_id).execute()
 
     async def set_tg_blocked(self, user_id: str) -> None:
