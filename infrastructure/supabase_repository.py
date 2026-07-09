@@ -615,7 +615,7 @@ class SupabasePinglyRepository:
     async def list_due_notifications(self, now: datetime, limit: int = 100) -> list[dict[str, Any]]:
         result = await (
             self._db().table("notifications")
-            .select("*, users(tg_id, vk_id, tg_blocked_at)")
+            .select("*, users(tg_id, vk_id, tg_blocked_at, notify_quiet_hours)")
             .eq("status", "pending")
             .lte("scheduled_for", now.isoformat())
             .limit(limit)
@@ -625,6 +625,17 @@ class SupabasePinglyRepository:
 
     async def mark_notification_sent(self, notification_id: str) -> None:
         await self._db().table("notifications").update({"status": "sent"}).eq("id", notification_id).execute()
+
+    async def reschedule_notification(self, notification_id: str, new_scheduled_for: datetime) -> None:
+        """Push a still-pending notification to a later time (quiet-hours deferral)."""
+        await self._db().table("notifications").update(
+            {"scheduled_for": new_scheduled_for.isoformat()}
+        ).eq("id", notification_id).execute()
+
+    async def set_notify_quiet_hours(self, user_id: str, enabled: bool) -> None:
+        await self._db().table("users").update(
+            {"notify_quiet_hours": enabled}
+        ).eq("id", user_id).execute()
 
     async def set_tg_blocked(self, user_id: str) -> None:
         """Stamp that Telegram delivery to this user is failing (bot blocked)."""

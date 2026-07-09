@@ -1565,6 +1565,13 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
         return RedirectResponse(f"{base}?saved=name", status_code=303)
 
+    @app.post("/settings/notifications")
+    async def update_notifications(quiet_hours: str = Form(default=""), user: dict = Depends(current_user)) -> Response:
+        # Unchecked checkboxes aren't submitted, so absence == off.
+        await services.accounts.set_quiet_hours(user["id"], quiet_hours == "on")
+        base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
+        return RedirectResponse(f"{base}?saved=notifications", status_code=303)
+
     @app.get("/student/settings", response_class=HTMLResponse)
     async def student_settings(request: Request, saved: str | None = None, error: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "student")

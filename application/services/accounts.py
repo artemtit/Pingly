@@ -75,3 +75,7 @@ class AccountService:
         if not full_name:
             return None
         return await self.repo.update_user_profile(user_id, full_name=full_name)
+
+    async def set_quiet_hours(self, user_id: str, enabled: bool) -> None:
+        """F10: toggle night-time quiet hours (22:00–08:00 MSK) for this user."""
+        await self.repo.set_notify_quiet_hours(user_id, enabled)
