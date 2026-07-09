@@ -219,6 +219,20 @@
     <p class="muted" style="margin-top:12px;font-size:13px;">Или напрямую: <a href="https://t.me/{{ support_username }}" target="_blank" rel="noopener">@{{ support_username }}</a></p>
     {% endif %}
   </div>
+
+  <div class="card" style="border-color: var(--color-error);">
+    <h2 style="color: var(--color-error);">{{ ui.icon('trash', 16) }} Опасная зона</h2>
+    {% if user.role == 'tutor' %}
+    <p class="muted" style="margin-bottom:10px;">Скачай копию всех своих данных (аккаунт, ученики, занятия, ДЗ, финансы) одним файлом.</p>
+    <a class="btn btn-secondary btn-sm" href="/tutor/data.json" style="margin-bottom:18px;">{{ ui.icon('save', 15) }} Скачать мои данные (JSON)</a>
+    {% endif %}
+    <p class="muted" style="margin:0 0 10px;">Удаление аккаунта необратимо: {% if user.role == 'tutor' %}вместе с ним удаляются все твои ученики, занятия, домашки и история.{% else %}все твои данные будут стёрты.{% endif %} Восстановить не получится.</p>
+    <form method="post" action="/account/delete" class="form" onsubmit="return confirm('Точно удалить аккаунт? Это необратимо.')">
+      <label>Для подтверждения введи слово <strong>удалить</strong>
+        <input class="input" name="confirm" autocomplete="off" placeholder="удалить" required></label>
+      <button class="btn btn-sm" type="submit" style="background: var(--color-error); color:#fff; border-color: var(--color-error); margin-top:8px;">Удалить аккаунт навсегда</button>
+    </form>
+  </div>
 </section>
 
 <script>

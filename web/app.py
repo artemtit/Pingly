@@ -1657,6 +1657,42 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
         return RedirectResponse(f"{base}?saved=notifications", status_code=303)
 
+    @app.get("/tutor/data.json")
+    async def tutor_data_export(user: dict = Depends(current_user)) -> Response:
+        # F12: 152-ФЗ data portability — a full machine-readable dump of the
+        # tutor's own data (account, students, lessons, homework, finance).
+        _require(user, "tutor")
+        import json
+        data = {
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "account": {k: user.get(k) for k in ("id", "full_name", "email", "tg_id", "tg_username", "role", "created_at")},
+            "students": await services.students.list_students_by_user(user["id"]),
+            "lessons": await services.lessons.list_tutor_calendar(user["id"]),
+            "homework": await services.homework.list_for_tutor(user["id"]),
+            "finance": await services.lessons.finance_overview(user["id"]),
+        }
+        body = json.dumps(data, ensure_ascii=False, indent=2, default=str)
+        return Response(
+            content=body, media_type="application/json; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="pingly-data.json"'},
+        )
+
+    @app.post("/account/delete")
+    async def delete_account(confirm: str = Form(default=""), user: dict = Depends(current_user)) -> Response:
+        # F12: irreversible self-service deletion. Require typing "удалить" so it
+        # can't happen by a stray click. Tutors also lose all their students' data.
+        base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
+        if confirm.strip().lower() != "удалить":
+            from urllib.parse import quote
+            return RedirectResponse(f"{base}?error={quote('Для удаления введите слово «удалить»')}", status_code=303)
+        if user["role"] == "tutor":
+            await services.students.delete_tutor_account(user["id"])
+        else:
+            await services.accounts.delete_account(user["id"])
+        response = RedirectResponse("/?deleted=1", status_code=303)
+        response.delete_cookie("pingly_session")
+        return response
+
     @app.get("/student/settings", response_class=HTMLResponse)
     async def student_settings(request: Request, saved: str | None = None, error: str | None = None, user: dict = Depends(current_user)) -> Response:
         _require(user, "student")

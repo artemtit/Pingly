@@ -115,6 +115,20 @@ class StudentService:
 
         return {"removed_account": bool(linked_user_id), "notify_tg_id": notify_tg_id, "student_name": student_name}
 
+    async def delete_tutor_account(self, tutor_user_id: str) -> None:
+        """F12: erase a tutor's whole account (152-ФЗ). Tears down each student via
+        the vetted per-student path (which detaches shared students and deletes
+        sole-tutor students' profiles + linked TG accounts), then deletes the tutor
+        user — cascading their profile, subjects, schedule rules, lessons, homework
+        and notifications by FK on delete cascade."""
+        students = await self.repo.list_tutor_students(tutor_user_id)
+        for student in students:
+            try:
+                await self.delete_student(tutor_user_id, student["id"])
+            except PermissionError:
+                continue
+        await self.repo.delete_user(tutor_user_id)
+
     async def has_student_profile(self, tg_id: int) -> bool:
         user = await self.repo.get_user_by_tg_id(tg_id)
         if not user:

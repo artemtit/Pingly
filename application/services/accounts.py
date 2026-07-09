@@ -79,3 +79,8 @@ class AccountService:
     async def set_quiet_hours(self, user_id: str, enabled: bool) -> None:
         """F10: toggle night-time quiet hours (22:00–08:00 MSK) for this user."""
         await self.repo.set_notify_quiet_hours(user_id, enabled)
+
+    async def delete_account(self, user_id: str) -> None:
+        """F12: erase a plain (non-tutor) account. Tutor accounts go through
+        StudentService.delete_tutor_account, which also tears down their students."""
+        await self.repo.delete_user(user_id)
