@@ -326,9 +326,34 @@ services = create_services()
 # boot in production (https) with the insecure default secret — otherwise anyone
 # could forge a session for any user.
 SESSION_MAX_AGE = 60 * 60 * 24 * 30
-if WEB_SECRET in ("", "dev-change-me") and urlparse(WEB_BASE_URL).scheme == "https":
+# S2: refuse to boot with the insecure default secret anywhere except a local dev
+# host — otherwise anyone could forge a session for any user. (No longer keyed on
+# the URL scheme: production is "not localhost".)
+_secret_host = (urlparse(WEB_BASE_URL).hostname or "").lower()
+if WEB_SECRET in ("", "dev-change-me") and _secret_host not in ("localhost", "127.0.0.1", ""):
     raise RuntimeError("WEB_SECRET must be set to a strong value in production")
 signer = URLSafeTimedSerializer(WEB_SECRET, salt="pingly-web-session")
+
+
+def _decode_session(raw: str) -> tuple[str | None, int | None] | None:
+    """(user_id, token_version) from a session cookie, or None if the signature is
+    bad/expired. A dict payload carries token_version (S6); a bare-string payload is
+    a legacy pre-S6 cookie (token_version unknown → not enforced)."""
+    try:
+        data = signer.loads(raw, max_age=SESSION_MAX_AGE)
+    except (BadSignature, SignatureExpired):
+        return None
+    if isinstance(data, dict):
+        return data.get("uid"), data.get("tv")
+    return data, None
+
+
+def _session_tv_ok(user: dict, tv: int | None) -> bool:
+    """S6: reject a cookie whose token_version is behind the user's current one
+    (i.e. issued before a logout-all / password change)."""
+    if tv is None:
+        return True
+    return int(user.get("token_version") or 0) == int(tv)
 
 
 async def _not_found(request: Request, exc: Exception) -> Response:
@@ -393,12 +418,12 @@ async def current_user(request: Request) -> dict:
     raw = request.cookies.get("pingly_session")
     if not raw:
         raise HTTPException(status_code=401)
-    try:
-        user_id = signer.loads(raw, max_age=SESSION_MAX_AGE)
-    except (BadSignature, SignatureExpired) as exc:
-        raise HTTPException(status_code=401) from exc
+    decoded = _decode_session(raw)
+    if not decoded or not decoded[0]:
+        raise HTTPException(status_code=401)
+    user_id, tv = decoded
     user = await services.accounts.get_user(user_id)
-    if not user:
+    if not user or not _session_tv_ok(user, tv):
         raise HTTPException(status_code=401)
     # F6: pin this request's display/parse timezone to the tutor's setting.
     set_current_offset(user.get("tz_offset_minutes"))
@@ -411,15 +436,16 @@ async def _user_from_cookie(request: Request) -> dict | None:
     raw = request.cookies.get("pingly_session")
     if not raw:
         return None
-    try:
-        user_id = signer.loads(raw, max_age=SESSION_MAX_AGE)
-    except (BadSignature, SignatureExpired):
+    decoded = _decode_session(raw)
+    if not decoded or not decoded[0]:
         return None
+    user_id, tv = decoded
     try:
         user = await services.accounts.get_user(user_id)
-        if user:
+        if user and _session_tv_ok(user, tv):
             set_current_offset(user.get("tz_offset_minutes"))
-        return user
+            return user
+        return None
     except Exception:
         return None
 
@@ -514,8 +540,11 @@ def _cabinet_url(user: dict) -> str:
 
 
 def _set_session(response: Response, user: dict) -> None:
+    # S6: bind the cookie to the user's token_version so a logout-all / password
+    # change can invalidate it. S5: Secure flag follows WEB_BASE_URL (https in prod).
+    payload = {"uid": user["id"], "tv": int(user.get("token_version") or 0)}
     response.set_cookie(
-        "pingly_session", signer.dumps(user["id"]),
+        "pingly_session", signer.dumps(payload),
         httponly=True, samesite="lax", secure=urlparse(WEB_BASE_URL).scheme == "https",
         max_age=SESSION_MAX_AGE,
     )
@@ -763,7 +792,17 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         return RedirectResponse(f"{base}?saved=tg", status_code=303)
 
     @app.post("/logout")
-    async def logout() -> Response:
+    async def logout(request: Request) -> Response:
+        # S6: bump token_version so every issued cookie for this user stops working,
+        # not just the one on this device. Best-effort — always clear the cookie.
+        raw = request.cookies.get("pingly_session")
+        if raw:
+            decoded = _decode_session(raw)
+            if decoded and decoded[0]:
+                try:
+                    await services.repo.bump_token_version(decoded[0])
+                except Exception:
+                    logging.getLogger("pingly.web").warning("logout: bump_token_version failed", exc_info=True)
         response = RedirectResponse("/", status_code=303)
         response.delete_cookie("pingly_session")
         return response

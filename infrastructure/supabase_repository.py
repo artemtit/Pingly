@@ -642,6 +642,15 @@ class SupabasePinglyRepository:
             {"tz_offset_minutes": minutes}
         ).eq("id", user_id).execute()
 
+    async def bump_token_version(self, user_id: str) -> None:
+        """S6: invalidate every existing session for this user (logout-all / password
+        change) by advancing token_version — the value baked into each session cookie."""
+        current = await self.get_user_by_id(user_id)
+        tv = int((current or {}).get("token_version") or 0) + 1
+        await self._db().table("users").update(
+            {"token_version": tv}
+        ).eq("id", user_id).execute()
+
     async def set_tg_blocked(self, user_id: str) -> None:
         """Stamp that Telegram delivery to this user is failing (bot blocked)."""
         await self._db().table("users").update(
