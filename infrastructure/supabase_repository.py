@@ -615,7 +615,7 @@ class SupabasePinglyRepository:
     async def list_due_notifications(self, now: datetime, limit: int = 100) -> list[dict[str, Any]]:
         result = await (
             self._db().table("notifications")
-            .select("*, users(tg_id, vk_id)")
+            .select("*, users(tg_id, vk_id, tg_blocked_at)")
             .eq("status", "pending")
             .lte("scheduled_for", now.isoformat())
             .limit(limit)
@@ -625,6 +625,16 @@ class SupabasePinglyRepository:
 
     async def mark_notification_sent(self, notification_id: str) -> None:
         await self._db().table("notifications").update({"status": "sent"}).eq("id", notification_id).execute()
+
+    async def set_tg_blocked(self, user_id: str) -> None:
+        """Stamp that Telegram delivery to this user is failing (bot blocked)."""
+        await self._db().table("users").update(
+            {"tg_blocked_at": datetime.now(timezone.utc).isoformat()}
+        ).eq("id", user_id).execute()
+
+    async def clear_tg_blocked(self, user_id: str) -> None:
+        """Clear the block flag after a delivery succeeds again."""
+        await self._db().table("users").update({"tg_blocked_at": None}).eq("id", user_id).execute()
 
     async def count_sent_lesson_reminders(self) -> int:
         """Публичный честный счётчик лендинга: сколько напоминаний «за 2 часа»

@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram import Bot
+from aiogram.exceptions import TelegramForbiddenError
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from application.factory import create_services
@@ -124,6 +125,16 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
             try:
                 await tg_bot.send_message(tg_id, text, reply_markup=keyboard)
                 delivered = True
+                # Delivery works again — clear a previously raised "blocked" flag
+                # so the tutor's "не доходят" badge disappears.
+                if user.get("tg_blocked_at"):
+                    await services.repo.clear_tg_blocked(notification["user_id"])
+            except TelegramForbiddenError:
+                # The user blocked the bot / deactivated their account. Silent
+                # today — stamp it so the tutor sees it on the student's card.
+                logger.info("tg blocked by user (tg_id=%s, notification_id=%s)", tg_id, notification["id"])
+                if not user.get("tg_blocked_at"):
+                    await services.repo.set_tg_blocked(notification["user_id"])
             except Exception:
                 logger.exception("tg send failed (tg_id=%s, notification_id=%s)", tg_id, notification["id"])
 

@@ -46,6 +46,13 @@
 </div>
 {% endif %}
 
+{% if student.tg_blocked %}
+<div class="card" style="border-color: var(--color-error); background: var(--color-error-light); margin-bottom: 16px;">
+  <strong style="color: var(--color-error);">{{ ui.icon('bell', 15) }} Напоминания не доходят</strong>
+  <p class="muted" style="margin: 6px 0 0;">Ученик заблокировал бота в Telegram (или удалил аккаунт) — напоминания о занятиях ему не приходят. Попроси его снова открыть бота и нажать «Запустить» / <code>/start</code>. Статус обновится сам после следующего успешного напоминания.</p>
+</div>
+{% endif %}
+
 {% set all_connected = student.tg_connected and (student.vk_connected or not vk_enabled) %}
 {% if not all_connected %}
 <div class="card invite-banner" style="margin-bottom: 16px;">
