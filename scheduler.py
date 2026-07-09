@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram import Bot
@@ -22,6 +22,19 @@ _SUB_MILESTONES = (3, 1, 0)
 
 # Lessons-remaining milestones at which we alert about an ending package once.
 _PACKAGE_MILESTONES = (1, 0)
+
+# How late a lesson reminder may be delivered before its fixed "через 2 часа"
+# wording is considered untrustworthy (e.g. after a server downtime).
+_REMINDER_STALE_AFTER = timedelta(minutes=15)
+
+
+def _parse_dt(raw: object) -> datetime | None:
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
 
 
 def _sub_link_keyboard() -> InlineKeyboardMarkup:
@@ -49,17 +62,35 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
                 await services.notifications.mark_sent(notification["id"])
                 continue
 
-        text = f"{notification['title']}\n\n{notification['body']}"
         is_lesson = bool(payload.get("lesson_id")) and notification["type"] in {"lesson_day_before", "lesson_hour_before"}
 
-        # Append the lesson topic (if the tutor set one) at send time, so the
-        # student sees the latest version even if it was added after scheduling.
+        title = notification["title"]
+        lesson = None
         if is_lesson:
             try:
                 lesson = await services.repo.get_lesson_by_id(payload["lesson_id"])
             except Exception:
                 logger.exception("get_lesson_by_id failed for lesson_id=%s", payload.get("lesson_id"))
                 lesson = None
+            # After a downtime a reminder can come due long after it was scheduled.
+            # If the lesson has already started, "занятие через 2 часа" is pure noise
+            # — drop it. If it's merely late (lesson still ahead), neutralize the
+            # fixed "через 2 часа" title so it can never be wrong; the body keeps the
+            # exact start time either way.
+            now = datetime.now(timezone.utc)
+            starts_at = _parse_dt((lesson or {}).get("starts_at"))
+            if starts_at is not None and now >= starts_at:
+                await services.notifications.mark_sent(notification["id"])
+                continue
+            scheduled_at = _parse_dt(notification.get("scheduled_for"))
+            if scheduled_at is not None and now - scheduled_at > _REMINDER_STALE_AFTER:
+                title = "⏰ Скоро занятие"
+
+        text = f"{title}\n\n{notification['body']}"
+
+        # Append the lesson topic (if the tutor set one) at send time, so the
+        # student sees the latest version even if it was added after scheduling.
+        if is_lesson:
             topic = (lesson or {}).get("public_comment")
             if topic:
                 text += f"\n\n📝 Тема: {topic}"
@@ -109,9 +140,15 @@ async def enqueue_subscription_reminders() -> None:
         days = info.get("days_left")
         if days is None or days not in _SUB_MILESTONES:
             continue
+        # Dedup per (billing cycle, milestone): keyed on the current access
+        # deadline so a RENEWED subscription (new trial_ends_at) gets a fresh set
+        # of reminders instead of being suppressed by last cycle's notifications.
+        cycle = tutor.get("trial_ends_at")
         recent = await services.repo.list_notifications_for_user(tutor["id"], 50)
         already = any(
-            n.get("type") == "subscription_expiring" and (n.get("payload") or {}).get("milestone") == days
+            n.get("type") == "subscription_expiring"
+            and (n.get("payload") or {}).get("milestone") == days
+            and (n.get("payload") or {}).get("cycle") == cycle
             for n in recent
         )
         if already:
@@ -130,7 +167,7 @@ async def enqueue_subscription_reminders() -> None:
             title = f"⛔ {period} закончился" if not paid else "⛔ Подписка закончилась"
             body = "Продли подписку Pingly Pro, чтобы продолжить пользоваться сервисом 💙"
         await services.repo.create_notification(
-            tutor["id"], "subscription_expiring", title, body, {"milestone": days},
+            tutor["id"], "subscription_expiring", title, body, {"milestone": days, "cycle": cycle},
         )
 
 
