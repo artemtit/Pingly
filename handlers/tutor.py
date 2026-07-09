@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from aiogram import Router
+from aiogram import Bot, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.filters.command import CommandObject
 from aiogram.types import (
+    BotCommand,
+    BotCommandScopeChat,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     LinkPreviewOptions,
@@ -13,9 +15,27 @@ from aiogram.types import (
 
 import config
 from application.factory import create_services
+from handlers.student import STUDENT_MENU_LABEL, student_menu_kb
 
 NO_PREVIEW = LinkPreviewOptions(is_disabled=True)
 WEB_URL = "https://pingly-app.ru"
+
+# Per-chat command menu for students — they get «Моё занятие» + помощь instead of
+# the default tutor-oriented set (/start, /web, /help). Set once when a student
+# links or returns, so their Telegram «menu» button shows the right options.
+STUDENT_COMMANDS = [
+    BotCommand(command="next", description="Моё ближайшее занятие"),
+    BotCommand(command="help", description="Помощь и поддержка"),
+]
+
+
+async def _set_student_menu(bot: Bot, chat_id: int) -> None:
+    """Publish the student command menu for one chat (best-effort — a transient
+    Telegram error must never break onboarding)."""
+    try:
+        await bot.set_my_commands(STUDENT_COMMANDS, scope=BotCommandScopeChat(chat_id=chat_id))
+    except Exception:  # noqa: BLE001 — cosmetic; ignore network hiccups
+        pass
 
 
 def _legal_keyboard() -> InlineKeyboardMarkup:
@@ -42,20 +62,24 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
     if command.args and command.args.startswith("inv_"):
         existing = await services.accounts.get_by_tg_id(uid)
         if existing:
+            await _set_student_menu(message.bot, uid)
             await message.answer(
-                "С возвращением! 👋 Напоминания о занятиях я пришлю сюда.",
-                reply_markup=ReplyKeyboardRemove(),
+                "С возвращением! 👋 Напоминания о занятиях я пришлю сюда.\n\n"
+                f"А кнопкой «{STUDENT_MENU_LABEL}» ниже можно в любой момент посмотреть ближайшее.",
+                reply_markup=student_menu_kb(),
             )
             return
         student = await services.students.link_student_from_invite(
             command.args[4:], uid, message.from_user.full_name, _username(message),
         )
         if student:
+            await _set_student_menu(message.bot, uid)
             await message.answer(
                 "Привет! 👋\n\n"
                 "Перед каждым занятием я пришлю напоминание — нажми «✅ Буду» или «❌ Отменяю».\n\n"
-                "Больше ничего делать не нужно. 🙂",
-                reply_markup=ReplyKeyboardRemove(),
+                f"А кнопкой «{STUDENT_MENU_LABEL}» ниже можно посмотреть, когда ближайшее занятие. "
+                "Больше ничего делать не нужно 🙂",
+                reply_markup=student_menu_kb(),
             )
             return
         await message.answer("Ссылка недействительна. Попроси репетитора прислать новую.")
@@ -64,9 +88,11 @@ async def cmd_start(message: Message, command: CommandObject) -> None:
     user = await services.accounts.get_by_tg_id(uid)
 
     if user and user["role"] == "student":
+        await _set_student_menu(message.bot, uid)
         await message.answer(
-            "С возвращением! 👋 Напоминания о занятиях придут сюда.",
-            reply_markup=ReplyKeyboardRemove(),
+            "С возвращением! 👋 Напоминания о занятиях придут сюда.\n\n"
+            f"Кнопка «{STUDENT_MENU_LABEL}» ниже покажет ближайшее занятие.",
+            reply_markup=student_menu_kb(),
         )
         return
 

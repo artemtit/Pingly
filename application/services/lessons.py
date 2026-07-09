@@ -47,6 +47,38 @@ def _fmt_when_ru(starts_at: str, offset: int = DEFAULT_TZ_OFFSET) -> str:
         return str(starts_at)[:16].replace("T", " ")
 
 
+# Empty state shown to a student who has no upcoming lesson (bot + VK «Моё занятие»).
+NO_NEXT_LESSON = (
+    "📅 Пока занятий не запланировано.\n\n"
+    "Как только репетитор поставит занятие, я пришлю сюда напоминание за 2 часа 🔔"
+)
+
+
+def format_next_lesson_card(lesson: dict | None, offset: int = DEFAULT_TZ_OFFSET) -> str:
+    """Human-facing card for a student's next lesson (Telegram/VK «Моё занятие»).
+
+    Pure/testable: takes an already-fetched lesson (or None) and the tutor's tz
+    offset, returns the ready-to-send message. Status line mirrors what the student
+    did last, so the card doubles as a confirmation of their «Буду / Перенести» tap.
+    """
+    if not lesson:
+        return NO_NEXT_LESSON
+    when = _fmt_when_ru(lesson.get("starts_at", ""), offset)
+    status = lesson.get("status")
+    if status == LessonStatus.CONFIRMED.value:
+        state = "✅ Ты подтвердил(а) — ждём тебя!"
+    elif status == LessonStatus.RESCHEDULE_REQUESTED.value:
+        state = "🔄 Ты просишь перенести — репетитор предложит новое время."
+    else:
+        state = "⏳ Пока не подтверждено — за 2 часа пришлю напоминание с кнопками «Буду / Отменяю»."
+    lines = ["📅 Твоё ближайшее занятие", "", f"🗓 {when}"]
+    topic = lesson.get("public_comment")
+    if topic:
+        lines.append(f"📖 Тема: {topic}")
+    lines += ["", state]
+    return "\n".join(lines)
+
+
 # Statuses that never consume a package slot.
 _PACKAGE_SKIP_STATUSES = {"cancelled", "reschedule_requested"}
 
@@ -239,7 +271,8 @@ class LessonService:
                     student_user_id,
                     NotificationType.LESSON_HOUR_BEFORE.value,
                     "⏰ Занятие через 2 часа",
-                    f"Занятие начнётся {_fmt_dt_local(starts_at, offset)}",
+                    f"Занятие начнётся {_fmt_dt_local(starts_at, offset)}.\n"
+                    "Нажми «Буду» или «Отменяю» ниже 👇",
                     {"lesson_id": lesson["id"]},
                     send_at,
                 )
@@ -287,6 +320,13 @@ class LessonService:
 
     async def next_lesson_for_student(self, student_user_id: str) -> dict | None:
         return await self.repo.get_next_lesson_for_student_user(student_user_id)
+
+    async def next_lesson_card(self, student_user_id: str) -> str:
+        """Ready-to-send «Моё занятие» card for a student (Telegram/VK). Formats the
+        next upcoming lesson in the tutor's timezone, or a friendly empty state."""
+        lesson = await self.repo.get_next_lesson_for_student_user(student_user_id)
+        offset = await self._tutor_offset((lesson or {}).get("tutor_user_id"))
+        return format_next_lesson_card(lesson, offset)
 
     # ---- single lesson actions -----------------------------------------
     async def complete_lesson(self, tutor_user_id: str, lesson_id: str) -> dict | None:

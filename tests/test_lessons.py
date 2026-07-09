@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from application.services.lessons import package_status
+from application.services.lessons import (
+    NO_NEXT_LESSON,
+    format_next_lesson_card,
+    package_status,
+)
 
 
 def _iso(dt: datetime) -> str:
@@ -48,3 +52,32 @@ def test_package_status_remaining_never_negative():
     status = package_status({"package_size": 2, "package_started_at": None}, lessons)
     assert status["consumed"] == 5
     assert status["remaining"] == 0
+
+
+def test_next_lesson_card_empty_state():
+    assert format_next_lesson_card(None) == NO_NEXT_LESSON
+
+
+def test_next_lesson_card_scheduled_shows_time_and_pending():
+    # 2026-07-09 14:00 in Moscow (UTC+3) → 11:00 UTC.
+    lesson = {"starts_at": "2026-07-09T11:00:00Z", "status": "scheduled"}
+    card = format_next_lesson_card(lesson, offset=180)
+    assert "9 июля в 14:00" in card
+    assert "Пока не подтверждено" in card
+
+
+def test_next_lesson_card_confirmed_with_topic():
+    lesson = {
+        "starts_at": "2026-07-09T11:00:00Z",
+        "status": "confirmed",
+        "public_comment": "Квадратные уравнения",
+    }
+    card = format_next_lesson_card(lesson, offset=180)
+    assert "📖 Тема: Квадратные уравнения" in card
+    assert "подтвердил" in card
+
+
+def test_next_lesson_card_reschedule_requested():
+    lesson = {"starts_at": "2026-07-09T11:00:00Z", "status": "reschedule_requested"}
+    card = format_next_lesson_card(lesson, offset=180)
+    assert "перенести" in card

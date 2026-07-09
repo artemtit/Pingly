@@ -3,13 +3,48 @@ from __future__ import annotations
 import time
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message
+from aiogram.filters import Command
+from aiogram.types import (
+    CallbackQuery,
+    KeyboardButton,
+    Message,
+    ReplyKeyboardMarkup,
+)
 
 from application.factory import create_services
 from infrastructure.openmodel import complete as _ai_complete
 
 router = Router()
 services = create_services()
+
+# The one persistent button a student sees — a minimal, read-only way to check
+# their next lesson without waiting for a reminder. The bot stays FSM-free: this
+# button and /next both just render a card, nothing to fill in (see CLAUDE.md).
+STUDENT_MENU_LABEL = "📅 Моё занятие"
+
+
+def student_menu_kb() -> ReplyKeyboardMarkup:
+    return ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=STUDENT_MENU_LABEL)]],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+
+async def send_next_lesson(message: Message) -> None:
+    """Render the «Моё занятие» card for whoever tapped the button / ran /next."""
+    user = await services.accounts.get_by_tg_id(message.from_user.id)
+    if user and user["role"] == "student":
+        text = await services.lessons.next_lesson_card(user["id"])
+        await message.answer(text, reply_markup=student_menu_kb())
+        return
+    if user and user["role"] == "tutor":
+        await message.answer("Ты вошёл(-ла) как репетитор — всё расписание в кабинете: /web")
+        return
+    await message.answer(
+        "Пока я тебя не знаю 🤔\n"
+        "Попроси репетитора прислать ссылку-приглашение — она придёт прямо сюда."
+    )
 
 # Lightweight, in-memory "awaiting follow-up text" state. The bot is otherwise
 # stateless (no FSM, per CLAUDE.md) — this is one bounded exception: after a
@@ -130,6 +165,16 @@ async def _summarize_reply(kind: str, text: str) -> str | None:
     if not out or len(out) > 80 or len(out) > len(text) + 10:
         return None
     return out
+
+
+@router.message(Command("next"))
+async def cmd_next(message: Message) -> None:
+    await send_next_lesson(message)
+
+
+@router.message(F.text == STUDENT_MENU_LABEL)
+async def menu_next_lesson(message: Message) -> None:
+    await send_next_lesson(message)
 
 
 @router.message(F.text & ~F.text.startswith("/"))

@@ -27,12 +27,27 @@ API_VERSION = "5.199"
 
 services = create_services()
 
+STUDENT_MENU_LABEL = "📅 Моё занятие"
+
 WELCOME_STUDENT = (
     "Привет! 👋\n\n"
     "Перед каждым занятием я пришлю напоминание — нажми «✅ Буду» или «❌ Отменяю».\n\n"
-    "Больше ничего делать не нужно. 🙂"
+    f"А кнопкой «{STUDENT_MENU_LABEL}» внизу можно посмотреть, когда ближайшее занятие. "
+    "Больше ничего делать не нужно 🙂"
 )
 INVALID_LINK = "Ссылка недействительна. Попроси репетитора прислать новую."
+
+
+def student_menu_keyboard() -> dict:
+    """Persistent bottom keyboard — VK mirror of the Telegram «Моё занятие» button.
+    A minimal, read-only way for a student to check their next lesson on demand."""
+    return {
+        "one_time": False,
+        "buttons": [[
+            {"action": {"type": "text", "label": STUDENT_MENU_LABEL,
+                        "payload": json.dumps({"action": "next_lesson"})}},
+        ]],
+    }
 
 
 def lesson_keyboard(lesson_id: str) -> dict:
@@ -129,7 +144,23 @@ class VkBot:
     async def _link_student(self, user_id: int, token: str) -> None:
         name = await self._user_name(user_id)
         student = await services.students.link_student_from_invite_vk(token, int(user_id), name)
-        await self.send_message(user_id, WELCOME_STUDENT if student else INVALID_LINK)
+        await self.send_message(
+            user_id,
+            WELCOME_STUDENT if student else INVALID_LINK,
+            keyboard=student_menu_keyboard() if student else None,
+        )
+
+    async def _send_next_lesson(self, user_id: int) -> None:
+        """«Моё занятие» — render the student's next-lesson card, or a nudge to link."""
+        user = await services.repo.get_user_by_vk_id(int(user_id))
+        if not user:
+            await self.send_message(
+                user_id,
+                "Пока я тебя не знаю 🤔 Попроси репетитора прислать ссылку-приглашение.",
+            )
+            return
+        card = await services.lessons.next_lesson_card(user["id"])
+        await self.send_message(user_id, card, keyboard=student_menu_keyboard())
 
     async def _on_message_new(self, obj: dict) -> None:
         msg = obj.get("message") or obj
@@ -137,13 +168,18 @@ class VkBot:
         if not user_id:
             return
         # Invite token can arrive via the community-link ref, the start payload, or text.
+        payload = _payload_obj(msg.get("payload"))
         token = (
             _invite_token(msg.get("ref"))
-            or _invite_token(_payload_obj(msg.get("payload")).get("ref"))
+            or _invite_token(payload.get("ref"))
             or _invite_token(msg.get("text"))
         )
         if token:
             await self._link_student(user_id, token)
+            return
+        # «Моё занятие» button (its payload) or the plain button text.
+        if payload.get("action") == "next_lesson" or (msg.get("text") or "").strip() == STUDENT_MENU_LABEL:
+            await self._send_next_lesson(user_id)
 
     async def _on_message_allow(self, obj: dict) -> None:
         user_id = obj.get("user_id")
