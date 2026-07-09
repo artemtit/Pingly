@@ -456,6 +456,11 @@ details.series-item:last-child { border-bottom: 0; }
 .h1-ico svg { color: var(--orange-500); flex: 0 0 auto; width: 30px; height: 30px; }
 .h2-ico svg { color: var(--orange-500); flex: 0 0 auto; width: 25px; height: 25px; }
 .h3-ico svg { color: var(--orange-500); flex: 0 0 auto; width: 20px; height: 20px; }
+/* Any icon that leads a page/section heading picks up the brand accent — same look
+   as .h1-ico/.h2-ico, so plain <h1>/<h2> with a ui.icon() are orange too, not black. */
+.main :is(h1, h2, h3) svg.ic { color: var(--orange-500); }
+/* Semantic exception: the "Опасная зона" heading keeps its red icon. */
+.main h2.h2-danger svg.ic { color: var(--color-error); }
 .series-edit-toggle { display: inline-flex; align-items: center; gap: 6px; }
 /* Generic inline icon (from ui.icon) sits on the text baseline outside flex rows. */
 .ic { vertical-align: -0.15em; }
