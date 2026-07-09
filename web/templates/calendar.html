@@ -59,18 +59,18 @@
         </details>
         {% if lesson.status in ("scheduled", "confirmed", "reschedule_requested") %}
         <form method="post" action="/tutor/lessons/{{ lesson.id }}/complete"><button class="btn btn-primary btn-sm">{{ ui.icon('circle-check', 15) }} Провести</button></form>
-        <form method="post" action="/tutor/lessons/{{ lesson.id }}/cancel" onsubmit="return confirm('Отменить это занятие?')"><button class="btn btn-ghost btn-sm">{{ ui.icon('circle-x', 15) }} Отменить</button></form>
+        <form method="post" action="/tutor/lessons/{{ lesson.id }}/cancel" data-confirm="Отменить это занятие? Ученик увидит, что оно отменено." data-confirm-title="Отменить занятие?" data-confirm-ok="Отменить"><button class="btn btn-ghost btn-sm">{{ ui.icon('circle-x', 15) }} Отменить</button></form>
         {% if day.date >= cal.today %}
         <details class="resched">
           <summary class="btn btn-ghost btn-sm">{{ ui.icon('calendar-clock', 15) }} Перенести</summary>
           <form method="post" action="/tutor/lessons/{{ lesson.id }}/reschedule" class="resched-form">
-            <input class="input" type="datetime-local" name="new_at" required>
+            <input class="input" type="datetime-local" name="new_at" data-future required>
             <button class="btn btn-secondary btn-sm">Сохранить</button>
           </form>
         </details>
         {% endif %}
         {% endif %}
-        <form method="post" action="/tutor/lessons/{{ lesson.id }}/delete" onsubmit="return confirm('Удалить занятие из базы?')"><button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red,#ef4444)" aria-label="Удалить занятие" title="Удалить занятие">{{ ui.icon('trash', 15) }}</button></form>
+        <form method="post" action="/tutor/lessons/{{ lesson.id }}/delete" data-confirm="Занятие будет удалено из базы без возможности восстановить." data-confirm-title="Удалить занятие?" data-confirm-ok="Удалить" data-confirm-danger><button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red,#ef4444)" aria-label="Удалить занятие" title="Удалить занятие">{{ ui.icon('trash', 15) }}</button></form>
       </div>
       {% endif %}
     </div>

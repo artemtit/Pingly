@@ -255,25 +255,40 @@
       if (!sel.length) return;
       var payBtn = this;
       payBtn.classList.add('btn-loading'); payBtn.disabled = true;
-      var sum = sel.reduce(function(acc, r){ return acc + (parseInt(r.dataset.price, 10) || 0); }, 0);
-      var done = 0;
-      function next(){
-        if (done >= sel.length) {
-          var r = payBtn.getBoundingClientRect();
-          pingly.confetti(r.left + r.width / 2, r.top);
-          var word = sel.length === 1 ? 'занятие отмечено' : (sel.length < 5 ? 'занятия отмечены' : 'занятий отмечено');
-          pingly.toast(sel.length + ' ' + word + ' как оплачено · +' + pingly.fmt(sum) + ' ₽', 'success');
-          sel.forEach(function(row, i){ setTimeout(function(){ row.classList.add('paying'); }, i * 60); });
+      var done = 0, failed = [];
+      function pluralLessons(n){ return n === 1 ? 'занятие' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'занятия' : 'занятий'); }
+      function finish(){
+        var okRows = sel.filter(function(r){ return failed.indexOf(r) < 0; });
+        var okSum = okRows.reduce(function(acc, r){ return acc + (parseInt(r.dataset.price, 10) || 0); }, 0);
+        if (!failed.length) {
+          // Full success.
+          var rect = payBtn.getBoundingClientRect();
+          pingly.confetti(rect.left + rect.width / 2, rect.top);
+          pingly.toast(okRows.length + ' ' + pluralLessons(okRows.length) + ' отмечено как оплачено · +' + pingly.fmt(okSum) + ' ₽', 'success');
+          okRows.forEach(function(row, i){ setTimeout(function(){ row.classList.add('paying'); }, i * 60); });
           setTimeout(function(){ location.reload(); }, 1100);
           return;
         }
+        // Partial or total failure — keep failed rows visible, report honestly.
+        payBtn.classList.remove('btn-loading'); payBtn.disabled = false;
+        if (okRows.length) {
+          pingly.toast('Отмечено ' + okRows.length + ', не удалось — ' + failed.length + '. Проверь связь и повтори для оставшихся.', 'error', true);
+          okRows.forEach(function(row){ row.classList.add('paying'); });
+          // Reload so the paid ones drop off; the still-unpaid failed ones remain.
+          setTimeout(function(){ location.reload(); }, 1600);
+        } else {
+          pingly.toast('Не удалось отметить оплату — проверь связь и попробуй ещё раз.', 'error', true);
+        }
+      }
+      function next(){
+        if (done >= sel.length) { finish(); return; }
         var row = sel[done++];
         fetch('/tutor/lessons/' + row.dataset.id + '/paid', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: 'paid=1',
           credentials: 'same-origin'
-        }).then(next, next);
+        }).then(function(r){ if (!r || !r.ok) failed.push(row); }, function(){ failed.push(row); }).then(next);
       }
       next();
     });

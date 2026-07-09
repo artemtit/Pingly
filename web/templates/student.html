@@ -36,7 +36,7 @@
       <form method="post" action="/student/lessons/{{ next_lesson.id }}/confirm" style="flex:1">
         <button class="btn btn-primary nl-btn">{{ ui.icon('check', 15) }} Буду</button>
       </form>
-      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1" onsubmit="return confirm('Отменить занятие? Репетитор увидит, что тебя не будет.')">
+      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1" data-confirm="Репетитор увидит, что тебя не будет." data-confirm-title="Отменить занятие?" data-confirm-ok="Отменяю">
         <button class="btn btn-secondary nl-btn">{{ ui.icon('circle-x', 15) }} Отменяю</button>
       </form>
     </div>
@@ -46,7 +46,7 @@
     {% elif next_lesson.status == 'confirmed' %}
     <div class="nl-actions">
       <div class="btn btn-primary nl-btn" style="flex:1;pointer-events:none;opacity:.85">{{ ui.icon('check', 15) }} Подтверждено</div>
-      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1" onsubmit="return confirm('Отменить занятие? Репетитор увидит, что тебя не будет.')">
+      <form method="post" action="/student/lessons/{{ next_lesson.id }}/cancel" style="flex:1" data-confirm="Репетитор увидит, что тебя не будет." data-confirm-title="Отменить занятие?" data-confirm-ok="Отменяю">
         <button class="btn btn-secondary nl-btn">{{ ui.icon('circle-x', 15) }} Отменяю</button>
       </form>
     </div>

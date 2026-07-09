@@ -61,7 +61,7 @@
     ]
   };
 
-  var els = null, steps = [], idx = 0;
+  var els = null, steps = [], idx = 0, lastFocus = null;
 
   function visibleTarget(sel) {
     if (!sel) return null;
@@ -79,24 +79,39 @@
     var spot = document.createElement("div"); spot.className = "tour-spot hidden";
     var skip = document.createElement("button"); skip.className = "tour-skip"; skip.textContent = "Пропустить";
     var pop = document.createElement("div"); pop.className = "tour-pop";
+    pop.setAttribute("role", "dialog");
+    pop.setAttribute("aria-modal", "true");
+    pop.setAttribute("aria-label", "Обзор кабинета");
     document.body.appendChild(mask);
     document.body.appendChild(spot);
     document.body.appendChild(skip);
     document.body.appendChild(pop);
     skip.addEventListener("click", finish);
     mask.addEventListener("click", function () {/* block clicks, no advance */});
-    window.addEventListener("resize", render);
+    window.addEventListener("resize", onResize);
     window.addEventListener("keydown", onKey);
     return { mask: mask, spot: spot, skip: skip, pop: pop };
   }
 
+  function onResize() { render(false); }
+
   function onKey(e) {
-    if (e.key === "Escape") finish();
-    else if (e.key === "ArrowRight" || e.key === "Enter") next();
-    else if (e.key === "ArrowLeft") prev();
+    if (e.key === "Escape") { finish(); return; }
+    if (e.key === "ArrowLeft") { prev(); return; }
+    // Enter/→ advance — but if focus is on a tour button let its own click fire
+    // (avoids double-advancing), so only handle the arrow key here.
+    if (e.key === "ArrowRight") { next(); return; }
+    if (e.key === "Tab" && els) {
+      var items = [els.skip].concat(Array.prototype.slice.call(els.pop.querySelectorAll("button")));
+      items = items.filter(function (n) { return n && n.offsetParent !== null; });
+      if (!items.length) return;
+      var first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
   }
 
-  function render() {
+  function render(moveFocus) {
     if (!els) return;
     var step = steps[idx];
     var target = step.center ? null : visibleTarget(step.sel);
@@ -148,28 +163,36 @@
       els.pop.style.top = clamp(top, 12, H - ph - 12) + "px";
     }
     requestAnimationFrame(function () { els.pop.classList.add("show"); });
+    if (moveFocus) {
+      var pbtn = els.pop.querySelector('[data-act="next"]');
+      if (pbtn) setTimeout(function () { pbtn.focus(); }, 30);
+    }
   }
 
-  function next() { if (idx < steps.length - 1) { idx++; els.pop.classList.remove("show"); render(); } else finish(); }
-  function prev() { if (idx > 0) { idx--; els.pop.classList.remove("show"); render(); } }
+  function next() { if (idx < steps.length - 1) { idx++; els.pop.classList.remove("show"); render(true); } else finish(); }
+  function prev() { if (idx > 0) { idx--; els.pop.classList.remove("show"); render(true); } }
 
   function finish() {
     try { localStorage.setItem(STORAGE_KEY, "1"); } catch (e) {}
-    window.removeEventListener("resize", render);
+    window.removeEventListener("resize", onResize);
     window.removeEventListener("keydown", onKey);
     if (els) {
       [els.mask, els.spot, els.skip, els.pop].forEach(function (n) { if (n && n.parentNode) n.parentNode.removeChild(n); });
       els = null;
     }
+    // D8: return focus to whatever opened the tour (e.g. the «Обзор» button).
+    if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) {} }
+    lastFocus = null;
   }
 
   function start(role) {
     if (els) return;
+    lastFocus = document.activeElement;
     role = role || window.PINGLY_ROLE || "tutor";
     steps = STEPS[role] || STEPS.tutor;
     idx = 0;
     els = build();
-    render();
+    render(true);
   }
 
   window.startPinglyTour = function () { start(window.PINGLY_ROLE); };

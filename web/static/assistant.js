@@ -123,17 +123,30 @@
     }
   }
 
-  function send() {
-    var text = input.value.trim();
-    if (!text || pending) return;
-    if (!history.length) msgsEl.innerHTML = "";
-    input.value = "";
-    autosize();
-    history.push({ role: "user", content: text });
-    saveHistory();
-    addBubble("user", text);
-    setPending(true);
+  // Error bubble with a «Повторить» button (D9). The failed user message stays
+  // at the tail of `history`, so retry just re-issues the same request.
+  function addError(text) {
+    var b = document.createElement("div");
+    b.className = "ai-msg ai-error";
+    var span = document.createElement("span");
+    span.innerHTML = esc(text).replace(/\n/g, "<br>");
+    b.appendChild(span);
+    var retry = document.createElement("button");
+    retry.type = "button";
+    retry.className = "ai-retry";
+    retry.textContent = "Повторить";
+    retry.addEventListener("click", function () {
+      if (pending) return;
+      b.parentNode && b.parentNode.removeChild(b);
+      requestReply();
+    });
+    b.appendChild(retry);
+    msgsEl.appendChild(b);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
 
+  function requestReply() {
+    setPending(true);
     fetch("/api/ai/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -147,14 +160,26 @@
           saveHistory();
           addBubble("assistant", res.data.reply);
         } else {
-          addBubble("error", res.data.error || "Что-то пошло не так — попробуй ещё раз.");
+          addError(res.data.error || "Что-то пошло не так — попробуй ещё раз.");
         }
         input.focus();
       })
       .catch(function () {
         setPending(false);
-        addBubble("error", "Нет связи — проверь интернет и попробуй ещё раз.");
+        addError("Нет связи — проверь интернет и попробуй ещё раз.");
       });
+  }
+
+  function send() {
+    var text = input.value.trim();
+    if (!text || pending) return;
+    if (!history.length) msgsEl.innerHTML = "";
+    input.value = "";
+    autosize();
+    history.push({ role: "user", content: text });
+    saveHistory();
+    addBubble("user", text);
+    requestReply();
   }
 
   function autosize() {
@@ -163,11 +188,23 @@
   }
 
   function toggle(open) {
-    var on = open === undefined ? !panel.classList.contains("open") : open;
+    var wasOpen = panel.classList.contains("open");
+    var on = open === undefined ? !wasOpen : open;
     panel.classList.toggle("open", on);
     fab.classList.toggle("hidden", on);
     if (on) { renderHistory(); input.focus(); }
+    else if (wasOpen) { fab.focus(); } // D8: return focus to the trigger on close
   }
+
+  // D8: contain Tab focus inside the open dialog.
+  panel.addEventListener("keydown", function (e) {
+    if (e.key !== "Tab" || !panel.classList.contains("open")) return;
+    var items = panel.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled])');
+    if (!items.length) return;
+    var first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
 
   function newChat() {
     if (pending) return;

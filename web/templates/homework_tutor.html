@@ -22,8 +22,8 @@
       <button type="button" class="tpl-chip"
         data-title="{{ t.title }}" data-desc="{{ t.description or '' }}"
         onclick="useTemplate(this)">{{ t.title }}
-        <form method="post" action="/tutor/homework/templates/{{ t.id }}/delete" class="tpl-del" onclick="event.stopPropagation()">
-          <button type="submit" title="Удалить шаблон" onclick="return confirm('Удалить шаблон?')">×</button>
+        <form method="post" action="/tutor/homework/templates/{{ t.id }}/delete" class="tpl-del" onclick="event.stopPropagation()" data-confirm="Шаблон «{{ t.title }}» будет удалён." data-confirm-title="Удалить шаблон?" data-confirm-ok="Удалить" data-confirm-danger>
+          <button type="submit" title="Удалить шаблон">×</button>
         </form>
       </button>
       {% endfor %}
@@ -39,7 +39,7 @@
       <label class="field"><span>Описание</span>
         <textarea id="hw-desc" name="description" placeholder="Материалы, ссылки, комментарий"></textarea></label>
       <label class="field"><span>Дедлайн (необязательно)</span>
-        <input class="input" type="datetime-local" name="due_at"></label>
+        <input class="input" type="datetime-local" name="due_at" data-future></label>
       <button class="btn btn-primary">{{ ui.icon('send', 16) }} Выдать задание</button>
     </form>
     <form method="post" action="/tutor/homework/templates" class="tpl-save">
@@ -84,7 +84,7 @@ function useTemplate(el) {
 }
 function saveTemplate() {
   var title = document.getElementById('hw-title').value.trim();
-  if (!title) { alert('Сначала впиши задание'); return false; }
+  if (!title) { pingly.toast('Сначала впиши задание', 'error'); document.getElementById('hw-title').focus(); return false; }
   document.getElementById('tpl-title').value = title;
   document.getElementById('tpl-desc').value = document.getElementById('hw-desc').value;
   return true;

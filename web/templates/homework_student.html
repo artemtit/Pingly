@@ -26,7 +26,7 @@
       {% elif hw.status == "in_progress" %}
       <form method="post" action="/student/homework/{{ hw.id }}/submit"><button class="btn btn-primary btn-sm">{{ ui.icon('check', 15) }} Сдать задание</button></form>
       {% elif hw.status == "submitted" %}
-      <span class="hw-wait">⏳ Ждём проверки репетитора</span>
+      <span class="hw-wait">{{ ui.icon('clock', 15) }} Ждём проверки репетитора</span>
       {% else %}
       <span class="hw-done">{{ ui.icon('check', 15) }} Проверено!</span>
       {% endif %}

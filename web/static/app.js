@@ -214,6 +214,111 @@
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 
+  /* ---------------- Confirm dialog (replaces native confirm()) ----------------
+     Themed, keyboard-accessible replacement for window.confirm. Reuses the shared
+     #confirm-modal markup (in layout.html). Returns a Promise<boolean>. Falls back
+     to native confirm() if the markup isn't on the page (standalone auth pages). */
+  pingly.confirm = function (opts) {
+    opts = opts || {};
+    var modal = document.getElementById('confirm-modal');
+    if (!modal) return Promise.resolve(window.confirm(opts.message || 'Продолжить?'));
+    return new Promise(function (resolve) {
+      var titleEl = modal.querySelector('.confirm-title');
+      var msgEl = modal.querySelector('.confirm-message');
+      var okBtn = modal.querySelector('.confirm-ok');
+      var cancelBtn = modal.querySelector('.confirm-cancel');
+      titleEl.textContent = opts.title || 'Подтвердите действие';
+      msgEl.textContent = opts.message || '';
+      okBtn.textContent = opts.okText || 'Подтвердить';
+      cancelBtn.textContent = opts.cancelText || 'Отмена';
+      okBtn.classList.toggle('confirm-danger', !!opts.danger);
+      var prev = document.activeElement;
+      function done(result) {
+        modal.classList.remove('open');
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+        modal.removeEventListener('click', onBackdrop);
+        document.removeEventListener('keydown', onKey, true);
+        if (prev && prev.focus) { try { prev.focus(); } catch (e) {} }
+        resolve(result);
+      }
+      function onOk() { done(true); }
+      function onCancel() { done(false); }
+      function onBackdrop(e) { if (e.target === modal) done(false); }
+      function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); done(false); } }
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+      modal.addEventListener('click', onBackdrop);
+      document.addEventListener('keydown', onKey, true);
+      modal.classList.add('open');
+      setTimeout(function () { okBtn.focus(); }, 50);
+    });
+  };
+
+  // Declarative confirm on forms: <form data-confirm="Точно?" [data-confirm-title]
+  // [data-confirm-ok] [data-confirm-danger]>. Capture phase + stopPropagation so
+  // the loading handler (bubble) doesn't spin the button on a cancelled submit.
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    if (form.dataset.confirm === undefined || form.dataset.confirmed) return;
+    e.preventDefault();
+    e.stopPropagation();
+    pingly.confirm({
+      message: form.dataset.confirm,
+      title: form.dataset.confirmTitle,
+      okText: form.dataset.confirmOk || 'Да',
+      danger: form.dataset.confirmDanger !== undefined
+    }).then(function (ok) {
+      if (!ok) return;
+      form.dataset.confirmed = '1';
+      if (form.requestSubmit) form.requestSubmit(); else form.submit();
+    });
+  }, true);
+
+  /* ---------------- Password show/hide toggle (D7) ----------------
+     Adds an eye button to any <input type="password" data-toggle>. */
+  function initPasswordToggles() {
+    document.querySelectorAll('input[type="password"][data-toggle]').forEach(function (input) {
+      if (input.dataset.toggled) return;
+      input.dataset.toggled = '1';
+      var wrap = document.createElement('div');
+      wrap.className = 'pw-wrap';
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pw-toggle';
+      btn.setAttribute('aria-label', 'Показать пароль');
+      var EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></svg>';
+      var EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>';
+      btn.innerHTML = EYE;
+      wrap.appendChild(btn);
+      btn.addEventListener('click', function () {
+        var show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        btn.innerHTML = show ? EYE_OFF : EYE;
+        btn.setAttribute('aria-label', show ? 'Скрыть пароль' : 'Показать пароль');
+        input.focus();
+      });
+    });
+  }
+  pingly.initPasswordToggles = initPasswordToggles;
+
+  /* ---------------- Future-only date inputs (D13) ----------------
+     Sets min="now" on <input type="date|datetime-local" data-future> so the
+     native picker greys out past dates (server still validates as backstop). */
+  function initFutureDates() {
+    var now = new Date();
+    var localISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    document.querySelectorAll('input[type="datetime-local"][data-future]').forEach(function (el) {
+      if (!el.getAttribute('min')) el.min = localISO;
+    });
+    document.querySelectorAll('input[type="date"][data-future]').forEach(function (el) {
+      if (!el.getAttribute('min')) el.min = localISO.slice(0, 10);
+    });
+  }
+
   /* ---------------- Sidebar collapse ---------------- */
   function initSidebar() {
     var btn = document.getElementById('sb-toggle');
@@ -272,6 +377,8 @@
     updateRelTimes();
     setInterval(updateRelTimes, 60000);
     initSidebar();
+    initPasswordToggles();
+    initFutureDates();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

@@ -58,9 +58,9 @@
       {% set pt = profile.page_theme if profile and profile.page_theme else 'auto' %}
       <div class="field"><span>Тема страницы</span>
         <div class="pills theme-pills" role="radiogroup" aria-label="Тема страницы" style="margin-top:6px;">
-          <label class="pill-btn {{ 'active' if pt == 'auto' }}"><input type="radio" name="page_theme" value="auto" {{ 'checked' if pt == 'auto' }} hidden> {{ ui.icon('settings', 14) }} Авто</label>
-          <label class="pill-btn {{ 'active' if pt == 'light' }}"><input type="radio" name="page_theme" value="light" {{ 'checked' if pt == 'light' }} hidden> {{ ui.icon('sun', 14) }} Светлая</label>
-          <label class="pill-btn {{ 'active' if pt == 'dark' }}"><input type="radio" name="page_theme" value="dark" {{ 'checked' if pt == 'dark' }} hidden> {{ ui.icon('moon', 14) }} Тёмная</label>
+          <label class="pill-btn {{ 'active' if pt == 'auto' }}"><input type="radio" name="page_theme" value="auto" {{ 'checked' if pt == 'auto' }} class="sr-only"> {{ ui.icon('settings', 14) }} Авто</label>
+          <label class="pill-btn {{ 'active' if pt == 'light' }}"><input type="radio" name="page_theme" value="light" {{ 'checked' if pt == 'light' }} class="sr-only"> {{ ui.icon('sun', 14) }} Светлая</label>
+          <label class="pill-btn {{ 'active' if pt == 'dark' }}"><input type="radio" name="page_theme" value="dark" {{ 'checked' if pt == 'dark' }} class="sr-only"> {{ ui.icon('moon', 14) }} Тёмная</label>
         </div>
         <p class="muted" style="margin-top:6px;font-size:13px;">«Авто» подстроится под устройство ученика.</p>
       </div>
@@ -227,13 +227,22 @@ function bindPreview(scope){
 ['pp-subjects', 'pp-bio', 'pp-slug'].forEach(function(id){
   document.getElementById(id).addEventListener('input', renderText);
 });
+function syncThemePills(){
+  document.querySelectorAll('.theme-pills .pill-btn').forEach(function(l){
+    var r = l.querySelector('input');
+    l.classList.toggle('active', !!(r && r.checked));
+  });
+  renderTheme();
+}
 document.querySelectorAll('.theme-pills .pill-btn').forEach(function(label){
   label.addEventListener('click', function(){
-    document.querySelectorAll('.theme-pills .pill-btn').forEach(function(l){ l.classList.remove('active'); });
-    label.classList.add('active');
     label.querySelector('input').checked = true;
-    renderTheme();
+    syncThemePills();
   });
+});
+// Keyboard: arrow keys move focus + check the radio → keep the pill in sync.
+document.querySelectorAll('.theme-pills input[name="page_theme"]').forEach(function(inp){
+  inp.addEventListener('change', syncThemePills);
 });
 bindPreview();
 updateAddBtn();

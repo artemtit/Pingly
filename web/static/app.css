@@ -306,8 +306,8 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .hw-card.status-reviewed { border-left-color: var(--color-success); }
 .hw-comment { margin-top: 10px; padding: 10px 12px; background: var(--color-success-light); color: var(--success-text); border-radius: 10px; font-size: 14px; }
 .hw-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-.hw-wait { color: var(--warning-text); font-weight: 600; font-size: 14px; }
-.hw-done { color: var(--color-success); font-weight: 700; }
+.hw-wait { color: var(--warning-text); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.hw-done { color: var(--color-success); font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
 .review-row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
 .review-row .input { flex: 1; }
 .review-actions { display: flex; gap: 8px; align-items: center; }
@@ -1591,3 +1591,35 @@ svg { -webkit-user-select: none; user-select: none; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* ============================================================
+   D-wave polish (D4–D7): shared utilities
+   ============================================================ */
+
+/* Screen-reader-only, but still focusable (D5: keyboard-reachable radios) */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+/* Segmented radio pills: show a focus ring when the hidden radio is focused */
+.pill-btn:focus-within { outline: 2px solid var(--color-primary-500, #F97316); outline-offset: 2px; }
+
+/* Destructive confirm button (D4 shared dialog) */
+.btn.confirm-danger { background: var(--color-error); border-color: var(--color-error); box-shadow: none; }
+.btn.confirm-danger:hover { filter: brightness(.95); }
+
+/* Horizontally scrollable table wrapper (D6: admin/tutors on mobile) */
+.table-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll-x .table { min-width: 760px; }
+
+/* Password show/hide toggle (D7) */
+.pw-wrap { position: relative; display: block; }
+.pw-wrap input { padding-right: 44px; }
+.pw-toggle {
+  position: absolute; top: 0; right: 0; height: 100%; width: 44px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--fg3, #94A3B8);
+}
+.pw-toggle:hover { color: var(--fg1, #0F172A); }
+.pw-toggle svg { width: 20px; height: 20px; }
+.pw-toggle:focus-visible { outline: 2px solid var(--color-primary-500, #F97316); outline-offset: -2px; border-radius: 8px; }

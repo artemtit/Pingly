@@ -28,7 +28,7 @@
     <img class="brand-logo" src="/static/logo.svg" data-light-src="/static/logo.svg" data-dark-src="/static/logo-dark.svg" height="26" alt="Pingly">
   </a>
   <div style="display:flex;align-items:center;gap:10px;">
-    <button class="theme-toggle" onclick="toggleTheme()" title="Тёмная тема" style="background:none;border:none;cursor:pointer;padding:4px;line-height:0;color:var(--fg2);">{{ icon('moon', 20) }}</button>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Тёмная тема" aria-label="Переключить тёмную тему" style="background:none;border:none;cursor:pointer;padding:4px;line-height:0;color:var(--fg2);">{{ icon('moon', 20) }}</button>
     <span class="avatar-circle">{{ user.full_name[0] | upper }}</span>
   </div>
 </header>
@@ -94,7 +94,7 @@
         <span>·</span>
         <a href="/logout">Выйти</a>
         <span>·</span>
-        <button class="link-btn theme-toggle" onclick="toggleTheme()" title="Тёмная тема" style="line-height:0;">{{ icon('moon', 16) }}</button>
+        <button class="link-btn theme-toggle" onclick="toggleTheme()" title="Тёмная тема" aria-label="Переключить тёмную тему" style="line-height:0;">{{ icon('moon', 16) }}</button>
       </div>
       <div class="userbox-legal">
         <a href="/privacy">Конфиденциальность</a>
@@ -128,12 +128,12 @@
     <a href="/tutor/students" class="{{ 'active' if active == 'students' }}">{{ icon('users') }}<span>Ученики</span></a>
     <a href="/tutor/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }}<span>Занятия</span></a>
     <a href="/tutor/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }}<span>Задания{% if plan_locked(user, 'homework') %} {{ icon('lock', 12) }}{% endif %}</span></a>
-    <button type="button" class="more-toggle {{ 'active' if active in more_sections }}" onclick="toggleMore()" aria-label="Ещё разделы">{{ icon('menu') }}<span>Ещё</span></button>
+    <button type="button" class="more-toggle {{ 'active' if active in more_sections }}" onclick="toggleMore()" aria-label="Ещё разделы" aria-expanded="false" aria-controls="more-sheet">{{ icon('menu') }}<span>Ещё</span></button>
     {% else %}
     <a href="/student" class="{{ 'active' if active == 'overview' }}">{{ icon('graduation-cap') }}<span>Главная</span></a>
     <a href="/student/calendar" class="{{ 'active' if active == 'calendar' }}">{{ icon('calendar') }}<span>Занятия</span></a>
     <a href="/student/homework" class="{{ 'active' if active == 'homework' }}">{{ icon('circle-check') }}<span>Задания</span></a>
-    <button type="button" class="more-toggle {{ 'active' if active in more_sections }}" onclick="toggleMore()" aria-label="Ещё разделы">{{ icon('menu') }}<span>Ещё</span></button>
+    <button type="button" class="more-toggle {{ 'active' if active in more_sections }}" onclick="toggleMore()" aria-label="Ещё разделы" aria-expanded="false" aria-controls="more-sheet">{{ icon('menu') }}<span>Ещё</span></button>
     {% endif %}
   </div>
 </nav>
@@ -161,20 +161,34 @@ function toggleMore(){
   sheet.classList.toggle('open', open);
   backdrop.classList.toggle('open', open);
   document.body.classList.toggle('more-open', open);
+  document.querySelectorAll('.more-toggle').forEach(function(b){ b.setAttribute('aria-expanded', open ? 'true' : 'false'); });
 }
 document.addEventListener('keydown', function(e){
   if (e.key === 'Escape') {
     document.getElementById('more-sheet').classList.remove('open');
     document.getElementById('more-backdrop').classList.remove('open');
     document.body.classList.remove('more-open');
+    document.querySelectorAll('.more-toggle').forEach(function(b){ b.setAttribute('aria-expanded', 'false'); });
   }
 });
 </script>
 
+{# Shared themed confirm dialog — replaces native confirm() app-wide (D4). #}
+<div class="modal-backdrop" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="modal">
+    <h2 class="confirm-title" id="confirm-title">Подтвердите действие</h2>
+    <p class="muted confirm-message" style="margin-top:8px;"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost confirm-cancel">Отмена</button>
+      <button type="button" class="btn btn-primary confirm-ok">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
 {% if ai_enabled and user.role == 'tutor' %}
 <div id="ai-assistant"></div>
-<link rel="stylesheet" href="/static/assistant.css?v=3">
-<script src="/static/assistant.js?v=3" defer></script>
+<link rel="stylesheet" href="/static/assistant.css?v=4">
+<script src="/static/assistant.js?v=4" defer></script>
 {% endif %}
 
 {% endblock %}

@@ -44,7 +44,7 @@
       </label>
 
       <div class="field" id="date-field" style="display:none;"><span>Дата</span>
-        <input class="input" type="date" name="lesson_date"></div>
+        <input class="input" type="date" name="lesson_date" id="lesson-date" data-future></div>
 
       <label class="field"><span>Время</span>
         <input class="input" type="time" name="lesson_time" value="15:00" required></label>
@@ -89,7 +89,7 @@
               <input class="input" type="time" name="new_time" value="{{ s.time_hhmm }}" required>
               <button class="btn btn-secondary btn-sm">{{ ui.icon('refresh', 15) }} Перенести всю серию</button>
             </form>
-            <form method="post" action="/tutor/series/{{ s.id }}/cancel" onsubmit="return confirm('Отменить всю серию занятий? Будущие занятия по этому расписанию будут удалены.')">
+            <form method="post" action="/tutor/series/{{ s.id }}/cancel" data-confirm="Будущие занятия по этому расписанию будут удалены. Прошедшие останутся в истории." data-confirm-title="Отменить всю серию?" data-confirm-ok="Отменить серию" data-confirm-danger>
               <button class="btn btn-ghost btn-sm">{{ ui.icon('circle-x', 15) }} Отменить серию</button>
             </form>
           </div>
@@ -125,6 +125,9 @@ function onRecurrence() {
   var v = document.getElementById('recurrence').value;
   var once = (v === 'once');
   document.getElementById('date-field').style.display = once ? '' : 'none';
+  // Дата обязательна только для разового занятия; у серии её нет (иначе скрытое
+  // required заблокирует отправку формы).
+  document.getElementById('lesson-date').required = once;
   document.getElementById('weekdays-field').style.display = (v === 'weekly' || v === 'multiple_weekly' || v === 'every_n_weeks') ? '' : 'none';
   document.getElementById('interval-field').style.display = (v === 'every_n_days' || v === 'every_n_weeks') ? '' : 'none';
   // Тема — только у разового занятия; у серии она своя для каждого урока.

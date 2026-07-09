@@ -41,7 +41,8 @@
         </div>
         <div class="auth-field">
           <label for="password">Пароль</label>
-          <input class="auth-input" type="password" id="password" name="password" required autocomplete="new-password" minlength="6" placeholder="минимум 6 символов">
+          <input class="auth-input" type="password" id="password" name="password" required autocomplete="new-password" minlength="6" placeholder="минимум 6 символов" aria-describedby="pw-hint">
+          <p class="pw-hint" id="pw-hint">Минимум 6 символов</p>
         </div>
         {% if captcha_enabled and turnstile_site_key %}
         <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" style="margin:4px 0 14px;"></div>
@@ -87,5 +88,35 @@
   </main>
 </div>
 {% include "partials/analytics.html" %}
+<script>
+(function(){
+  var EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/></svg>';
+  var EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>';
+  var input = document.getElementById('password');
+  if (!input) return;
+  var wrap = document.createElement('div');
+  wrap.className = 'pw-wrap';
+  input.parentNode.insertBefore(wrap, input);
+  wrap.appendChild(input);
+  var btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'pw-toggle'; btn.setAttribute('aria-label', 'Показать пароль');
+  btn.innerHTML = EYE;
+  wrap.appendChild(btn);
+  btn.addEventListener('click', function(){
+    var show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.innerHTML = show ? EYE_OFF : EYE;
+    btn.setAttribute('aria-label', show ? 'Скрыть пароль' : 'Показать пароль');
+    input.focus();
+  });
+  // Live minimum-length hint.
+  var hint = document.getElementById('pw-hint');
+  input.addEventListener('input', function(){
+    var ok = input.value.length >= 6;
+    hint.classList.toggle('ok', ok);
+    hint.textContent = ok ? 'Длина в порядке' : 'Минимум 6 символов';
+  });
+}());
+</script>
 </body>
 </html>

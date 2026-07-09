@@ -29,9 +29,9 @@
     <div class="field">
       <span>Кому</span>
       <div class="pills" role="radiogroup" aria-label="Аудитория" style="margin-top:6px;">
-        <label class="pill-btn active"><input type="radio" name="audience" value="tutors" data-count="{{ counts.tutors }}" checked hidden> Репетиторы · {{ counts.tutors }}</label>
-        <label class="pill-btn"><input type="radio" name="audience" value="students" data-count="{{ counts.students }}" hidden> Ученики · {{ counts.students }}</label>
-        <label class="pill-btn"><input type="radio" name="audience" value="all" data-count="{{ counts.all }}" hidden> Все · {{ counts.all }}</label>
+        <label class="pill-btn active"><input type="radio" name="audience" value="tutors" data-count="{{ counts.tutors }}" checked class="sr-only"> Репетиторы · {{ counts.tutors }}</label>
+        <label class="pill-btn"><input type="radio" name="audience" value="students" data-count="{{ counts.students }}" class="sr-only"> Ученики · {{ counts.students }}</label>
+        <label class="pill-btn"><input type="radio" name="audience" value="all" data-count="{{ counts.all }}" class="sr-only"> Все · {{ counts.all }}</label>
       </div>
     </div>
     <label class="field">
@@ -50,17 +50,37 @@
     var n = current().getAttribute('data-count');
     submit.textContent = 'Отправить ' + n + ' получателям';
   }
+  function syncActive(){
+    form.querySelectorAll('.pill-btn').forEach(function(l){
+      var r = l.querySelector('input');
+      l.classList.toggle('active', !!(r && r.checked));
+    });
+    refresh();
+  }
   form.querySelectorAll('.pill-btn').forEach(function(label){
     label.addEventListener('click', function(){
-      form.querySelectorAll('.pill-btn').forEach(function(l){ l.classList.remove('active'); });
-      label.classList.add('active');
       label.querySelector('input').checked = true;
-      refresh();
+      syncActive();
     });
   });
+  // Keyboard: arrow keys move focus + check the radio → keep the pill in sync.
+  form.querySelectorAll('input[name="audience"]').forEach(function(inp){
+    inp.addEventListener('change', syncActive);
+  });
   form.addEventListener('submit', function(e){
+    if (form.dataset.confirmed) return;
+    e.preventDefault();
     var n = current().getAttribute('data-count');
-    if (!confirm('Отправить сообщение ' + n + ' получателям?')) { e.preventDefault(); }
+    pingly.confirm({
+      title: 'Отправить рассылку?',
+      message: 'Сообщение уйдёт ' + n + ' получателям в Telegram. Отменить отправку будет нельзя.',
+      okText: 'Отправить',
+      danger: true
+    }).then(function(ok){
+      if (!ok) return;
+      form.dataset.confirmed = '1';
+      if (form.requestSubmit) form.requestSubmit(); else form.submit();
+    });
   });
   refresh();
 })();
