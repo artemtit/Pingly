@@ -3,11 +3,30 @@ import config
 import uvicorn
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import BotCommand
 from config import BOT_TOKEN
 from handlers import tutor, student
 from scheduler import create_scheduler
 import db
 from web.app import create_app
+
+
+# Commands shown in the Telegram "menu" button. Kept minimal on purpose — the
+# bot is a thin служебный layer (see CLAUDE.md), all real work is on the site.
+BOT_COMMANDS = [
+    BotCommand(command="start", description="Запустить бота / войти"),
+    BotCommand(command="web", description="Ссылка в кабинет (репетитор)"),
+    BotCommand(command="help", description="Помощь, документы, поддержка"),
+]
+
+
+async def register_commands(bot: Bot) -> None:
+    """Publish the command menu. Non-critical (like get_me): a transient Telegram
+    timeout on startup must not crash the process, so swallow and carry on."""
+    try:
+        await bot.set_my_commands(BOT_COMMANDS)
+    except Exception as exc:  # noqa: BLE001 — network hiccup shouldn't take the bot down
+        print(f"[startup] set_my_commands failed: {exc}")
 
 
 async def start_web() -> None:
@@ -53,6 +72,7 @@ async def main() -> None:
         asyncio.create_task(start_web())
 
     await resolve_username(bot)
+    await register_commands(bot)
 
     dp = Dispatcher(storage=MemoryStorage())
 
