@@ -1596,6 +1596,11 @@ a, button, summary, label, .btn, .icon-btn, .pill-btn { -webkit-tap-highlight-co
 
 /* 8 — Disabled buttons read as disabled everywhere */
 .btn:disabled, .btn[disabled] { opacity: .6; cursor: not-allowed; box-shadow: none; }
+/* Destructive action button (e.g. «Удалить аккаунт») — solid red, turns a clear
+   grey while disabled so it reads as «not yet» until the confirm word is typed. */
+.btn-danger { background: var(--color-error); color: #fff; border-color: var(--color-error); }
+.btn-danger:hover { background: var(--color-error); }
+.btn-danger:disabled, .btn-danger[disabled] { background: var(--color-neutral-200); color: var(--color-text-muted); border-color: var(--color-neutral-200); opacity: 1; }
 
 /* 9 — Images/SVGs never intercept text selection or drag */
 svg { -webkit-user-select: none; user-select: none; }
