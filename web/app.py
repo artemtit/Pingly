@@ -506,6 +506,24 @@ async def _send_telegram(tg_id: int, text: str) -> None:
         await bot.session.close()
 
 
+async def _send_vk(peer_id: int, text: str) -> None:
+    """Fire-and-forget VK message from the web process (VK mirror of _send_telegram)."""
+    from infrastructure import vk
+
+    await vk.send_message(peer_id, text)
+
+
+async def _notify_tutor(target: tuple[str, int, str] | None) -> None:
+    """Route a (channel, dest, text) push to the tutor's chosen channel. No-op on None."""
+    if not target:
+        return
+    channel, dest, text = target
+    if channel == "vk":
+        await _send_vk(dest, text)
+    else:
+        await _send_telegram(dest, text)
+
+
 async def _broadcast_telegram(tg_ids: list[int], text: str) -> dict:
     """Send the same message to many tutors via one short-lived Bot instance.
     Returns {sent, failed}. Throttled lightly to respect Telegram limits."""
@@ -800,6 +818,18 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             return RedirectResponse(f"{base}?error={quote(err or 'Не удалось подключить Telegram')}", status_code=303)
         return RedirectResponse(f"{base}?saved=tg", status_code=303)
 
+    @app.get("/tutor/settings/vk/connect")
+    async def tutor_vk_connect(user: dict = Depends(current_user)) -> Response:
+        """Mint a one-time link token and bounce the tutor into the VK community
+        chat carrying it (ref=lnk_<token>); the VK bot attaches their VK id."""
+        _require(user, "tutor")
+        if not _config.VK_ENABLED or not _config.VK_GROUP_ID:
+            return RedirectResponse("/tutor/settings?error=vk_off", status_code=303)
+        token = await services.web_auth.create_vk_link_token(user["id"])
+        return RedirectResponse(
+            f"https://vk.me/club{_config.VK_GROUP_ID}?ref=lnk_{token}", status_code=303,
+        )
+
     @app.post("/logout")
     async def logout(request: Request) -> Response:
         # S6: bump token_version so every issued cookie for this user stops working,
@@ -854,8 +884,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         request_row = await services.public.create_booking(slug, name, contact, preferred_time, comment)
         if request_row:
             target = await services.public.booking_push_target(request_row["tutor_user_id"], name.strip(), contact.strip())
-            if target:
-                await _send_telegram(target[0], target[1])
+            await _notify_tutor(target)
             return RedirectResponse(f"/u/{slug}?sent=1", status_code=303)
         return RedirectResponse(f"/u/{slug}", status_code=303)
 
@@ -1358,9 +1387,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         _require(user, "student")
         lesson = await services.lessons.student_confirm_lesson(user["id"], lesson_id)
         if lesson:
-            target = await services.lessons.confirm_push_target(lesson)
-            if target:
-                await _send_telegram(target[0], target[1])
+            await _notify_tutor(await services.lessons.confirm_push_target(lesson))
         return RedirectResponse("/student", status_code=303)
 
     @app.post("/student/lessons/{lesson_id}/cancel")
@@ -1368,9 +1395,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         _require(user, "student")
         lesson = await services.lessons.student_cancel_lesson(user["id"], lesson_id)
         if lesson:
-            target = await services.lessons.cancel_push_target(lesson)
-            if target:
-                await _send_telegram(target[0], target[1])
+            await _notify_tutor(await services.lessons.cancel_push_target(lesson))
         return RedirectResponse("/student", status_code=303)
 
     @app.post("/student/lessons/{lesson_id}/reschedule-request")
@@ -1378,9 +1403,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         _require(user, "student")
         lesson = await services.lessons.student_request_reschedule(user["id"], lesson_id)
         if lesson:
-            target = await services.lessons.reschedule_request_push_target(lesson)
-            if target:
-                await _send_telegram(target[0], target[1])
+            await _notify_tutor(await services.lessons.reschedule_request_push_target(lesson))
         return RedirectResponse("/student", status_code=303)
 
     @app.get("/student/history", response_class=HTMLResponse)

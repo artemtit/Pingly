@@ -38,9 +38,38 @@ class WebAuthService:
         self.base_url = base_url.rstrip("/")
         self.bot_token = bot_token
 
+    # Namespace prefix for tutor VK-link tokens. Hashing "vklink:" + token keeps a
+    # VK-link token from ever matching a web-login lookup (which hashes the bare
+    # token) and vice-versa, even though both reuse the web_login_tokens table.
+    _VK_LINK_PREFIX = "vklink:"
+
     @staticmethod
     def _hash(token: str) -> str:
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    # ---------------- Tutor VK linking (community-bot deep link) ----------------
+    async def create_vk_link_token(self, user_id: str) -> str:
+        """One-time token the tutor carries into VK via vk.me/club<id>?ref=lnk_<token>.
+        The VK bot consumes it to attach the tutor's VK id to this account."""
+        token = secrets.token_urlsafe(24)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
+        await self.repo.create_web_token(user_id, self._hash(self._VK_LINK_PREFIX + token), expires_at)
+        return token
+
+    async def link_tutor_vk_by_token(self, token: str, vk_id: int, vk_name: str = "") -> tuple[bool, str | None]:
+        """Attach a VK identity to the tutor account named by a link token. Called
+        from the VK bot process. Guards: token valid, account is a tutor, and this
+        VK id isn't already tied to a different Pingly account."""
+        user = await self.repo.consume_web_token(self._hash(self._VK_LINK_PREFIX + token), datetime.now(timezone.utc))
+        if not user:
+            return False, "Ссылка устарела. Открой «Подключить ВКонтакте» в кабинете ещё раз."
+        if user.get("role") != "tutor":
+            return False, "Подключить ВКонтакте можно только к аккаунту репетитора."
+        existing = await self.repo.get_user_by_vk_id(vk_id)
+        if existing and existing["id"] != user["id"]:
+            return False, "Этот ВКонтакте уже привязан к другому аккаунту Pingly."
+        await self.repo.set_user_vk(user["id"], vk_id)
+        return True, None
 
     # ---------------- Telegram bot deep-link (existing /web flow) ----------------
     async def create_login_link_for_tg(self, tg_id: int) -> str | None:

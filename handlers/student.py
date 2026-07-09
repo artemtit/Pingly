@@ -51,8 +51,24 @@ async def send_next_lesson(message: Message) -> None:
 # student taps «Отменяю» or «Прошу перенести» we wait for a single optional
 # free-text message, forward it to the tutor, then forget. Lost on restart,
 # which is fine for a 10-min window.
-_awaiting_reason: dict[int, dict] = {}  # tg_user_id -> {tutor_tg_id, name, at, kind}
+_awaiting_reason: dict[int, dict] = {}  # tg_user_id -> {tutor_channel, tutor_dest, name, at, kind}
 _REASON_TTL = 600  # seconds to wait for the message before giving up
+
+
+async def _notify_tutor(bot, target: tuple[str, int, str] | None) -> None:
+    """Route a (channel, dest, text) push to the tutor. The student is on Telegram
+    here, but the tutor may be on VK — send via the right channel. Best-effort."""
+    if not target:
+        return
+    channel, dest, text = target
+    try:
+        if channel == "vk":
+            from infrastructure import vk
+            await vk.send_message(dest, text)
+        else:
+            await bot.send_message(dest, text)
+    except Exception:
+        pass
 
 
 @router.callback_query(F.data.startswith("lesson_confirm:"))
@@ -63,12 +79,7 @@ async def confirm_lesson(callback: CallbackQuery) -> None:
     await callback.message.edit_text("✅ Отлично, ждём тебя на занятии!")
     await callback.answer("Записал: ты будешь 👍")
     if lesson:
-        target = await services.lessons.confirm_push_target(lesson)
-        if target:
-            try:
-                await callback.bot.send_message(target[0], target[1])
-            except Exception:
-                pass
+        await _notify_tutor(callback.bot, await services.lessons.confirm_push_target(lesson))
 
 
 @router.callback_query(F.data.startswith("lesson_cancel:"))
@@ -84,13 +95,11 @@ async def cancel_lesson(callback: CallbackQuery) -> None:
     if lesson:
         target = await services.lessons.cancel_push_target(lesson)
         if target:
-            try:
-                await callback.bot.send_message(target[0], target[1])
-            except Exception:
-                pass
+            await _notify_tutor(callback.bot, target)
             # Wait for an optional free-text reason and forward it to the tutor.
             _awaiting_reason[callback.from_user.id] = {
-                "tutor_tg_id": target[0],
+                "tutor_channel": target[0],
+                "tutor_dest": target[1],
                 "name": (lesson.get("student_profiles") or {}).get("name") or "Ученик",
                 "at": time.monotonic(),
                 "kind": "cancel",
@@ -110,13 +119,11 @@ async def reschedule_lesson(callback: CallbackQuery) -> None:
     if lesson:
         target = await services.lessons.reschedule_request_push_target(lesson)
         if target:
-            try:
-                await callback.bot.send_message(target[0], target[1])
-            except Exception:
-                pass
+            await _notify_tutor(callback.bot, target)
             # Wait for an optional free-text time preference and forward it to the tutor.
             _awaiting_reason[callback.from_user.id] = {
-                "tutor_tg_id": target[0],
+                "tutor_channel": target[0],
+                "tutor_dest": target[1],
                 "name": (lesson.get("student_profiles") or {}).get("name") or "Ученик",
                 "at": time.monotonic(),
                 "kind": "reschedule",
@@ -202,7 +209,4 @@ async def capture_cancel_reason(message: Message) -> None:
         forward = f"🔄 {info['name']} предлагает время для переноса: «{text}»"
     else:
         forward = f"📝 {info['name']} о причине отмены: «{text}»"
-    try:
-        await message.bot.send_message(info["tutor_tg_id"], forward)
-    except Exception:
-        pass
+    await _notify_tutor(message.bot, (info["tutor_channel"], info["tutor_dest"], forward))

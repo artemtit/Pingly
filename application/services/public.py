@@ -102,9 +102,14 @@ class PublicService:
             return
         await self.repo.update_booking_request_status(tutor_user_id, request_id, status)
 
-    async def booking_push_target(self, tutor_user_id: str, name: str, contact: str) -> tuple[int, str] | None:
+    async def booking_push_target(self, tutor_user_id: str, name: str, contact: str) -> tuple[str, int, str] | None:
+        """Return (channel, dest, message) to notify the tutor of a new booking —
+        Telegram first, then VK — or None if the tutor has neither linked."""
         tutor = await self.repo.get_user_by_id(tutor_user_id)
-        tg_id = (tutor or {}).get("tg_id")
-        if not tg_id:
+        if tutor and tutor.get("tg_id"):
+            channel, dest = "tg", int(tutor["tg_id"])
+        elif tutor and tutor.get("vk_id"):
+            channel, dest = "vk", int(tutor["vk_id"])
+        else:
             return None
-        return tg_id, f"🎓 Новая заявка на занятие!\n\n{name} ({contact}) хочет записаться.\nОткрой кабинет → Заявки."
+        return channel, dest, f"🎓 Новая заявка на занятие!\n\n{name} ({contact}) хочет записаться.\nОткрой кабинет → Заявки."

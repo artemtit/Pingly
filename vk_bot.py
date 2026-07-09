@@ -9,7 +9,10 @@ Does exactly what the Telegram bot does for students:
   2. delivery of lesson reminders (sending is driven by scheduler.py)
   3. "Буду / Отменяю" callback buttons under reminders
 
-Tutors stay in the web cabinet; VK ID login for tutors is Фаза 2.
+Tutors manage everything in the web cabinet but can link their VK as a
+notification channel (vk.me/club<id>?ref=lnk_<token>) to receive booking/
+cancel/reschedule pushes here instead of Telegram. Full VK ID OAuth login is
+still Фаза 2.
 """
 from __future__ import annotations
 
@@ -76,6 +79,12 @@ def _invite_token(raw: str | None) -> str | None:
     """`inv_<token>` → `<token>`; anything else → None."""
     raw = (raw or "").strip()
     return raw[4:] if raw.startswith("inv_") else None
+
+
+def _link_token(raw: str | None) -> str | None:
+    """`lnk_<token>` → `<token>` (tutor VK-link deep link); anything else → None."""
+    raw = (raw or "").strip()
+    return raw[4:] if raw.startswith("lnk_") else None
 
 
 def _payload_obj(payload) -> dict:
@@ -150,6 +159,32 @@ class VkBot:
             keyboard=student_menu_keyboard() if student else None,
         )
 
+    async def _link_tutor(self, user_id: int, token: str) -> None:
+        """Attach this VK user to the tutor account named by a `lnk_` link token."""
+        name = await self._user_name(user_id)
+        ok, err = await services.web_auth.link_tutor_vk_by_token(token, int(user_id), name)
+        await self.send_message(
+            user_id,
+            (
+                "Готово! ✅ Теперь заявки, отмены и переносы будут приходить сюда, "
+                "во ВКонтакте. Управление — в кабинете на сайте."
+            ) if ok else (err or INVALID_LINK),
+        )
+
+    async def _notify_tutor(self, target) -> None:
+        """Route a (channel, dest, text) push: VK straight from this bot, Telegram
+        via the shared TG bot instance (tutors may be on either channel)."""
+        if not target:
+            return
+        channel, dest, text = target
+        try:
+            if channel == "vk":
+                await self.send_message(dest, text)
+            elif self.tg_bot:
+                await self.tg_bot.send_message(dest, text)
+        except Exception:
+            pass
+
     async def _send_next_lesson(self, user_id: int) -> None:
         """«Моё занятие» — render the student's next-lesson card, or a nudge to link."""
         user = await services.repo.get_user_by_vk_id(int(user_id))
@@ -167,14 +202,22 @@ class VkBot:
         user_id = msg.get("from_id") or msg.get("user_id")
         if not user_id:
             return
-        # Invite token can arrive via the community-link ref, the start payload, or text.
+        # A token can arrive via the community-link ref, the start payload, or text.
         payload = _payload_obj(msg.get("payload"))
+        link_tok = (
+            _link_token(msg.get("ref"))
+            or _link_token(payload.get("ref"))
+            or _link_token(msg.get("text"))
+        )
+        if link_tok:  # tutor connecting their VK to the web cabinet
+            await self._link_tutor(user_id, link_tok)
+            return
         token = (
             _invite_token(msg.get("ref"))
             or _invite_token(payload.get("ref"))
             or _invite_token(msg.get("text"))
         )
-        if token:
+        if token:  # student onboarding via an invite link
             await self._link_student(user_id, token)
             return
         # «Моё занятие» button (its payload) or the plain button text.
@@ -183,8 +226,15 @@ class VkBot:
 
     async def _on_message_allow(self, obj: dict) -> None:
         user_id = obj.get("user_id")
-        token = _invite_token(obj.get("key"))
-        if user_id and token:
+        if not user_id:
+            return
+        key = obj.get("key")
+        link_tok = _link_token(key)
+        if link_tok:
+            await self._link_tutor(user_id, link_tok)
+            return
+        token = _invite_token(key)
+        if token:
             await self._link_student(user_id, token)
 
     async def _event_answer(self, event_id, user_id, peer_id, text: str) -> None:
@@ -213,14 +263,9 @@ class VkBot:
             )
             await self._event_answer(event_id, user_id, peer_id, "Записал: ты будешь 👍")
             await self.send_message(peer_id, "✅ Отлично, ждём тебя на занятии!")
-            # Push the tutor "X подтвердил" (tutors are on Telegram in Фаза 1).
-            if lesson and self.tg_bot:
-                target = await services.lessons.confirm_push_target(lesson)
-                if target:
-                    try:
-                        await self.tg_bot.send_message(target[0], target[1])
-                    except Exception:
-                        pass
+            # Push the tutor "X подтвердил" (Telegram or VK, whichever they linked).
+            if lesson:
+                await self._notify_tutor(await services.lessons.confirm_push_target(lesson))
             return
 
         if action == "lesson_cancel":
@@ -234,14 +279,9 @@ class VkBot:
                 peer_id,
                 "Понял, занятие отменено. Репетитор уже в курсе — он напишет о переносе.",
             )
-            # Notify the tutor (tutors are on Telegram in Фаза 1).
-            if lesson and self.tg_bot:
-                target = await services.lessons.cancel_push_target(lesson)
-                if target:
-                    try:
-                        await self.tg_bot.send_message(target[0], target[1])
-                    except Exception:
-                        pass
+            # Notify the tutor (Telegram or VK, whichever they linked).
+            if lesson:
+                await self._notify_tutor(await services.lessons.cancel_push_target(lesson))
             return
 
         if action == "lesson_reschedule":
@@ -255,14 +295,9 @@ class VkBot:
                 peer_id,
                 "Хорошо! Репетитор уже в курсе и предложит новое время.",
             )
-            # Notify the tutor (tutors are on Telegram in Фаза 1).
-            if lesson and self.tg_bot:
-                target = await services.lessons.reschedule_request_push_target(lesson)
-                if target:
-                    try:
-                        await self.tg_bot.send_message(target[0], target[1])
-                    except Exception:
-                        pass
+            # Notify the tutor (Telegram or VK, whichever they linked).
+            if lesson:
+                await self._notify_tutor(await services.lessons.reschedule_request_push_target(lesson))
 
     async def _dispatch(self, update: dict) -> None:
         utype = update.get("type")

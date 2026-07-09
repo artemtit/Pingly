@@ -157,6 +157,15 @@ class SupabasePinglyRepository:
         )
         return _one(result)
 
+    async def set_user_vk(self, user_id: str, vk_id: int) -> dict[str, Any] | None:
+        result = await (
+            self._db().table("users")
+            .update({"vk_id": vk_id})
+            .eq("id", user_id)
+            .execute()
+        )
+        return _one(result)
+
     async def create_invited_student(self, tutor_user_id: str, name: str, tg_username: str, invite_token: str) -> dict[str, Any]:
         result = await self._db().table("student_profiles").insert({
             "name": name,

@@ -434,19 +434,32 @@ class LessonService:
         await self.repo.update_lesson_fields(lesson_id, {"status": LessonStatus.CONFIRMED.value})
         return lesson
 
-    async def confirm_push_target(self, lesson: dict) -> tuple[int, str] | None:
-        """Given a just-confirmed lesson, return (tutor_tg_id, message) to notify
-        the tutor, or None if the tutor has no Telegram linked."""
+    @staticmethod
+    def _tutor_push_dest(tutor: dict | None) -> tuple[str, int] | None:
+        """Pick the tutor's notification channel: Telegram first, then VK.
+        Returns (channel, dest) where channel ∈ {"tg", "vk"}, or None if the tutor
+        has neither linked."""
+        if not tutor:
+            return None
+        if tutor.get("tg_id"):
+            return "tg", int(tutor["tg_id"])
+        if tutor.get("vk_id"):
+            return "vk", int(tutor["vk_id"])
+        return None
+
+    async def confirm_push_target(self, lesson: dict) -> tuple[str, int, str] | None:
+        """Given a just-confirmed lesson, return (channel, dest, message) to notify
+        the tutor, or None if the tutor has neither Telegram nor VK linked."""
         tutor_id = lesson.get("tutor_user_id")
         if not tutor_id:
             return None
         tutor = await self.repo.get_user_by_id(tutor_id)
-        tg_id = (tutor or {}).get("tg_id")
-        if not tg_id:
+        dest = self._tutor_push_dest(tutor)
+        if not dest:
             return None
         name = (lesson.get("student_profiles") or {}).get("name") or "Ученик"
         when = _fmt_when_ru(lesson.get("starts_at", ""), int((tutor or {}).get("tz_offset_minutes") or DEFAULT_TZ_OFFSET))
-        return tg_id, f"✅ {name} подтвердил(а) занятие {when}."
+        return dest[0], dest[1], f"✅ {name} подтвердил(а) занятие {when}."
 
     async def student_request_reschedule(self, student_user_id: str, lesson_id: str) -> dict | None:
         """Student asks to move a lesson. Marks it and returns the lesson so the
@@ -466,13 +479,13 @@ class LessonService:
             )
         return lesson
 
-    async def reschedule_request_push_target(self, lesson: dict) -> tuple[int, str] | None:
+    async def reschedule_request_push_target(self, lesson: dict) -> tuple[str, int, str] | None:
         tutor_id = lesson.get("tutor_user_id")
         if not tutor_id:
             return None
         tutor = await self.repo.get_user_by_id(tutor_id)
-        tg_id = (tutor or {}).get("tg_id")
-        if not tg_id:
+        dest = self._tutor_push_dest(tutor)
+        if not dest:
             return None
         name = (lesson.get("student_profiles") or {}).get("name") or "Ученик"
         when = _fmt_when_ru(lesson.get("starts_at", ""), int((tutor or {}).get("tz_offset_minutes") or DEFAULT_TZ_OFFSET))
@@ -480,7 +493,7 @@ class LessonService:
             f"🟠 {name} просит перенести занятие {when}.\n\n"
             "Напиши ученику и поставь новое время в кабинете."
         )
-        return tg_id, message
+        return dest[0], dest[1], message
 
     async def set_lesson_paid(self, tutor_user_id: str, lesson_id: str, paid: bool) -> dict | None:
         return await self.repo.set_lesson_payment(tutor_user_id, lesson_id, paid)
@@ -612,15 +625,15 @@ class LessonService:
     async def delete_lesson(self, tutor_user_id: str, lesson_id: str) -> None:
         await self.repo.delete_lesson(tutor_user_id, lesson_id)
 
-    async def cancel_push_target(self, lesson: dict) -> tuple[int, str] | None:
-        """Given a just-cancelled lesson, return (tutor_tg_id, message) to notify
-        the tutor, or None if the tutor has no Telegram linked."""
+    async def cancel_push_target(self, lesson: dict) -> tuple[str, int, str] | None:
+        """Given a just-cancelled lesson, return (channel, dest, message) to notify
+        the tutor, or None if the tutor has neither Telegram nor VK linked."""
         tutor_id = lesson.get("tutor_user_id")
         if not tutor_id:
             return None
         tutor = await self.repo.get_user_by_id(tutor_id)
-        tg_id = (tutor or {}).get("tg_id")
-        if not tg_id:
+        dest = self._tutor_push_dest(tutor)
+        if not dest:
             return None
         name = (lesson.get("student_profiles") or {}).get("name") or "Ученик"
         when = _fmt_when_ru(lesson.get("starts_at", ""), int((tutor or {}).get("tz_offset_minutes") or DEFAULT_TZ_OFFSET))
@@ -628,7 +641,7 @@ class LessonService:
             f"🔔 {name} отменил(а) занятие {when}.\n\n"
             "Напиши ученику, чтобы договориться о переносе."
         )
-        return tg_id, message
+        return dest[0], dest[1], message
 
     async def change_lesson_status(self, tutor_user_id: str, lesson_id: str, status: LessonStatus, starts_at: datetime | None = None) -> dict | None:
         return await self.repo.update_lesson_status(tutor_user_id, lesson_id, status.value, starts_at)

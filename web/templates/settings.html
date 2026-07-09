@@ -15,6 +15,7 @@
   {% else %}<div class="trial-banner">{{ ui.icon('clock', 15) }} Оплата обрабатывается — подписка активируется в течение минуты. Обнови страницу.</div>{% endif %}
 {% elif paid == '0' %}<div class="trial-banner trial-ending">Оплата не завершена. Если списание прошло — статус обновится в течение минуты.</div>{% endif %}
 {% if error == 'payments_off' %}<div class="trial-banner">{{ ui.icon('credit-card', 15) }} Онлайн-оплата временно недоступна. Сервис работает в полном объёме.</div>
+{% elif error == 'vk_off' %}<div class="trial-banner trial-ending">Подключение ВКонтакте временно недоступно. Попробуй позже.</div>
 {% elif error %}<div class="trial-banner trial-ending">{{ error }}</div>{% endif %}
 {% if upgrade %}<div class="trial-banner trial-ending">{{ ui.icon('lock', 15) }} Раздел «{{ {'finance':'Финансы','requests':'Заявки','homework':'Задания'}.get(upgrade, upgrade) }}» доступен на тарифе Max. Оформи Max, чтобы открыть его.</div>{% endif %}
 {% if locked %}<div class="trial-banner trial-ending">{{ ui.icon('lock', 15) }} Пробный период закончился. Кабинет на паузе — оформи подписку ниже, чтобы вернуть доступ к ученикам, расписанию и напоминаниям.</div>{% endif %}
@@ -80,6 +81,21 @@
     {% endif %}
     {% endif %}
   </div>
+
+  {% if user.role == "tutor" and vk_enabled %}
+  <div class="card">
+    <h2>{{ ui.icon('bot', 18) }} ВКонтакте</h2>
+    {% if user.vk_id %}
+    <div class="settings-row"><span class="muted">Подключён</span><strong>ВКонтакте</strong></div>
+    <div class="settings-row"><span>Уведомления</span><span class="badge completed">приходят во ВКонтакте</span></div>
+    <p class="muted" style="margin: 10px 0 14px;">Заявки, отмены и переносы прилетают тебе во ВКонтакте. Если подключён и Telegram — уведомления идут в Telegram.</p>
+    {% else %}
+    <div class="settings-row"><span class="muted">Статус</span><span class="badge cancelled">не подключён</span></div>
+    <p class="muted" style="margin: 10px 0 14px;">Нет Telegram? Подключи ВКонтакте — заявки, отмены и переносы будут приходить в личку сообщества. Нажми кнопку и напиши боту в открывшемся чате — этого достаточно.</p>
+    <a class="btn btn-secondary" href="/tutor/settings/vk/connect">Подключить ВКонтакте →</a>
+    {% endif %}
+  </div>
+  {% endif %}
 
   <div class="card">
     <h2>{{ ui.icon('globe', 18) }} Часовой пояс</h2>
