@@ -40,7 +40,9 @@
         </td>
         <td class="muted">{{ (t.created_at or "")[:10] }}</td>
         <td>
-          {% if t.subscription_status == 'active' %}
+          {% if t.is_blocked %}
+            <span class="badge cancelled">Заблокирован</span>
+          {% elif t.subscription_status == 'active' %}
             <span class="badge reviewed">Подписка</span>
           {% elif t.access_active %}
             <span class="badge submitted">Триал</span><div class="muted" style="font-size:12px;">до {{ (t.trial_ends_at or "")[:10] }}</div>
@@ -52,22 +54,7 @@
         <td>{{ t.lessons_done }}<span class="muted" style="font-size:12px;"> / {{ t.lesson_count }}</span></td>
         <td>{% if t.revenue %}<strong>{{ "{:,}".format(t.revenue).replace(",", " ") }} ₽</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
         <td>
-          <details class="resched">
-            <summary class="btn btn-ghost btn-sm">{{ ui.icon('settings', 15) }} Управлять</summary>
-            <div class="admin-manage">
-              <form method="post" action="/admin/tutors/{{ t.id }}/subscription" class="admin-row">
-                <input type="hidden" name="action" value="grant">
-                <input type="hidden" name="plan" value="max">
-                <input class="input" type="number" name="days" value="30" min="1" style="width:72px;">
-                <button class="btn btn-primary btn-sm">Выдать подписку, дней</button>
-              </form>
-              <form method="post" action="/admin/tutors/{{ t.id }}/subscription" class="admin-row">
-                <input type="hidden" name="action" value="extend_trial">
-                <input class="input" type="number" name="days" value="14" min="1" style="width:72px;">
-                <button class="btn btn-secondary btn-sm">Продлить триал, дней</button>
-              </form>
-            </div>
-          </details>
+          <a href="/admin/tutors/{{ t.id }}" class="btn btn-ghost btn-sm">{{ ui.icon('eye', 15) }} Открыть</a>
         </td>
       </tr>
     {% else %}

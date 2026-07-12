@@ -915,6 +915,45 @@ class SupabasePinglyRepository:
     async def admin_set_plan(self, user_id: str, plan: str) -> None:
         await self._db().table("users").update({"plan": plan}).eq("id", user_id).execute()
 
+    async def admin_set_blocked(self, user_id: str, blocked: bool) -> None:
+        """Block/unblock an account. Blocking also bumps token_version so every
+        active session cookie stops working immediately (S6)."""
+        await self._db().table("users").update({"is_blocked": blocked}).eq("id", user_id).execute()
+        if blocked:
+            await self.bump_token_version(user_id)
+
+    async def revoke_subscription(self, user_id: str) -> None:
+        """Cut off paid access right now: mark the subscription canceled and expire
+        the access window (trial_ends_at → now). The hard paywall locks the cabinet
+        on the next request."""
+        await (
+            self._db().table("users")
+            .update({
+                "subscription_status": "canceled",
+                "trial_ends_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .eq("id", user_id)
+            .execute()
+        )
+
+    async def admin_tutor_payments(self, user_id: str) -> list[dict[str, Any]]:
+        return (
+            await self._db().table("subscription_payments")
+            .select("amount_rub, status, created_at, transaction_id")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .execute()
+        ).data
+
+    async def admin_tutor_lessons(self, tutor_user_id: str) -> list[dict[str, Any]]:
+        return (
+            await self._db().table("lessons_v2")
+            .select("id, starts_at, status, student_profiles(name)")
+            .eq("tutor_user_id", tutor_user_id)
+            .order("starts_at", desc=True)
+            .execute()
+        ).data
+
     # ---------------- Subscription payments (Platega) ----------------
     async def create_subscription_payment(self, user_id: str, transaction_id: str, amount_rub: int) -> dict[str, Any]:
         result = await self._db().table("subscription_payments").insert({

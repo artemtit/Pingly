@@ -432,7 +432,7 @@ async def current_user(request: Request) -> dict:
         raise HTTPException(status_code=401)
     user_id, tv = decoded
     user = await services.accounts.get_user(user_id)
-    if not user or not _session_tv_ok(user, tv):
+    if not user or not _session_tv_ok(user, tv) or user.get("is_blocked"):
         raise HTTPException(status_code=401)
     # F6: pin this request's display/parse timezone to the tutor's setting.
     set_current_offset(user.get("tz_offset_minutes"))
@@ -451,7 +451,7 @@ async def _user_from_cookie(request: Request) -> dict | None:
     user_id, tv = decoded
     try:
         user = await services.accounts.get_user(user_id)
-        if user and _session_tv_ok(user, tv):
+        if user and _session_tv_ok(user, tv) and not user.get("is_blocked"):
             set_current_offset(user.get("tz_offset_minutes"))
             return user
         return None
@@ -1842,6 +1842,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
 
     @app.post("/admin/tutors/{tutor_id}/subscription")
     async def admin_set_subscription(
+        request: Request,
         tutor_id: str,
         action: str = Form(...),
         plan: str = Form("max"),
@@ -1858,7 +1859,45 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             await services.admin.set_plan(tutor_id, plan)
         elif action == "extend_trial":
             await services.admin.extend_trial(tutor_id, max(1, int(days)))
+        elif action == "revoke":
+            await services.admin.revoke_subscription(tutor_id)
+            logging.getLogger("pingly.admin").warning(
+                "REVOKE subscription by=%s target=%s", user.get("id"), tutor_id,
+            )
+        dest = str(request.query_params.get("from") or "").strip()
+        if dest == "detail":
+            return RedirectResponse(f"/admin/tutors/{tutor_id}?saved=1", status_code=303)
         return RedirectResponse("/admin/tutors?saved=1", status_code=303)
+
+    @app.get("/admin/tutors/{tutor_id}", response_class=HTMLResponse)
+    async def admin_tutor_detail(request: Request, tutor_id: str, saved: str | None = None, user: dict = Depends(current_user)) -> Response:
+        _require_admin(user)
+        detail = await services.admin.tutor_detail(tutor_id)
+        if not detail:
+            raise HTTPException(status_code=404)
+        return templates.TemplateResponse(
+            "admin/tutor_detail.html", _ctx(request, user, "admin", d=detail, saved=saved),
+        )
+
+    @app.post("/admin/tutors/{tutor_id}/block")
+    async def admin_block_tutor(
+        tutor_id: str,
+        blocked: str = Form(...),
+        user: dict = Depends(current_user),
+    ) -> Response:
+        _require_admin(user)
+        target = await services.admin.get_tutor(tutor_id)
+        if not target:
+            raise HTTPException(status_code=404)
+        if tutor_id == user.get("id"):
+            # Guard: an admin can't lock themselves out of the panel.
+            return RedirectResponse(f"/admin/tutors/{tutor_id}?saved=self", status_code=303)
+        want_block = blocked == "1"
+        await services.admin.set_blocked(tutor_id, want_block)
+        logging.getLogger("pingly.admin").warning(
+            "%s by=%s target=%s", "BLOCK" if want_block else "UNBLOCK", user.get("id"), tutor_id,
+        )
+        return RedirectResponse(f"/admin/tutors/{tutor_id}?saved=1", status_code=303)
 
     @app.get("/admin/broadcast", response_class=HTMLResponse)
     async def admin_broadcast_form(request: Request, result: str | None = None, user: dict = Depends(current_user)) -> Response:

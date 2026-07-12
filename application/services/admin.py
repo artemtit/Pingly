@@ -128,6 +128,41 @@ class AdminService:
         user = await self.repo.get_user_by_id(user_id)
         return user if user and user.get("role") == "tutor" else None
 
+    async def tutor_detail(self, user_id: str) -> dict | None:
+        """Everything about one tutor: profile + students + lessons + payments."""
+        user = await self.repo.get_user_by_id(user_id)
+        if not user or user.get("role") != "tutor":
+            return None
+        now = datetime.now(timezone.utc)
+        students = await self.repo.list_tutor_students(user_id)
+        lessons = await self.repo.admin_tutor_lessons(user_id)
+        payments = await self.repo.admin_tutor_payments(user_id)
+
+        status_counts: dict[str, int] = {}
+        for lesson in lessons:
+            key = (lesson.get("status") or "—").lower()
+            status_counts[key] = status_counts.get(key, 0) + 1
+        paid = [p for p in payments if (p.get("status") or "").lower() == "confirmed"]
+
+        return {
+            "user": dict(user),
+            "access_active": _is_active(user, now),
+            "students": students,
+            "student_count": len(students),
+            "lessons": lessons[:20],
+            "lesson_count": len(lessons),
+            "lesson_status_counts": status_counts,
+            "payments": payments[:20],
+            "revenue": sum(int(p.get("amount_rub") or 0) for p in paid),
+            "payments_count": len(paid),
+        }
+
+    async def set_blocked(self, user_id: str, blocked: bool) -> None:
+        await self.repo.admin_set_blocked(user_id, blocked)
+
+    async def revoke_subscription(self, user_id: str) -> None:
+        await self.repo.revoke_subscription(user_id)
+
     async def grant_subscription(self, user_id: str, plan: str, days: int = 30) -> None:
         """Manually give/extend a paid subscription on the chosen tier."""
         plan = plan if plan in VALID_PLANS else "max"

@@ -1,0 +1,162 @@
+{% extends "layout.html" %}
+{% import "macros.html" as ui %}
+{% set u = d.user %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow"><a href="/admin/tutors" style="color:var(--orange-600);font-weight:600;">← Репетиторы</a></div>
+    <h1>{{ u.full_name or "Без имени" }}</h1>
+  </div>
+  <div>
+    {% if u.is_blocked %}
+      <span class="badge cancelled">Заблокирован</span>
+    {% elif u.subscription_status == 'active' %}
+      <span class="badge reviewed">Подписка</span>
+    {% elif d.access_active %}
+      <span class="badge submitted">Триал</span>
+    {% else %}
+      <span class="badge">Доступ истёк</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="view-switch" style="margin-bottom:18px;">
+  <a href="/admin">Обзор</a>
+  <a href="/admin/tutors" class="active">Репетиторы</a>
+  <a href="/admin/broadcast">Рассылка</a>
+</div>
+
+{% if saved == '1' %}
+<div class="card" style="border-color: var(--color-success); background: var(--color-success-light); margin-bottom: 16px;">
+  <strong style="color: var(--success-text);">{{ ui.icon('check', 15) }} Изменения применены</strong>
+</div>
+{% elif saved == 'self' %}
+<div class="card" style="border-color: var(--color-danger); background: var(--color-danger-light); margin-bottom: 16px;">
+  <strong style="color: var(--danger-text);">Нельзя заблокировать собственный аккаунт.</strong>
+</div>
+{% endif %}
+
+<section class="grid stats" style="margin-bottom:18px;">
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('graduation-cap') }}</span><div><div class="value">{{ d.student_count }}</div><div class="label">Учеников</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('book-open') }}</span><div><div class="value">{{ d.lesson_count }}</div><div class="label">Занятий</div></div></div>
+  <div class="card stat"><span class="stat-icon accent">{{ ui.icon('russian-ruble') }}</span><div><div class="value">{{ "{:,}".format(d.revenue).replace(",", " ") }} ₽</div><div class="label">Выручка</div></div></div>
+  <div class="card stat"><span class="stat-icon">{{ ui.icon('credit-card') }}</span><div><div class="value">{{ d.payments_count }}</div><div class="label">Платежей</div></div></div>
+</section>
+
+<section class="grid two" style="align-items:start;">
+  <!-- Профиль -->
+  <div class="card">
+    <div class="card-head"><h2 style="margin:0;">{{ ui.icon('users', 18) }} Профиль</h2></div>
+    <table class="table">
+      <tbody>
+        <tr><td class="muted">ID</td><td><code>{{ u.id }}</code></td></tr>
+        <tr><td class="muted">Роль</td><td>{{ u.role }}{% if u.is_admin %} <span class="badge reviewed">admin</span>{% endif %}</td></tr>
+        <tr><td class="muted">Telegram</td><td>{% if u.tg_username %}<a href="https://t.me/{{ u.tg_username }}" target="_blank" rel="noopener" style="color:var(--orange-600);font-weight:600;">@{{ u.tg_username }}</a>{% elif u.tg_id %}id {{ u.tg_id }}{% else %}—{% endif %}</td></tr>
+        <tr><td class="muted">Email</td><td>{{ u.email or "—" }}</td></tr>
+        <tr><td class="muted">Регистрация</td><td>{{ u.created_at | msk('%d.%m.%Y %H:%M') if u.created_at else "—" }}</td></tr>
+        <tr><td class="muted">Тариф</td><td>{{ u.plan or "—" }}</td></tr>
+        <tr><td class="muted">Статус подписки</td><td>{{ u.subscription_status or "—" }}</td></tr>
+        <tr><td class="muted">Доступ до</td><td>{{ u.trial_ends_at | msk('%d.%m.%Y %H:%M') if u.trial_ends_at else "—" }}</td></tr>
+        <tr><td class="muted">Часовой пояс</td><td>UTC{{ "%+d"|format(((u.tz_offset_minutes or 180) // 60)) }}</td></tr>
+        <tr><td class="muted">Реф. код</td><td>{{ u.referral_code or "—" }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Управление -->
+  <div class="card">
+    <div class="card-head"><h2 style="margin:0;">{{ ui.icon('settings', 18) }} Управление</h2></div>
+    <div class="admin-manage" style="gap:14px;">
+      <form method="post" action="/admin/tutors/{{ u.id }}/subscription?from=detail" class="admin-row">
+        <input type="hidden" name="action" value="grant">
+        <input type="hidden" name="plan" value="max">
+        <input class="input" type="number" name="days" value="30" min="1" style="width:72px;">
+        <button class="btn btn-primary btn-sm">Выдать подписку, дней</button>
+      </form>
+      <form method="post" action="/admin/tutors/{{ u.id }}/subscription?from=detail" class="admin-row">
+        <input type="hidden" name="action" value="extend_trial">
+        <input class="input" type="number" name="days" value="14" min="1" style="width:72px;">
+        <button class="btn btn-secondary btn-sm">Продлить триал, дней</button>
+      </form>
+      <form method="post" action="/admin/tutors/{{ u.id }}/subscription?from=detail" class="admin-row"
+            onsubmit="return confirm('Снять подписку и закрыть доступ прямо сейчас?');">
+        <input type="hidden" name="action" value="revoke">
+        <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);">Снять подписку / закрыть доступ</button>
+      </form>
+      <hr style="border:none;border-top:1px solid var(--border);margin:2px 0;">
+      {% if u.is_blocked %}
+      <form method="post" action="/admin/tutors/{{ u.id }}/block" class="admin-row">
+        <input type="hidden" name="blocked" value="0">
+        <button class="btn btn-primary btn-sm">Разблокировать аккаунт</button>
+      </form>
+      {% else %}
+      <form method="post" action="/admin/tutors/{{ u.id }}/block" class="admin-row"
+            onsubmit="return confirm('Заблокировать аккаунт? Все сессии будут завершены, вход закрыт.');">
+        <input type="hidden" name="blocked" value="1">
+        <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);">Заблокировать аккаунт</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- Ученики -->
+<section class="card" style="margin-top:18px;">
+  <div class="card-head"><h2 style="margin:0;">{{ ui.icon('graduation-cap', 18) }} Ученики ({{ d.student_count }})</h2></div>
+  {% if d.students %}
+  <div class="table-scroll table-scroll-x">
+  <table class="table">
+    <thead><tr><th>Имя</th><th>Telegram</th><th>Статус связи</th></tr></thead>
+    <tbody>
+    {% for s in d.students %}
+      <tr>
+        <td><strong>{{ s.name or "—" }}</strong></td>
+        <td class="muted">{% if s.tg_username %}@{{ s.tg_username }}{% elif s.tg_id %}id {{ s.tg_id }}{% else %}не подключён{% endif %}</td>
+        <td>{% if s.relation_status == 'active' %}<span class="badge completed">активен</span>{% else %}<span class="badge submitted">{{ s.relation_status or "—" }}</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}<div class="empty"><p>У репетитора пока нет учеников.</p></div>{% endif %}
+</section>
+
+<section class="grid two" style="margin-top:18px;align-items:start;">
+  <!-- Занятия -->
+  <div class="card">
+    <div class="card-head"><h2 style="margin:0;">{{ ui.icon('book-open', 18) }} Последние занятия</h2></div>
+    {% if d.lessons %}
+    <div class="req-list">
+      {% for l in d.lessons %}
+      <div class="req-row">
+        <div class="req-main">
+          <div class="req-head"><strong>{{ (l.student_profiles.name if l.student_profiles else "") or "—" }}</strong></div>
+          <div class="muted">{{ l.starts_at | msk('%d.%m.%Y %H:%M') if l.starts_at else "—" }}</div>
+        </div>
+        <span class="badge">{{ l.status or "—" }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% if d.lesson_count > 20 %}<p class="muted" style="margin-top:10px;">Показаны последние 20 из {{ d.lesson_count }}.</p>{% endif %}
+    {% else %}<div class="empty"><p>Занятий ещё не было.</p></div>{% endif %}
+  </div>
+
+  <!-- Платежи -->
+  <div class="card">
+    <div class="card-head"><h2 style="margin:0;">{{ ui.icon('credit-card', 18) }} Платежи</h2></div>
+    {% if d.payments %}
+    <div class="req-list">
+      {% for p in d.payments %}
+      <div class="req-row">
+        <div class="req-main">
+          <div class="req-head"><strong>{{ "{:,}".format(p.amount_rub or 0).replace(",", " ") }} ₽</strong></div>
+          <div class="muted">{{ p.created_at | msk('%d.%m.%Y %H:%M') if p.created_at else "—" }}</div>
+        </div>
+        {% if p.status == 'confirmed' %}<span class="badge completed">оплачено</span>{% else %}<span class="badge submitted">{{ p.status or "—" }}</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<div class="empty"><p>Платежей ещё не было.</p></div>{% endif %}
+  </div>
+</section>
+{% endblock %}
