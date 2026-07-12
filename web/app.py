@@ -19,7 +19,7 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 import config as _config
 from application.factory import create_services
 from infrastructure import captcha as _captcha
-from infrastructure.openmodel import complete as _openmodel_complete
+from infrastructure.deepseek import complete as _ai_complete, extract_text as _ai_extract_text
 from application.services.accounts import subscription_info as _subscription_info
 from application.services.timezones import (
     TZ_CHOICES, current_tz, normalize_offset, set_current_offset,
@@ -321,7 +321,7 @@ def _plan_locked(user: dict | None, section: str) -> bool:
 
 
 templates.env.globals["vk_enabled"] = _config.VK_ENABLED
-templates.env.globals["ai_enabled"] = _config.AI_ENABLED and bool(_config.OPENMODEL_API_KEY)
+templates.env.globals["ai_enabled"] = _config.AI_ENABLED and bool(_config.DEEPSEEK_API_KEY)
 # Read at call time: VK_GROUP_ID is resolved from the token at startup.
 templates.env.globals["vk_invite_base"] = lambda: f"https://vk.me/club{_config.VK_GROUP_ID}"
 templates.env.globals["plans_enabled"] = _config.PLANS_ENABLED
@@ -1686,7 +1686,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             return str(cached[5])
 
         snapshot = _build_tutor_ai_snapshot(students, lessons, finance)
-        if _config.AI_ENABLED and _config.OPENMODEL_API_KEY:
+        if _config.AI_ENABLED and _config.DEEPSEEK_API_KEY:
             system = (
                 "Ты готовишь короткую ИИ-сводку для главного экрана кабинета репетитора Pingly. "
                 "Ответ нужен на русском, без заголовков, 3 коротких пункта максимум. "
@@ -1698,7 +1698,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
                 + "\n\nСделай сводку на сегодня: кто чаще переносит, у кого долг, у кого падает посещаемость."
             )
             try:
-                reply = await _openmodel_complete(system, user_text, max_tokens=220, timeout=10.0)
+                reply = await _ai_complete(system, user_text, max_tokens=220, timeout=10.0)
             except Exception:
                 reply = None
             if reply and reply.strip():
@@ -1712,7 +1712,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.post("/api/ai/chat")
     async def ai_chat(request: Request, user: dict = Depends(current_user)) -> Response:
         _require(user, "tutor")
-        if not (_config.AI_ENABLED and _config.OPENMODEL_API_KEY):
+        if not (_config.AI_ENABLED and _config.DEEPSEEK_API_KEY):
             raise HTTPException(status_code=503)
         try:
             body = await request.json()
@@ -1765,26 +1765,21 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
                         + analytics_block
                     )
                 resp = await client.post(
-                    f"{_config.OPENMODEL_BASE_URL}/v1/messages",
-                    headers={"x-api-key": _config.OPENMODEL_API_KEY, "anthropic-version": "2023-06-01"},
+                    f"{_config.DEEPSEEK_BASE_URL}/chat/completions",
+                    headers={"Authorization": f"Bearer {_config.DEEPSEEK_API_KEY}"},
                     json={
-                        "model": _config.OPENMODEL_MODEL,
-                        "system": system_prompt,
-                        "messages": msgs,
+                        "model": _config.DEEPSEEK_MODEL,
+                        "messages": [{"role": "system", "content": system_prompt}, *msgs],
                         "max_tokens": 1500,
                     },
                 )
         except httpx.HTTPError:
-            logging.getLogger("pingly.web").warning("ai chat: openmodel request failed", exc_info=True)
+            logging.getLogger("pingly.web").warning("ai chat: deepseek request failed", exc_info=True)
             return JSONResponse({"error": "Не получилось связаться с помощником — попробуй ещё раз."}, status_code=502)
         if resp.status_code != 200:
-            logging.getLogger("pingly.web").warning("ai chat: openmodel returned %s: %s", resp.status_code, resp.text[:300])
+            logging.getLogger("pingly.web").warning("ai chat: deepseek returned %s: %s", resp.status_code, resp.text[:300])
             return JSONResponse({"error": "Помощник сейчас недоступен — попробуй позже."}, status_code=502)
-        data = resp.json()
-        # The model may emit thinking blocks first — keep only text blocks.
-        text = "\n".join(
-            b.get("text", "") for b in data.get("content", []) if isinstance(b, dict) and b.get("type") == "text"
-        ).strip()
+        text = _ai_extract_text(resp.json())
         if not text:
             return JSONResponse({"error": "Пустой ответ — попробуй переформулировать."}, status_code=502)
         return JSONResponse({"reply": text})

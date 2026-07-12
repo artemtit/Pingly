@@ -12,7 +12,7 @@ from aiogram.types import (
 )
 
 from application.factory import create_services
-from infrastructure.openmodel import complete as _ai_complete
+from infrastructure.deepseek import complete as _ai_complete
 
 router = Router()
 services = create_services()

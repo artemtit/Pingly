@@ -84,11 +84,11 @@ VK_GROUP_ID: int = int(os.getenv("VK_GROUP_ID", "0") or 0)  # filled at startup 
 VK_APP_ID: str = os.getenv("VK_APP_ID", "")
 VK_APP_SECRET: str = os.getenv("VK_APP_SECRET", "")
 
-# AI assistant in the tutor cabinet. Calls the OpenModel gateway
-# (Anthropic Messages format: POST {base}/v1/messages, header x-api-key).
+# AI assistant in the tutor cabinet. Calls the official DeepSeek API
+# (OpenAI-compatible chat completions: POST {base}/chat/completions, Bearer auth).
 # Off until the key is set — the chat button is not rendered while disabled.
 AI_ENABLED: bool = os.getenv("AI_ENABLED", "0") == "1"
-OPENMODEL_API_KEY: str = os.getenv("OPENMODEL_API_KEY", "")
-OPENMODEL_MODEL: str = os.getenv("OPENMODEL_MODEL", "deepseek-v4-flash")
-OPENMODEL_BASE_URL: str = os.getenv("OPENMODEL_BASE_URL", "https://api.openmodel.ai")
+DEEPSEEK_API_KEY: str = os.getenv("DEEPSEEK_API_KEY", "")
+DEEPSEEK_MODEL: str = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+DEEPSEEK_BASE_URL: str = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 AI_DAILY_LIMIT: int = int(os.getenv("AI_DAILY_LIMIT", "40"))  # requests per tutor per day
