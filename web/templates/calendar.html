@@ -24,8 +24,8 @@
     <button type="button" data-status="rescheduled" title="Показать/скрыть"><i class="dot rescheduled"></i>Перенесено</button>
     <button type="button" data-status="cancelled" title="Показать/скрыть"><i class="dot cancelled"></i>Отменено</button>
   </div>
-  {% if is_tutor %}
-  <a class="btn btn-ghost btn-sm" href="/tutor/calendar.ics" style="margin-left:auto;" title="Скачать .ics для Google/Apple Календаря">{{ ui.icon('calendar-check', 15) }} Экспорт .ics</a>
+  {% if is_tutor and cal.view == "month" %}
+  <a class="btn btn-ghost btn-sm" href="/tutor/calendar.ics" style="margin-left:auto;" title="Скачать файл .ics и импортировать в Google / Apple Календарь">{{ ui.icon('calendar-check', 15) }} Экспорт в календарь</a>
   {% endif %}
 </div>
 
