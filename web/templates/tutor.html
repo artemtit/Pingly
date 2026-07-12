@@ -154,15 +154,25 @@
   {% if not plan_locked(user, 'finance') %}
   <div class="card">
     <div class="card-head"><h2 class="h2-ico">{{ ui.icon('wallet') }} Финансы</h2><a class="link-btn" href="/tutor/finance">Подробнее →</a></div>
-    <div class="fin-mini-num"><span data-count="{{ finance.month_earned }}" data-suffix=" ₽">{{ finance.month_earned }} ₽</span></div>
-    <div class="fin-mini-label">заработано в этом месяце</div>
+    <div class="fin-mini-top">
+      <div>
+        <div class="fin-mini-num"><span data-count="{{ finance.month_earned }}" data-suffix=" ₽">{{ finance.month_earned }} ₽</span></div>
+        <div class="fin-mini-label">заработано в этом месяце</div>
+      </div>
+      {% if finance.month_earned_change_pct is not none %}
+      <div class="fin-trend">
+        <span class="badge {{ 'badge-ok' if finance.month_earned_change_pct >= 0 else 'badge-down' }}">{{ '+' if finance.month_earned_change_pct >= 0 else '' }}{{ finance.month_earned_change_pct }}%</span>
+        <div class="fin-trend-label">к прошлому месяцу</div>
+      </div>
+      {% endif %}
+    </div>
     {% if finance.total_unpaid %}
     <div class="fin-due-box">
       <div>Не оплачено: <span class="n">{{ finance.total_unpaid }} ₽</span></div>
       <a href="/tutor/finance">Собрать оплату →</a>
     </div>
     {% else %}
-    <div class="fin-ok-box">{{ ui.icon('check', 15) }} Все проведённые занятия оплачены</div>
+    <div class="fin-ok-box">{{ ui.icon('check', 15) }} Все выплаты получены вовремя и успешно</div>
     {% endif %}
   </div>
   {% endif %}

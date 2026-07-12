@@ -570,8 +570,11 @@ class LessonService:
         lessons = await self.repo.list_lessons_for_tutor(tutor_user_id, 1000)
         now = datetime.now(timezone.utc)
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        prev_year, prev_month = (now.year - 1, 12) if now.month == 1 else (now.year, now.month - 1)
+        prev_month_start = month_start.replace(year=prev_year, month=prev_month)
         by_student: dict[str, dict] = {}
         month_earned = 0
+        prev_month_earned = 0
         total_unpaid = 0
         for l in lessons:
             if l.get("status") != LessonStatus.COMPLETED.value:
@@ -593,10 +596,16 @@ class LessonService:
             started = datetime.fromisoformat(str(l["starts_at"]).replace("Z", "+00:00")) if l.get("starts_at") else None
             if started and started >= month_start:
                 month_earned += price
+            elif started and prev_month_start <= started < month_start:
+                prev_month_earned += price
         students = sorted(by_student.values(), key=lambda r: r["unpaid_sum"], reverse=True)
+        month_change_pct = None
+        if prev_month_earned > 0:
+            month_change_pct = round((month_earned - prev_month_earned) / prev_month_earned * 100)
         return {
             "students": students,
             "month_earned": month_earned,
+            "month_earned_change_pct": month_change_pct,
             "total_unpaid": total_unpaid,
         }
 
