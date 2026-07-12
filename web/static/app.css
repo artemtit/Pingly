@@ -783,13 +783,12 @@ details.series-item:last-child { border-bottom: 0; }
 .badge-ok { background: var(--color-success-light); color: var(--success-text); }
 
 @media (max-width: 640px) {
-  .strow-sub { white-space: normal; }
+  /* Keep every row exactly one line of text tall (the subject used to wrap, so some
+     rows grew taller and their right-side controls drifted up/down vs neighbours).
+     Uniform heights → the action columns line up cleanly down the list. */
   .icon-btn { width: 44px; height: 44px; }
   .tg-handle { display: none; }
-  .tg-chip { padding: 8px; }
-  /* On phones the «Отправить ссылку» button just clutters the row — it's still
-     available inside the student card. Keep only the @-chip + actions. */
-  .btn-invite { display: none; }
+  .tg-chip { height: 44px; padding: 0 10px; }  /* match icon-btn height so controls align */
 }
 
 /* ── Growth features (v005) ─────────────────────────────────── */
@@ -1092,6 +1091,12 @@ mark { background: var(--orange-100); color: inherit; border-radius: 3px; paddin
   border-radius: 999px; border: 1px solid var(--orange-200); background: var(--orange-50);
   color: var(--orange-700); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
   transition: background .15s, border-color .15s, transform .12s; white-space: nowrap; }
+/* Phones: collapse «Отправить ссылку» to a 44px paper-plane button so every right-side
+   control is the same height and the row reads as one aligned cluster. Must sit AFTER
+   the base .btn-invite above, or it loses the cascade and the full-width pill returns. */
+@media (max-width: 640px) {
+  .btn-invite { width: 44px; height: 44px; padding: 0; gap: 0; font-size: 0; justify-content: center; }
+}
 .btn-invite:hover { background: var(--orange-100); border-color: var(--orange-300); transform: translateY(-1px); }
 .btn-invite:focus-visible { outline: 2px solid var(--color-primary-700); outline-offset: 2px; }
 [data-theme="dark"] .btn-invite { background: rgba(249,115,22,.14); border-color: rgba(249,115,22,.4); color: #FDBA74; }
