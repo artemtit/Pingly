@@ -258,6 +258,65 @@ class LessonService:
             await self._schedule_lesson_notifications(lesson, starts_at, student_name, offset)
         return lessons
 
+    async def extend_active_series(self) -> int:
+        """Roll every active series' materialised lessons forward to the HORIZON_DAYS
+        window. A series is generated once at creation, so without this a long-running
+        one silently runs dry after ~8 weeks and vanishes from the calendar. Idempotent:
+        only missing occurrences are created (deduped against ALL existing lessons for
+        the rule, incl. cancelled — so a cancelled occurrence is never resurrected).
+        Returns how many lessons were created. Meant to run daily from the scheduler."""
+        now = datetime.now(timezone.utc)
+        created = 0
+        for tutor in await self.repo.list_tutor_users():
+            offset = int(tutor.get("tz_offset_minutes") or DEFAULT_TZ_OFFSET)
+            for rule in await self.repo.list_schedule_rules(tutor["id"]):
+                try:
+                    created += await self._extend_rule(tutor["id"], rule, offset, now)
+                except Exception:
+                    import logging
+                    logging.getLogger("pingly.lessons").exception(
+                        "extend series failed (rule_id=%s)", rule.get("id"))
+        return created
+
+    async def _extend_rule(self, tutor_user_id: str, rule: dict, offset: int, now: datetime) -> int:
+        weekdays = rule.get("weekdays") or [rule["day_of_week"]]
+        if isinstance(weekdays, str):
+            import json
+            weekdays = json.loads(weekdays)
+        occurrences = self._occurrences(
+            rule.get("recurrence", "weekly"),
+            [int(w) for w in weekdays],
+            int(rule.get("interval_n", 1)),
+            rule["lesson_time"],
+            now,
+            offset,
+        )
+        if not occurrences:
+            return 0
+        # Dedup against every existing lesson for this rule (all statuses), keyed to
+        # the minute, so we never double-book nor revive a cancelled occurrence.
+        existing = await self.repo.list_future_lessons_for_rule(
+            rule["id"], now - timedelta(minutes=1), tutor_user_id, only_active=False)
+        have = set()
+        for l in existing:
+            try:
+                dt = datetime.fromisoformat(str(l["starts_at"]).replace("Z", "+00:00"))
+            except (ValueError, TypeError, KeyError):
+                continue
+            have.add(dt.replace(second=0, microsecond=0))
+        student_id = rule["student_id"]
+        student = await self.repo.get_student_for_tutor(tutor_user_id, student_id)
+        student_name = (student or {}).get("name")
+        created = 0
+        for starts_at in occurrences:
+            if starts_at.replace(second=0, microsecond=0) in have:
+                continue
+            lesson = await self.repo.create_lesson(
+                tutor_user_id, student_id, starts_at, schedule_rule_id=rule["id"])
+            await self._schedule_lesson_notifications(lesson, starts_at, student_name, offset)
+            created += 1
+        return created
+
     async def _schedule_lesson_notifications(self, lesson: dict, starts_at: datetime, student_name: str | None = None, offset: int = DEFAULT_TZ_OFFSET) -> None:
         now = datetime.now(timezone.utc)
         student_user_id = lesson.get("student_user_id")

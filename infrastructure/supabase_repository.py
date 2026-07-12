@@ -423,15 +423,18 @@ class SupabasePinglyRepository:
         result = await q.execute()
         return _one(result)
 
-    async def list_future_lessons_for_rule(self, rule_id: str, after: datetime, tutor_user_id: str | None = None) -> list[dict[str, Any]]:
+    async def list_future_lessons_for_rule(self, rule_id: str, after: datetime, tutor_user_id: str | None = None, only_active: bool = True) -> list[dict[str, Any]]:
         q = (
             self._db().table("lessons_v2")
             .select("*")
             .eq("schedule_rule_id", rule_id)
-            .in_("status", ACTIVE_LESSON_STATUSES)
             .gte("starts_at", after.isoformat())
             .order("starts_at")
         )
+        # only_active=False includes cancelled occurrences too — needed when
+        # regenerating a series so we don't resurrect an occurrence the tutor cancelled.
+        if only_active:
+            q = q.in_("status", ACTIVE_LESSON_STATUSES)
         if tutor_user_id is not None:
             q = q.eq("tutor_user_id", tutor_user_id)
         result = await q.execute()

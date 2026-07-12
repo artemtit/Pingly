@@ -310,6 +310,17 @@ async def _alert_package(tutor_user_id: str, student: dict, status: dict) -> Non
             )
 
 
+async def extend_recurring_series() -> None:
+    """Keep active series topped up to the generation horizon. Series are materialised
+    once at creation, so a long-running one runs dry after ~8 weeks without this."""
+    try:
+        n = await services.lessons.extend_active_series()
+        if n:
+            logger.info("extended recurring series: +%d lessons", n)
+    except Exception:
+        logger.exception("extend_recurring_series failed")
+
+
 def create_scheduler(bot: Bot, vk_bot=None) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="UTC")
     # max_instances=1 + coalesce: if a delivery run is still going when the next
@@ -327,6 +338,13 @@ def create_scheduler(bot: Bot, vk_bot=None) -> AsyncIOScheduler:
     scheduler.add_job(
         enqueue_package_reminders, "interval", hours=12,
         next_run_time=datetime.now() + timedelta(seconds=45),
+    )
+    # Keep recurring series topped up (they're generated once at creation and would
+    # otherwise run dry after ~8 weeks). Idempotent; first run shortly after startup
+    # heals any already-lapsed series on deploy.
+    scheduler.add_job(
+        extend_recurring_series, "interval", hours=12,
+        next_run_time=datetime.now() + timedelta(seconds=20),
     )
     # Morning digest runs hourly (top of the hour); the job itself fires per tutor
     # only when it's 09:00 in that tutor's timezone, so everyone gets it in the

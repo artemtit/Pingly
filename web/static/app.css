@@ -178,7 +178,7 @@ h2 { font-size: 20px; letter-spacing: -.02em; margin-bottom: 14px; }
 .h2-ico .ic {
   width: 1.08em;
   height: 1.08em;
-  vertical-align: -.16em;
+  vertical-align: -.09em;  /* raised to sit centred on the heading text */
   flex: 0 0 auto;
 }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -463,7 +463,7 @@ details.series-item:last-child { border-bottom: 0; }
 .main h2.h2-danger svg.ic { color: var(--color-error); }
 .series-edit-toggle { display: inline-flex; align-items: center; gap: 6px; }
 /* Generic inline icon (from ui.icon) sits on the text baseline outside flex rows. */
-.ic { vertical-align: -0.15em; }
+.ic { vertical-align: -0.07em; }  /* raised: -0.15em sat too low next to text */
 /* Empty-state icon replaces the big decorative emoji. */
 .empty-emoji svg { width: 46px; height: 46px; color: var(--gray-300); }
 [data-theme="dark"] .empty-emoji svg { color: var(--gray-600); }
