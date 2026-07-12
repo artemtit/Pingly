@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from application.repositories import PinglyRepository
 from infrastructure import email as email_client
+from infrastructure import founder_notify
 
 _PBKDF2_ITERATIONS = 200_000
 _TG_AUTH_MAX_AGE = 86400  # accept Telegram login payloads up to 24h old
@@ -102,6 +103,7 @@ class WebAuthService:
         user = await self.repo.create_email_tutor(
             email, hash_password(password), full_name, email_verified=not require_verification,
         )
+        founder_notify.notify(f"🆕 Регистрация (email)\nИмя: {full_name}\nEmail: {email}")
         return user, None
 
     async def login_email(self, email: str, password: str) -> dict | None:
@@ -203,4 +205,8 @@ class WebAuthService:
         existing = await self.repo.get_user_by_tg_id(int(tg_id))
         if existing:
             return existing
-        return await self.repo.upsert_tutor_user(int(tg_id), full_name, username)
+        user = await self.repo.upsert_tutor_user(int(tg_id), full_name, username)
+        founder_notify.notify(
+            f"🆕 Регистрация (Telegram)\nИмя: {full_name}" + (f"\nTG: @{username}" if username else "")
+        )
+        return user

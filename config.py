@@ -26,6 +26,13 @@ SUPPORT_TG_ID: int = int(os.getenv("SUPPORT_TG_ID", "2091126912") or 0)
 SUPPORT_USERNAME: str = os.getenv("SUPPORT_USERNAME", "Pingly_Admin").lstrip("@")
 SUPPORT_EMAIL: str = os.getenv("SUPPORT_EMAIL", "support@pingly-app.ru")
 
+# Founder ops alerts: a *separate* Telegram bot that pings the founder on key business
+# events (new registration, payment). Token lives in .env only. Delivery target defaults
+# to SUPPORT_TG_ID (Артём); the founder must open a chat with this bot once (/start) or
+# Telegram won't deliver. Empty token → alerts silently disabled.
+FOUNDER_ALERT_BOT_TOKEN: str = os.getenv("FOUNDER_ALERT_BOT_TOKEN", "")
+FOUNDER_ALERT_CHAT_ID: int = int(os.getenv("FOUNDER_ALERT_CHAT_ID", str(SUPPORT_TG_ID)) or 0)
+
 # Platega payments (subscriptions). Secrets live in .env, never in git.
 PLATEGA_API_URL: str = os.getenv("PLATEGA_API_URL", "https://app.platega.io")
 PLATEGA_MERCHANT_ID: str = os.getenv("PLATEGA_MERCHANT_ID", "")

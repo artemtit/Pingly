@@ -4,7 +4,7 @@ import logging
 
 import config
 from application.repositories import PinglyRepository
-from infrastructure import platega
+from infrastructure import founder_notify, platega
 
 logger = logging.getLogger("pingly.billing")
 
@@ -203,6 +203,9 @@ class BillingService:
                 activate_uid = transitioned.get("user_id") or user_id
                 await self.repo.activate_subscription(
                     activate_uid, _days_for_period(period), plan if config.PLANS_ENABLED else None
+                )
+                founder_notify.notify(
+                    f"💰 Оплата подтверждена\nТариф: {plan} · {period}\nСумма: {expected_rub} ₽\nUser: {activate_uid}"
                 )
                 # Pay out the referral bonus on the referred tutor's first real
                 # payment. Idempotent in the repo, so renewals never re-trigger it.

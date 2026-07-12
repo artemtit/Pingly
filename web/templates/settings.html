@@ -112,16 +112,6 @@
     </form>
   </div>
 
-  <div class="card" style="border-color: var(--color-error);">
-    <h2 class="h2-danger" style="color: var(--color-error);">{{ ui.icon('trash', 16) }} Опасная зона</h2>
-    <p class="muted" style="margin:0 0 10px;">Удаление аккаунта необратимо: {% if user.role == 'tutor' %}вместе с ним удаляются все твои ученики, занятия, домашки и история.{% else %}все твои данные будут стёрты.{% endif %} Восстановить не получится.</p>
-    <form method="post" action="/account/delete" class="form" data-confirm="Аккаунт и все связанные данные будут стёрты без возможности восстановить." data-confirm-title="Удалить аккаунт навсегда?" data-confirm-ok="Удалить навсегда" data-confirm-danger>
-      <label>Для подтверждения введи слово <strong>удалить</strong>
-        <input class="input" id="del-confirm" name="confirm" autocomplete="off" placeholder="удалить" required></label>
-      <button class="btn btn-sm btn-danger" id="del-acc-btn" type="submit" style="margin-top:8px;" disabled>Удалить аккаунт навсегда</button>
-    </form>
-  </div>
-
   {% if user.role == "tutor" %}
   {% set sub = subscription_info(user) %}
   <div class="card">
@@ -256,6 +246,16 @@
     {% if support_username %}
     <p class="muted" style="margin-top:12px;font-size:13px;">Или напрямую: <a href="https://t.me/{{ support_username }}" target="_blank" rel="noopener">@{{ support_username }}</a></p>
     {% endif %}
+  </div>
+
+  <div class="card" style="border-color: var(--color-error);">
+    <h2 class="h2-danger" style="color: var(--color-error);">{{ ui.icon('trash', 16) }} Опасная зона</h2>
+    <p class="muted" style="margin:0 0 10px;">Удаление аккаунта необратимо: {% if user.role == 'tutor' %}вместе с ним удаляются все твои ученики, занятия, домашки и история.{% else %}все твои данные будут стёрты.{% endif %} Восстановить не получится.</p>
+    <form method="post" action="/account/delete" class="form" data-confirm="Аккаунт и все связанные данные будут стёрты без возможности восстановить." data-confirm-title="Удалить аккаунт навсегда?" data-confirm-ok="Удалить навсегда" data-confirm-danger>
+      <label>Для подтверждения введи слово <strong>удалить</strong>
+        <input class="input" id="del-confirm" name="confirm" autocomplete="off" placeholder="удалить" required></label>
+      <button class="btn btn-sm btn-danger" id="del-acc-btn" type="submit" style="margin-top:8px;" disabled>Удалить аккаунт навсегда</button>
+    </form>
   </div>
 </section>
 

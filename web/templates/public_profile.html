@@ -133,6 +133,7 @@
   .chips { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
   .chip { display: inline-flex; align-items: center; gap: 8px; padding: 10px 15px; background: var(--chip-bg); border: 1px solid var(--border); border-radius: var(--radius-chip); font-size: 13.5px; font-weight: 500; color: var(--fg2); box-shadow: 0 10px 24px -22px rgb(15 23 42 / 0.24); }
   .chip svg { width: 17px; height: 17px; color: var(--orange-500); flex: 0 0 auto; }
+  :root[data-dark] .chip { color: #CBD5E1; }
 
   .card { margin-top: 26px; border-radius: var(--radius-card); padding: 24px 20px 22px; }
   .card-head { display: flex; align-items: center; gap: 11px; margin-bottom: 20px; }
@@ -147,6 +148,7 @@
   .field .opt { font-weight: 500; color: var(--fg2); }
   .input-shell { position: relative; display: flex; align-items: center; }
   .input-shell > svg { position: absolute; left: 14px; width: 18px; height: 18px; color: var(--fg2); pointer-events: none; }
+  :root[data-dark] .input-shell > svg { color: #CBD5E1; }
   .input, .textarea { width: 100%; font-family: var(--font); font-size: 16px; color: var(--fg1); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-field); transition: border-color 150ms var(--ease), box-shadow 150ms var(--ease), background 150ms var(--ease); outline: none; backdrop-filter: blur(14px) saturate(160%); }
   .input { height: 50px; padding: 0 14px 0 42px; }
   .textarea { min-height: 88px; padding: 13px 14px; resize: vertical; line-height: 1.5; }
