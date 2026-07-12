@@ -500,22 +500,35 @@ class SupabasePinglyRepository:
         )
         return _one(result)
 
-    async def list_lessons_for_tutor(self, tutor_user_id: str, limit: int = 100) -> list[dict[str, Any]]:
+    # Ascending order keeps chronological callers (dashboard «ближайшие», finance)
+    # correct, but ascending + a plain limit silently starves the FUTURE once a
+    # long-running tutor accumulates more past lessons than the cap — the window
+    # fills up with ancient history and cuts off upcoming ones. So we drop the
+    # ancient past (>~7 months, still covers finance's 6-month lookback) and lift
+    # the cap high enough that the whole recent+future window always fits.
+    _CALENDAR_WINDOW_DAYS = 215
+    _CALENDAR_LIMIT = 1000
+
+    async def list_lessons_for_tutor(self, tutor_user_id: str, limit: int = _CALENDAR_LIMIT) -> list[dict[str, Any]]:
+        since = (datetime.now(timezone.utc) - timedelta(days=self._CALENDAR_WINDOW_DAYS)).isoformat()
         result = await (
             self._db().table("lessons_v2")
             .select("*, student_profiles(name, tg_username)")
             .eq("tutor_user_id", tutor_user_id)
+            .gte("starts_at", since)
             .order("starts_at")
             .limit(limit)
             .execute()
         )
         return result.data
 
-    async def list_lessons_for_student_user(self, student_user_id: str, limit: int = 100) -> list[dict[str, Any]]:
+    async def list_lessons_for_student_user(self, student_user_id: str, limit: int = _CALENDAR_LIMIT) -> list[dict[str, Any]]:
+        since = (datetime.now(timezone.utc) - timedelta(days=self._CALENDAR_WINDOW_DAYS)).isoformat()
         result = await (
             self._db().table("lessons_v2")
             .select("*, student_profiles(name)")
             .eq("student_user_id", student_user_id)
+            .gte("starts_at", since)
             .order("starts_at")
             .limit(limit)
             .execute()
