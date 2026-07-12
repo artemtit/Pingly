@@ -49,6 +49,7 @@
       </div>
       {% if is_tutor %}
       <div class="day-lesson-actions">
+        {% if lesson.status != "cancelled" %}
         <details class="resched lesson-topic-edit">
           <summary class="btn btn-ghost btn-sm">{{ ui.icon('file-pen', 15) }} {{ 'Изменить тему' if lesson.comment else 'Тема урока' }}</summary>
           <form method="post" action="/tutor/lessons/{{ lesson.id }}/comment" class="resched-form">
@@ -57,6 +58,7 @@
             <button class="btn btn-secondary btn-sm">Сохранить тему</button>
           </form>
         </details>
+        {% endif %}
         {% if lesson.status in ("scheduled", "confirmed", "reschedule_requested") %}
         <form method="post" action="/tutor/lessons/{{ lesson.id }}/complete"><button class="btn btn-primary btn-sm">{{ ui.icon('circle-check', 15) }} Провести</button></form>
         <form method="post" action="/tutor/lessons/{{ lesson.id }}/cancel" data-confirm="Отменить это занятие? Ученик увидит, что оно отменено." data-confirm-title="Отменить занятие?" data-confirm-ok="Отменить"><button class="btn btn-ghost btn-sm">{{ ui.icon('circle-x', 15) }} Отменить</button></form>
