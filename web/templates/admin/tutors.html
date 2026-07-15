@@ -42,7 +42,7 @@
         <td>
           {% if t.is_blocked %}
             <span class="badge cancelled">Заблокирован</span>
-          {% elif t.subscription_status == 'active' %}
+          {% elif t.subscription_status == 'active' and t.access_active %}
             <span class="badge reviewed">Подписка</span>
           {% elif t.access_active %}
             <span class="badge submitted">Триал</span><div class="muted" style="font-size:12px;">до {{ (t.trial_ends_at or "")[:10] }}</div>

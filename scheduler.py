@@ -12,7 +12,7 @@ from application.factory import create_services
 from application.services.accounts import subscription_info
 from application.services.lessons import package_status
 from application.services.timezones import DEFAULT_TZ_OFFSET, tz_from_offset
-from config import WEB_BASE_URL
+from config import PAYWALL_ENABLED, WEB_BASE_URL
 from vk_bot import lesson_keyboard as vk_lesson_keyboard
 
 logger = logging.getLogger("pingly.scheduler")
@@ -100,6 +100,15 @@ async def send_due_notifications(tg_bot: Bot, vk_bot=None) -> None:
             if starts_at is not None and now >= starts_at:
                 await services.notifications.mark_sent(notification["id"])
                 continue
+            # Reminders are the paid feature — when the hard paywall is on, a
+            # tutor whose trial/subscription has lapsed shouldn't keep getting
+            # free delivery to their students just because it was queued earlier.
+            tutor_id = (lesson or {}).get("tutor_user_id")
+            if PAYWALL_ENABLED and tutor_id:
+                tutor = await services.repo.get_user_by_id(tutor_id)
+                if tutor and not subscription_info(tutor)["active"]:
+                    await services.notifications.mark_sent(notification["id"])
+                    continue
             scheduled_at = _parse_dt(notification.get("scheduled_for"))
             if scheduled_at is not None and now - scheduled_at > _REMINDER_STALE_AFTER:
                 title = "⏰ Скоро занятие"

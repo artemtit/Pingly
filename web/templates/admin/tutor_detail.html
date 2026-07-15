@@ -10,7 +10,7 @@
   <div>
     {% if u.is_blocked %}
       <span class="badge cancelled">Заблокирован</span>
-    {% elif u.subscription_status == 'active' %}
+    {% elif u.subscription_status == 'active' and d.access_active %}
       <span class="badge reviewed">Подписка</span>
     {% elif d.access_active %}
       <span class="badge submitted">Триал</span>

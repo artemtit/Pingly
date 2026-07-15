@@ -19,9 +19,10 @@ def _parse_dt(raw: object) -> datetime | None:
 
 
 def _is_active(user: dict, now: datetime) -> bool:
-    """Paid-active or still within the trial/access window."""
-    if (user.get("subscription_status") or "").lower() == "active":
-        return True
+    """Within the trial/paid access window. trial_ends_at doubles as the paid
+    period's deadline (see activate_subscription) — a subscription_status of
+    'active' alone doesn't mean access is current, only that the last period
+    was a paid one; it must still be within trial_ends_at."""
     ends = _parse_dt(user.get("trial_ends_at"))
     return bool(ends and ends > now)
 

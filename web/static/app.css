@@ -1060,11 +1060,17 @@ a.stat:hover .stat-go { color: var(--orange-500); transform: translateX(2px); }
 .hw-quick-row { display: flex; gap: 8px; } .hw-quick-row > * { flex: 1; }
 
 /* Overview: finance mini-block */
-.fin-mini-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.fin-mini-top { position: relative; padding-right: 118px; }
 .fin-mini-num { font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
 .fin-mini-label { font-size: 13px; color: var(--fg3); margin-top: 2px; }
-.fin-trend { text-align: right; }
-.fin-trend-label { font-size: 12px; color: var(--fg3); margin-top: 4px; }
+.fin-trend {
+  position: absolute; top: 0; right: 0; text-align: center;
+  border-radius: 14px; padding: 10px 16px; white-space: nowrap;
+  background: var(--color-success-light); color: var(--success-text);
+}
+.fin-trend.fin-trend-down { background: var(--color-error-light); color: var(--error-text); }
+.fin-trend .fin-trend-pct { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+.fin-trend-label { font-size: 11px; margin-top: 3px; opacity: .85; }
 .badge-down { background: var(--color-error-light); color: var(--error-text); }
 .fin-due-box { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--color-error-light);
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }

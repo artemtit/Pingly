@@ -35,8 +35,15 @@ class StudentService:
     async def create_student_for_user(
         self, tutor_user_id: str, name: str, tg_username: str = "", subject_summary: str | None = None,
     ) -> dict:
-        token = secrets.token_urlsafe(12)
         username = (tg_username or "").strip().lstrip("@")
+        if username:
+            # Guards against an accidental double-submit (or re-adding the same
+            # student) silently creating a second profile with its own invite
+            # link and its own lesson schedule.
+            for existing in await self.repo.list_tutor_students(tutor_user_id):
+                if (existing.get("tg_username") or "").lower() == username.lower():
+                    return existing
+        token = secrets.token_urlsafe(12)
         student = await self.repo.create_invited_student(tutor_user_id, name.strip(), username, token)
         subject = (subject_summary or "").strip()
         if subject:

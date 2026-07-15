@@ -100,9 +100,15 @@ class WebAuthService:
         existing = await self.repo.get_user_by_email(email)
         if existing:
             return None, "Аккаунт с таким email уже есть — войди"
-        user = await self.repo.create_email_tutor(
-            email, hash_password(password), full_name, email_verified=not require_verification,
-        )
+        try:
+            user = await self.repo.create_email_tutor(
+                email, hash_password(password), full_name, email_verified=not require_verification,
+            )
+        except Exception:
+            # Two near-simultaneous registrations with the same email both pass
+            # the check above; the DB's unique constraint rejects the second
+            # insert — surface it as the same friendly message, not a 500.
+            return None, "Аккаунт с таким email уже есть — войди"
         founder_notify.notify(f"🆕 Регистрация (email)\nИмя: {full_name}\nEmail: {email}")
         return user, None
 
@@ -205,7 +211,15 @@ class WebAuthService:
         existing = await self.repo.get_user_by_tg_id(int(tg_id))
         if existing:
             return existing
-        user = await self.repo.upsert_tutor_user(int(tg_id), full_name, username)
+        try:
+            user = await self.repo.upsert_tutor_user(int(tg_id), full_name, username)
+        except Exception:
+            # Two near-simultaneous widget logins for the same tg_id both pass the
+            # check above; the DB's unique constraint rejects the second insert —
+            # re-fetch instead of surfacing a 500.
+            user = await self.repo.get_user_by_tg_id(int(tg_id))
+            if not user:
+                raise
         founder_notify.notify(
             f"🆕 Регистрация (Telegram)\nИмя: {full_name}" + (f"\nTG: @{username}" if username else "")
         )

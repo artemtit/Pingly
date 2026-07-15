@@ -20,7 +20,11 @@ def subscription_info(user: dict) -> dict:
     return {
         "status": status,
         "days_left": days_left,
-        "active": status == "active" or (days_left is not None and days_left > 0),
+        # trial_ends_at doubles as the access-window deadline for both trial and
+        # paid periods (see activate_subscription) — "active" must follow it, not
+        # the status label alone, otherwise a tutor who paid once stays "active"
+        # forever even after the paid period lapses without renewal.
+        "active": days_left is not None and days_left > 0,
         "trial_ends_at": raw,
     }
 

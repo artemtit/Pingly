@@ -160,8 +160,8 @@
         <div class="fin-mini-label">заработано в этом месяце</div>
       </div>
       {% if finance.month_earned_change_pct is not none %}
-      <div class="fin-trend">
-        <span class="badge {{ 'badge-ok' if finance.month_earned_change_pct >= 0 else 'badge-down' }}">{{ '+' if finance.month_earned_change_pct >= 0 else '' }}{{ finance.month_earned_change_pct }}%</span>
+      <div class="fin-trend{{ '' if finance.month_earned_change_pct >= 0 else ' fin-trend-down' }}">
+        <div class="fin-trend-pct">{{ '+' if finance.month_earned_change_pct >= 0 else '' }}{{ finance.month_earned_change_pct }}%</div>
         <div class="fin-trend-label">к прошлому месяцу</div>
       </div>
       {% endif %}
