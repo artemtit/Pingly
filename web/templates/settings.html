@@ -9,6 +9,7 @@
 </div>
 
 {% if saved == 'support' %}<div class="trial-banner">{{ ui.icon('check', 15) }} Сообщение отправлено — ответим в Telegram</div>
+{% elif saved == 'delete_code' %}<div class="trial-banner">{{ ui.icon('check', 15) }} Код отправлен на {{ user.email }} — введи его ниже, чтобы подтвердить удаление</div>
 {% elif saved %}<div class="trial-banner">{{ ui.icon('check', 15) }} Сохранено</div>{% endif %}
 {% if paid == '1' %}{% set _ps = subscription_info(user) %}
   {% if _ps.status == 'active' %}<div class="trial-banner">{{ ui.icon('check', 15) }} Оплата прошла — подписка активна. Спасибо!</div>
@@ -113,6 +114,23 @@
   </div>
 
   {% if user.role == "tutor" %}
+  <div class="card">
+    <h2>{{ ui.icon('bell', 18) }} Напоминания</h2>
+    <p class="muted" style="margin-bottom:10px;">За сколько часов до занятия ученик получает напоминание с кнопками «Буду / Отменяю».</p>
+    <form method="post" action="/settings/reminder-hours" class="form">
+      <label>Напомнить за
+        {% set cur_rh = user.reminder_hours if user.reminder_hours is not none else 2 %}
+        <select class="input" name="reminder_hours" onchange="this.form.submit()">
+          {% for h in range(1, 25) %}
+          <option value="{{ h }}" {% if h == cur_rh %}selected{% endif %}>{{ h }} {{ h | ru_hours }}</option>
+          {% endfor %}
+        </select></label>
+      <noscript><button class="btn btn-secondary btn-sm" type="submit" style="margin-top:8px;">Сохранить</button></noscript>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if user.role == "tutor" %}
   {% set sub = subscription_info(user) %}
   <div class="card">
     <h2>{{ ui.icon('gem', 18) }} Подписка</h2>
@@ -138,7 +156,6 @@
     {% if sub.trial_ends_at %}
     <div class="settings-row"><span class="muted">{{ 'Пробный до' if sub.status != 'active' else 'Действует до' }}</span><strong>{{ sub.trial_ends_at | msk('%d.%m.%Y') }}</strong></div>
     {% endif %}
-    <div class="settings-row"><span class="muted">Цена</span><strong>{% if plans_enabled %}Pro {{ price_pro }} ₽ · Max {{ price_max }} ₽{% else %}{{ price or 990 }} ₽/мес · {{ price_year or 9900 }} ₽/год{% endif %}</strong></div>
     {% if payments_enabled and not plans_enabled %}
     {% set verb = 'Продлить' if sub.status == 'active' else 'Оформить' %}
     {% set year_save = (price or 990) * 12 - (price_year or 9900) %}
@@ -251,9 +268,18 @@
   <div class="card" style="border-color: var(--color-error);">
     <h2 class="h2-danger" style="color: var(--color-error);">{{ ui.icon('trash', 16) }} Опасная зона</h2>
     <p class="muted" style="margin:0 0 10px;">Удаление аккаунта необратимо: {% if user.role == 'tutor' %}вместе с ним удаляются все твои ученики, занятия, домашки и история.{% else %}все твои данные будут стёрты.{% endif %} Восстановить не получится.</p>
+    {% if user.email %}
+    <form method="post" action="/account/delete/send-code" style="margin-bottom:10px;">
+      <button class="btn btn-secondary btn-sm" type="submit">Прислать код на {{ user.email }}</button>
+    </form>
+    {% endif %}
     <form method="post" action="/account/delete" class="form" data-confirm="Аккаунт и все связанные данные будут стёрты без возможности восстановить." data-confirm-title="Удалить аккаунт навсегда?" data-confirm-ok="Удалить навсегда" data-confirm-danger>
       <label>Для подтверждения введи слово <strong>удалить</strong>
         <input class="input" id="del-confirm" name="confirm" autocomplete="off" placeholder="удалить" required></label>
+      {% if user.email %}
+      <label style="margin-top:10px;">Код из письма
+        <input class="input" id="del-code" name="code" autocomplete="off" inputmode="numeric" maxlength="6" placeholder="000000" required></label>
+      {% endif %}
       <button class="btn btn-sm btn-danger" id="del-acc-btn" type="submit" style="margin-top:8px;" disabled>Удалить аккаунт навсегда</button>
     </form>
   </div>
@@ -296,10 +322,16 @@ function copyText(btn) {
 // «Опасная зона»: кнопка удаления серая и неактивна, пока не введено ровно «удалить».
 (function(){
   var inp = document.getElementById('del-confirm');
+  var code = document.getElementById('del-code');
   var btn = document.getElementById('del-acc-btn');
   if (!inp || !btn) return;
-  function sync(){ btn.disabled = inp.value.trim().toLowerCase() !== 'удалить'; }
+  function sync(){
+    var ok = inp.value.trim().toLowerCase() === 'удалить';
+    if (code) ok = ok && code.value.trim().length === 6;
+    btn.disabled = !ok;
+  }
   inp.addEventListener('input', sync);
+  if (code) code.addEventListener('input', sync);
   sync();
 })();
 </script>

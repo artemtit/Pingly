@@ -12,7 +12,7 @@ from application.factory import create_services
 from application.services.accounts import subscription_info
 from application.services.lessons import package_status
 from application.services.timezones import DEFAULT_TZ_OFFSET, tz_from_offset
-from config import PAYWALL_ENABLED, WEB_BASE_URL
+from config import PAYMENTS_ENABLED, PAYWALL_ENABLED, WEB_BASE_URL
 from vk_bot import lesson_keyboard as vk_lesson_keyboard
 
 logger = logging.getLogger("pingly.scheduler")
@@ -330,6 +330,19 @@ async def extend_recurring_series() -> None:
         logger.exception("extend_recurring_series failed")
 
 
+async def reconcile_pending_payments() -> None:
+    """A payment can go through at Platega while both the webhook AND the
+    tutor's return to /tutor/settings?paid=1 fail to happen (closed the bank
+    app tab, network blip, our own downtime) — without this sweep, that's real
+    money taken with no access granted until someone notices by hand."""
+    try:
+        n = await services.billing.reconcile_pending_payments()
+        if n:
+            logger.info("reconciled pending payments: +%d activated", n)
+    except Exception:
+        logger.exception("reconcile_pending_payments failed")
+
+
 def create_scheduler(bot: Bot, vk_bot=None) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="UTC")
     # max_instances=1 + coalesce: if a delivery run is still going when the next
@@ -359,4 +372,9 @@ def create_scheduler(bot: Bot, vk_bot=None) -> AsyncIOScheduler:
     # only when it's 09:00 in that tutor's timezone, so everyone gets it in the
     # morning regardless of where they are.
     scheduler.add_job(enqueue_morning_digests, "cron", minute=0)
+    if PAYMENTS_ENABLED:
+        scheduler.add_job(
+            reconcile_pending_payments, "interval", minutes=30,
+            next_run_time=datetime.now() + timedelta(minutes=1),
+        )
     return scheduler

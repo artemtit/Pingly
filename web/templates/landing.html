@@ -424,22 +424,21 @@
       <span class="over">Отзывы</span>
       <h2>Репетиторы о Pingly</h2>
     </div>
-    <div class="grid-3 reviews-grid">
-      <article class="lcard review" data-reveal>
-        <span class="review-tag">математика</span>
-        <p>«Главная боль — напомнить и уточнить за пару часов до занятия. Pingly делает это за меня.»</p>
-        <div class="review-id"><span class="review-av">А</span><div><div class="review-name">Анна Олеговна</div><div class="review-role">репетитор по математике</div></div></div>
+  </div>
+  <div class="reviews-marquee" data-reveal>
+    <div class="reviews-track">
+      {% macro review_card(tag, quote, initial, name, role, hidden=false) %}
+      <article class="lcard review"{% if hidden %} aria-hidden="true"{% endif %}>
+        <span class="review-tag">{{ tag }}</span>
+        <p>{{ quote }}</p>
+        <div class="review-id"><span class="review-av">{{ initial }}</span><div><div class="review-name">{{ name }}</div><div class="review-role">{{ role }}</div></div></div>
       </article>
-      <article class="lcard review" data-reveal style="--d:.1s">
-        <span class="review-tag">английский</span>
-        <p>«Раньше каждому писала вручную "у нас сегодня урок?". Теперь бот спрашивает сам.»</p>
-        <div class="review-id"><span class="review-av">Е</span><div><div class="review-name">Екатерина Алексеевна</div><div class="review-role">репетитор по английскому</div></div></div>
-      </article>
-      <article class="lcard review" data-reveal style="--d:.2s">
-        <span class="review-tag">языки</span>
-        <p>«Ученики отменяли за 15 минут. Ввела правило 2 часов — а бот его сам напоминает.»</p>
-        <div class="review-id"><span class="review-av">Э</span><div><div class="review-name">Эля</div><div class="review-role">репетитор по языкам</div></div></div>
-      </article>
+      {% endmacro %}
+      {% for dup in [false, true] %}
+      {{ review_card('математика', '«Главная боль — напомнить и уточнить за пару часов до занятия. Pingly делает это за меня.»', 'А', 'Анна Олеговна', 'репетитор по математике', dup) }}
+      {{ review_card('английский', '«Раньше каждому писала вручную "у нас сегодня урок?". Теперь бот спрашивает сам.»', 'Е', 'Екатерина Алексеевна', 'репетитор по английскому', dup) }}
+      {{ review_card('языки', '«Ученики отменяли за 15 минут. Ввела правило 2 часов — а бот его сам напоминает.»', 'Э', 'Эля', 'репетитор по языкам', dup) }}
+      {% endfor %}
     </div>
   </div>
 </section>

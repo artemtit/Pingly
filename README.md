@@ -135,7 +135,7 @@ Pingly/
 ├── scheduler.py                    # APScheduler: доставка уведомлений, подписки
 ├── vk_bot.py                       # VK-бот (Long Poll)
 ├── requirements.txt                # Зависимости Python
-├── supabase_schema.sql             # MVP-схема БД
+├── supabase_schema.sql             # УСТАРЕЛ — не запускать, см. файл
 ├── design-decisions.md             # Архитектурные решения
 ├── design-tokens.css               # Дизайн-система
 │
@@ -253,42 +253,56 @@ pip install -r requirements.txt
 2. Откройте **SQL Editor → New query**.
 3. Выполните миграции **последовательно**:
 
-```sql
--- 1. MVP-схема
-\i supabase_schema.sql
+`supabase_schema.sql` в корне репозитория — устаревший артефакт из до-платформенной версии MVP, он больше не соответствует коду и запускать его не нужно. Актуальная схема целиком собирается из `migrations/`:
 
--- 2. Платформа v2
+```sql
+-- 1. Платформа v2
 \i migrations/001_product_platform.sql
 
--- 3. RLS-политики
+-- 2. RLS-политики
 \i migrations/002_server_runtime_policies.sql
 
--- 4. Рекуррентность + CRM
+-- 3. Рекуррентность + CRM
 \i migrations/003_platform_full.sql
 
--- 5. Веб-аккаунты
+-- 4. Веб-аккаунты
 \i migrations/004_web_accounts.sql
 
--- 6. Рост: платежи, шаблоны, публичные страницы
+-- 5. Рост: платежи, шаблоны, публичные страницы
 \i migrations/005_growth_features.sql
 
--- 7. RLS для growth-таблиц
+-- 6. RLS для growth-таблиц
 \i migrations/006_growth_rls_policies.sql
 
--- 8. Платежи Platega
+-- 7. Платежи Platega
 \i migrations/007_subscription_payments.sql
 
--- 9. Абонементы
+-- 8. Абонементы
 \i migrations/008_lesson_packages.sql
 
--- 10. Подтверждение email
+-- 9. Подтверждение email
 \i migrations/009_email_verification.sql
 
--- 11. Админ-флаг
+-- 10. Админ-флаг
 \i migrations/013_admin_flag.sql
 
--- 12. Реферальные награды
+-- 11. Реферальные награды
 \i migrations/014_referral_reward_on_pay.sql
+
+-- 12. Статус доставки в Telegram
+\i migrations/015_tg_delivery_status.sql
+
+-- 13. Тихие часы уведомлений
+\i migrations/016_notify_quiet_hours.sql
+
+-- 14. Часовой пояс репетитора
+\i migrations/017_tutor_timezone.sql
+
+-- 15. Версионирование токена сессии
+\i migrations/018_token_version.sql
+
+-- 16. Блокировка аккаунтов админом
+\i migrations/019_admin_block.sql
 ```
 
 ### 5. Настройка переменных окружения

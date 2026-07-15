@@ -88,3 +88,9 @@ class AccountService:
     async def set_timezone(self, user_id: str, offset_minutes: int) -> None:
         """F6: set the user's timezone (UTC offset in minutes)."""
         await self.repo.set_tz_offset(user_id, offset_minutes)
+
+    async def set_reminder_hours(self, user_id: str, hours: int) -> None:
+        """How long before a lesson the student gets the reminder ping. Clamped
+        to a sane 1–24h window so a fat-fingered value can't misfire."""
+        hours = max(1, min(24, hours))
+        await self.repo.set_reminder_hours(user_id, hours)

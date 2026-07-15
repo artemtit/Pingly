@@ -1,4 +1,7 @@
 * { box-sizing: border-box; }
+/* Matches body's base tone so iOS/Android momentum-scroll overscroll (which
+   reveals html's background, not body's) never flashes a plain white strip. */
+html { background: #F4F5F8; }
 body {
   margin: 0;
   min-height: 100vh;
@@ -731,8 +734,8 @@ details.series-item:last-child { border-bottom: 0; }
   .day-lesson { flex-wrap: wrap; }
   .day-lesson-actions { width: 100%; }
   .legend { margin-left: 0; }
-  .cal-nav { align-items: stretch; }
-  .cal-nav .btn { width: 100%; }
+  .cal-nav { flex-wrap: nowrap; align-items: stretch; gap: 6px; }
+  .cal-nav .btn { flex: 1 1 0; width: auto; min-width: 0; padding: 8px 6px; font-size: 13px; white-space: nowrap; }
   .view-switch { width: 100%; justify-content: space-between; }
   .view-switch a { flex: 1 1 0; text-align: center; padding-inline: 10px; }
   .search { flex-direction: column; }
@@ -1060,11 +1063,11 @@ a.stat:hover .stat-go { color: var(--orange-500); transform: translateX(2px); }
 .hw-quick-row { display: flex; gap: 8px; } .hw-quick-row > * { flex: 1; }
 
 /* Overview: finance mini-block */
-.fin-mini-top { position: relative; padding-right: 118px; }
+.fin-mini-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .fin-mini-num { font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
 .fin-mini-label { font-size: 13px; color: var(--fg3); margin-top: 2px; }
 .fin-trend {
-  position: absolute; top: 0; right: 0; text-align: center;
+  flex-shrink: 0; text-align: center;
   border-radius: 14px; padding: 10px 16px; white-space: nowrap;
   background: var(--color-success-light); color: var(--success-text);
 }
@@ -1072,6 +1075,10 @@ a.stat:hover .stat-go { color: var(--orange-500); transform: translateX(2px); }
 .fin-trend .fin-trend-pct { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
 .fin-trend-label { font-size: 11px; margin-top: 3px; opacity: .85; }
 .badge-down { background: var(--color-error-light); color: var(--error-text); }
+/* "Показать ещё N" — the toggle itself should go away once expanded, not
+   sit there doing nothing while the extra rows are already visible below it. */
+.more-future[open] > summary { display: none; }
+
 .fin-due-box { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--color-error-light);
   display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .fin-due-box .n { font-weight: 800; color: var(--error-text); font-size: 17px; }

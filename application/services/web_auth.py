@@ -119,6 +119,26 @@ class WebAuthService:
             return None
         return user
 
+    async def link_email(self, user_id: str, email: str, password: str) -> tuple[dict | None, str | None]:
+        """Attach email+password to an account that was created via Telegram and
+        has none yet. Mandatory security step (see /link-email): keeps every
+        account reachable outside Telegram and lets a duplicate email
+        registration be caught here instead of silently creating a second,
+        empty tutor account."""
+        email = (email or "").strip().lower()
+        if "@" not in email or "." not in email.split("@")[-1]:
+            return None, "Похоже, email введён неверно"
+        if len(password) < 8:
+            return None, "Пароль должен быть не короче 8 символов"
+        existing = await self.repo.get_user_by_email(email)
+        if existing and existing["id"] != user_id:
+            return None, "Этот email уже используется другим аккаунтом Pingly. Войди по email, а Telegram привяжи в настройках."
+        try:
+            user = await self.repo.set_user_email_password(user_id, email, hash_password(password))
+        except Exception:
+            return None, "Этот email уже используется другим аккаунтом Pingly. Войди по email, а Telegram привяжи в настройках."
+        return user, None
+
     # ---------------- Email verification codes ----------------
     async def send_verification_code(self, user: dict) -> tuple[bool, str | None]:
         """Generate, store and email a fresh 6-digit code. Returns (ok, error)."""
@@ -157,6 +177,29 @@ class WebAuthService:
                 pass
         verified = await self.repo.mark_email_verified(user["id"])
         return verified or user, None
+
+    async def send_delete_code(self, user: dict) -> tuple[bool, str | None]:
+        """Generate, store and email a 6-digit code that must be entered before an
+        account can be deleted. Reuses the same verification_code column as
+        registration — the two flows never overlap for one account."""
+        return await self.send_verification_code(user)
+
+    def check_delete_code(self, user: dict, code: str) -> bool:
+        """Compare a submitted code against the one on file, without the
+        email_verified short-circuit verify_email_code has (an already-verified
+        account must still enter the fresh code to delete itself)."""
+        stored = user.get("verification_code")
+        code = (code or "").strip()
+        if not stored or not code or not hmac.compare_digest(str(stored), code):
+            return False
+        expires = user.get("verification_expires_at")
+        if expires:
+            try:
+                if datetime.fromisoformat(str(expires).replace("Z", "+00:00")) < datetime.now(timezone.utc):
+                    return False
+            except ValueError:
+                pass
+        return True
 
     async def resend_code(self, email: str) -> bool:
         """Re-send a code for an unverified account. No-op if already verified."""
@@ -200,7 +243,26 @@ class WebAuthService:
         await self.repo.set_user_telegram(user_id, tg_id, data.get("username"))
         return True, None
 
+    async def find_tg_account(self, data: dict[str, str]) -> tuple[dict | None, bool]:
+        """Look up (never create) an account by Telegram widget data. Returns
+        (user_or_None, signature_ok) so the /login flow can tell "bad Telegram
+        payload" apart from "valid payload, no account linked yet" — the latter
+        must NOT silently create a duplicate for someone who already has an
+        email account (see login_telegram_widget's docstring)."""
+        if not self.verify_telegram_widget(data):
+            return None, False
+        tg_id = data.get("id")
+        if not tg_id or not str(tg_id).isdigit():
+            return None, False
+        return await self.repo.get_user_by_tg_id(int(tg_id)), True
+
     async def login_telegram_widget(self, data: dict[str, str]) -> dict | None:
+        """Log in by Telegram widget, creating a brand-new tutor account if this
+        tg_id isn't linked to anyone yet. Only safe to call from a REGISTER
+        context — on /login use find_tg_account instead, since this always
+        creates on a miss and can't tell "new user" from "existing email-only
+        user who forgot to link Telegram" apart (the widget never exposes
+        email, so there's nothing to match against)."""
         if not self.verify_telegram_widget(data):
             return None
         tg_id = data.get("id")

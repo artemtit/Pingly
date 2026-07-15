@@ -21,6 +21,7 @@ from application.factory import create_services
 from infrastructure import captcha as _captcha
 from infrastructure.deepseek import complete as _ai_complete, extract_text as _ai_extract_text
 from application.services.accounts import subscription_info as _subscription_info
+from application.services.lessons import _plural_hours
 from application.services.timezones import (
     TZ_CHOICES, current_tz, normalize_offset, set_current_offset,
 )
@@ -239,6 +240,7 @@ def _series_view(rule: dict, name_by_id: dict) -> dict:
 templates.env.filters["ru_weekday"] = _ru_weekday
 templates.env.filters["msk"] = _fmt_msk
 templates.env.filters["ru_days"] = _ru_days
+templates.env.filters["ru_hours"] = lambda n: _plural_hours(int(n))
 templates.env.globals["subscription_info"] = _subscription_info
 templates.env.globals["support_email"] = _config.SUPPORT_EMAIL
 templates.env.globals["support_username"] = _config.SUPPORT_USERNAME
@@ -412,6 +414,19 @@ def create_app() -> FastAPI:
                 user = await _user_from_cookie(request)
                 if user and user.get("role") == "tutor" and not _subscription_info(user)["active"]:
                     return RedirectResponse("/tutor/settings?locked=1", status_code=303)
+        return await call_next(request)
+
+    @app.middleware("http")
+    async def _email_required(request: Request, call_next):
+        """A tutor account created via Telegram has no email on file. Force
+        linking one before any cabinet page loads — for account recovery, and
+        so a later email registration by the same person is caught as a
+        duplicate here instead of silently creating a second, empty account."""
+        path = request.url.path
+        if path.startswith(("/tutor", "/student")):
+            user = await _user_from_cookie(request)
+            if user and user.get("role") == "tutor" and not user.get("email"):
+                return RedirectResponse("/link-email", status_code=303)
         return await call_next(request)
 
     register_routes(app)
@@ -779,6 +794,27 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         await services.web_auth.resend_code(email)
         return RedirectResponse(f"/verify?email={quote(norm_email)}&sent=1", status_code=303)
 
+    @app.get("/link-email", response_class=HTMLResponse)
+    async def link_email_page(request: Request, error: str | None = None, user: dict = Depends(current_user)) -> Response:
+        # Only a tutor who logged in via Telegram and has no email yet lands here
+        # (see the _email_required middleware) — anyone else is bounced to their
+        # cabinet so this page can't be reached "just because".
+        if user.get("role") != "tutor" or user.get("email"):
+            return RedirectResponse(_cabinet_url(user), status_code=303)
+        return templates.TemplateResponse("link_email.html", {"request": request, "error": error})
+
+    @app.post("/link-email")
+    async def link_email_submit(
+        email: str = Form(...), password: str = Form(...), user: dict = Depends(current_user),
+    ) -> Response:
+        from urllib.parse import quote
+        if user.get("role") != "tutor" or user.get("email"):
+            return RedirectResponse(_cabinet_url(user), status_code=303)
+        updated, err = await services.web_auth.link_email(user["id"], email, password)
+        if err or not updated:
+            return RedirectResponse(f"/link-email?error={quote(err or 'Не удалось сохранить email')}", status_code=303)
+        return RedirectResponse(_cabinet_url(user), status_code=303)
+
     @app.get("/auth/telegram")
     async def auth_telegram(token: str) -> Response:
         user = await services.web_auth.consume_login_token(token)
@@ -794,13 +830,24 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         if not _rate_ok(f"tgauth:{ip}", *_TG_AUTH_RATE):
             return RedirectResponse("/login?error=too_many", status_code=303)
         data = dict(request.query_params)
-        # `ref` is not part of Telegram's signed payload — pop it before the
-        # hash check. apply_referral is idempotent (one bonus per account), so
-        # it's safe to call whenever a ref link is used.
+        # `ref` and `intent` are not part of Telegram's signed payload — pop
+        # them before the hash check. apply_referral is idempotent (one bonus
+        # per account), so it's safe to call whenever a ref link is used.
         ref = (data.pop("ref", "") or "").strip()
-        user = await services.web_auth.login_telegram_widget(data)
-        if not user:
-            return RedirectResponse("/login?error=tg_failed", status_code=303)
+        intent = data.pop("intent", "register")
+        if intent == "login":
+            # /login must never silently create a second, empty account for
+            # someone who already registered by email and just forgot to link
+            # Telegram — only log in if this tg_id is already linked.
+            user, sig_ok = await services.web_auth.find_tg_account(data)
+            if not sig_ok:
+                return RedirectResponse("/login?error=tg_failed", status_code=303)
+            if not user:
+                return RedirectResponse("/login?error=tg_no_account", status_code=303)
+        else:
+            user = await services.web_auth.login_telegram_widget(data)
+            if not user:
+                return RedirectResponse("/login?error=tg_failed", status_code=303)
         if ref:
             await services.accounts.apply_referral(user["id"], ref)
         response = RedirectResponse(_cabinet_url(user), status_code=303)
@@ -1797,14 +1844,42 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
         return RedirectResponse(f"{base}?saved=timezone", status_code=303)
 
+    @app.post("/settings/reminder-hours")
+    async def update_reminder_hours(reminder_hours: str = Form(default="2"), user: dict = Depends(current_user)) -> Response:
+        _require(user, "tutor")
+        try:
+            hours = int(reminder_hours)
+        except ValueError:
+            hours = 2
+        await services.accounts.set_reminder_hours(user["id"], hours)
+        return RedirectResponse("/tutor/settings?saved=reminder", status_code=303)
+
+    @app.post("/account/delete/send-code")
+    async def delete_account_send_code(user: dict = Depends(current_user)) -> Response:
+        base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
+        from urllib.parse import quote
+        if not user.get("email"):
+            return RedirectResponse(f"{base}?error={quote('У аккаунта нет email — подтверждение кодом недоступно')}", status_code=303)
+        if not _rate_ok(f"delcode:{user['id']}", *_RESEND_RATE):
+            return RedirectResponse(f"{base}?error={quote('Код уже отправлен. Подожди немного и проверь почту.')}", status_code=303)
+        ok, err = await services.web_auth.send_delete_code(user)
+        if not ok:
+            return RedirectResponse(f"{base}?error={quote(err or 'Не удалось отправить код')}", status_code=303)
+        return RedirectResponse(f"{base}?saved=delete_code", status_code=303)
+
     @app.post("/account/delete")
-    async def delete_account(confirm: str = Form(default=""), user: dict = Depends(current_user)) -> Response:
+    async def delete_account(confirm: str = Form(default=""), code: str = Form(default=""), user: dict = Depends(current_user)) -> Response:
         # F12: irreversible self-service deletion. Require typing "удалить" so it
         # can't happen by a stray click. Tutors also lose all their students' data.
+        # If the account has an email on file, a fresh 6-digit code sent to it is
+        # also required — the typed word alone isn't proof it's really the owner.
         base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
         if confirm.strip().lower() != "удалить":
             from urllib.parse import quote
             return RedirectResponse(f"{base}?error={quote('Для удаления введите слово «удалить»')}", status_code=303)
+        if user.get("email") and not services.web_auth.check_delete_code(user, code):
+            from urllib.parse import quote
+            return RedirectResponse(f"{base}?error={quote('Неверный или устаревший код из письма')}", status_code=303)
         if user["role"] == "tutor":
             await services.students.delete_tutor_account(user["id"])
         else:

@@ -26,6 +26,7 @@
         {% if error == "bad_credentials" %}Неверный email или пароль.
         {% elif error == "expired" %}Ссылка для входа устарела. Попробуй ещё раз.
         {% elif error == "tg_failed" %}Не удалось войти через Telegram. Попробуй ещё раз.
+        {% elif error == "tg_no_account" %}Аккаунт с этим Telegram не найден. Если ты уже регистрировался(-ась) по email — войди по email и привяжи Telegram в настройках. Если ты новый(-ая) — <a href="/register">зарегистрируйся</a>.
         {% elif error == "too_many" %}Слишком много попыток входа. Подожди пару минут.
         {% else %}{{ error }}{% endif %}
       </div>
@@ -53,7 +54,9 @@
         </button>
         <script>
           function onTelegramAuth(user) {
-            window.location.href = "/auth/telegram/callback?" + new URLSearchParams(user).toString();
+            var qs = new URLSearchParams(user);
+            qs.append("intent", "login");
+            window.location.href = "/auth/telegram/callback?" + qs.toString();
           }
           function tgLogin() {
             if (window.Telegram && Telegram.Login && Telegram.Login.auth) {
@@ -66,7 +69,6 @@
         <div class="auth-tg-fallback">Вход через Telegram появится после настройки бота.</div>
         {% endif %}
       </div>
-      <div class="auth-tg-note">Уже регистрировался(-ась) по email? Входи по email — привязать Telegram можно потом в настройках, иначе создастся второй аккаунт.</div>
 
       <div class="auth-foot">Нет аккаунта? <a href="/register">Зарегистрироваться</a></div>
     </div>

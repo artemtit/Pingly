@@ -104,15 +104,15 @@
       <div class="card-head"><h2 class="h2-ico">{{ ui.icon('calendar-check') }} Ближайшие занятия</h2><a class="link-btn" href="/tutor/calendar">В календаре →</a></div>
       {% if upcoming %}<p class="muted" style="margin:-2px 0 12px;font-size:12.5px;">Это отдельные занятия. Нажми на любое — откроется в календаре, где можно провести, отменить или перенести <b>именно его</b>, не трогая серию.</p>{% endif %}
       <div class="timeline">
-        {% for lesson in upcoming[:8] %}{{ slesson(lesson) }}{% else %}
+        {% for lesson in upcoming[:10] %}{{ slesson(lesson) }}{% else %}
         <div class="empty"><div class="empty-emoji">{{ ui.icon('calendar', 40) }}</div><p>Будущих занятий нет.</p></div>
         {% endfor %}
       </div>
-      {% if upcoming | length > 8 %}
+      {% if upcoming | length > 10 %}
       <details class="more-future">
-        <summary class="link-btn" style="display:inline-block;margin-top:10px;">Показать ещё {{ upcoming | length - 8 }}</summary>
+        <summary class="link-btn" style="display:inline-block;margin-top:10px;">Показать ещё {{ upcoming | length - 10 }}</summary>
         <div class="timeline" style="margin-top:8px;">
-          {% for lesson in upcoming[8:] %}{{ slesson(lesson) }}{% endfor %}
+          {% for lesson in upcoming[10:] %}{{ slesson(lesson) }}{% endfor %}
         </div>
       </details>
       {% endif %}

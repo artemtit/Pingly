@@ -50,8 +50,11 @@ async def send_next_lesson(message: Message) -> None:
 # stateless (no FSM, per CLAUDE.md) — this is one bounded exception: after a
 # student taps «Отменяю» or «Прошу перенести» we wait for a single optional
 # free-text message, forward it to the tutor, then forget. Lost on restart,
-# which is fine for a 10-min window.
-_awaiting_reason: dict[int, dict] = {}  # tg_user_id -> {tutor_channel, tutor_dest, name, at, kind}
+# which is fine for a 10-min window. A list (not a single slot) because a
+# student can tap the button on two different lessons before typing anything
+# — a single slot would let the second tap silently steal the reply meant
+# for the first lesson.
+_awaiting_reason: dict[int, list[dict]] = {}  # tg_user_id -> [{tutor_channel, tutor_dest, name, at, kind}, ...]
 _REASON_TTL = 600  # seconds to wait for the message before giving up
 
 
@@ -97,13 +100,13 @@ async def cancel_lesson(callback: CallbackQuery) -> None:
         if target:
             await _notify_tutor(callback.bot, target)
             # Wait for an optional free-text reason and forward it to the tutor.
-            _awaiting_reason[callback.from_user.id] = {
+            _awaiting_reason.setdefault(callback.from_user.id, []).append({
                 "tutor_channel": target[0],
                 "tutor_dest": target[1],
                 "name": (lesson.get("student_profiles") or {}).get("name") or "Ученик",
                 "at": time.monotonic(),
                 "kind": "cancel",
-            }
+            })
 
 
 @router.callback_query(F.data.startswith("lesson_reschedule:"))
@@ -121,13 +124,13 @@ async def reschedule_lesson(callback: CallbackQuery) -> None:
         if target:
             await _notify_tutor(callback.bot, target)
             # Wait for an optional free-text time preference and forward it to the tutor.
-            _awaiting_reason[callback.from_user.id] = {
+            _awaiting_reason.setdefault(callback.from_user.id, []).append({
                 "tutor_channel": target[0],
                 "tutor_dest": target[1],
                 "name": (lesson.get("student_profiles") or {}).get("name") or "Ученик",
                 "at": time.monotonic(),
                 "kind": "reschedule",
-            }
+            })
 
 
 # Extract the essence of the student's free text for the tutor notification.
@@ -190,9 +193,18 @@ async def capture_cancel_reason(message: Message) -> None:
     to the tutor. Only fires for a student who tapped «Отменяю» or «Прошу
     перенести» in the last few minutes; otherwise stays silent so the bot keeps
     its service-only behaviour."""
-    info = _awaiting_reason.pop(message.from_user.id, None)
-    if not info or (time.monotonic() - info["at"] > _REASON_TTL):
+    queue = _awaiting_reason.get(message.from_user.id) or []
+    now = time.monotonic()
+    # Drop anything that's expired, then answer the oldest still-live entry
+    # first (FIFO) — matches which lesson the student tapped the button on
+    # first, if two are pending at once.
+    queue[:] = [e for e in queue if now - e["at"] <= _REASON_TTL]
+    if not queue:
+        _awaiting_reason.pop(message.from_user.id, None)
         return
+    info = queue.pop(0)
+    if not queue:
+        _awaiting_reason.pop(message.from_user.id, None)
     text = (message.text or "").strip()[:500]
     if not text:
         return

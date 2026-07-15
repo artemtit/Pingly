@@ -112,9 +112,44 @@ class BillingService:
         except Exception:
             logger.exception("get_latest_pending_payment_for_user failed (user_id=%s)", user_id)
             payment = None
-        if not payment or not payment.get("transaction_id"):
+        if not payment:
             return False
-        tid = payment["transaction_id"]
+        return await self._try_confirm_payment(payment)
+
+    async def reconcile_pending_payments(self) -> int:
+        """Periodic sweep for payments where BOTH the webhook and the user's
+        return-to-site never happened (network blip, closed the bank app tab,
+        Platega outage, ...) — without this, such a payment is real money taken
+        but access never granted until someone notices and fixes it by hand in
+        the admin panel. Skips anything younger than 10 min (still likely
+        in-flight) and older than 7 days (treated as abandoned). Returns how
+        many payments this call activated."""
+        try:
+            payments = await self.repo.list_stale_pending_payments()
+        except Exception:
+            logger.exception("list_stale_pending_payments failed")
+            return 0
+        activated = 0
+        for payment in payments:
+            try:
+                if await self._try_confirm_payment(payment):
+                    activated += 1
+            except Exception:
+                logger.exception(
+                    "reconcile_pending_payments failed for transaction_id=%s",
+                    payment.get("transaction_id"),
+                )
+        return activated
+
+    async def _try_confirm_payment(self, payment: dict) -> bool:
+        """Shared core of reconcile_on_return / reconcile_pending_payments: check
+        one ledger row against Platega and activate if CONFIRMED. Uses the same
+        atomic 'pending -> confirmed' gate as the webhook, so calling this
+        redundantly (webhook + return page + sweep, in any order) never
+        double-activates."""
+        tid = payment.get("transaction_id")
+        if not tid:
+            return False
         try:
             tx = await platega.get_transaction(tid)
         except platega.PlategaError:
@@ -131,12 +166,15 @@ class BillingService:
             logger.exception("confirm_subscription_payment_once failed (transaction_id=%s)", tid)
             return False
         if not transitioned:
-            return False  # the webhook already activated it — nothing to do
-        activate_uid = transitioned.get("user_id") or user_id
+            return False  # already activated (by the webhook or an earlier reconcile call)
+        activate_uid = transitioned.get("user_id") or payment.get("user_id")
+        if not activate_uid:
+            return False
         # period/plan aren't stored on the ledger row; infer the period from amount
         # (990 monthly vs 9900 yearly). Tiers are off, so plan stays default.
         period = "year" if int(expected or 0) >= config.SUBSCRIPTION_PRICE_YEAR_RUB else "month"
         await self.repo.activate_subscription(activate_uid, _days_for_period(period), None)
+        founder_notify.notify(f"💰 Оплата подтверждена (реконсиляция)\nСумма: {expected} ₽\nUser: {activate_uid}")
         try:
             await self.repo.grant_referral_reward(activate_uid)
         except Exception:

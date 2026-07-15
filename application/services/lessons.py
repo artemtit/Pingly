@@ -10,6 +10,21 @@ from domain import LessonStatus, NotificationType
 HORIZON_DAYS = 56
 MAX_GENERATED = 60
 
+# Fallback when a tutor hasn't set a custom reminder lead time (users.reminder_hours).
+DEFAULT_REMINDER_HOURS = 2
+
+
+def _plural_hours(n: int) -> str:
+    """Russian plural for 'час': 1 час, 2–4 часа, 5+ часов."""
+    if 11 <= n % 100 <= 14:
+        return "часов"
+    d = n % 10
+    if d == 1:
+        return "час"
+    if 2 <= d <= 4:
+        return "часа"
+    return "часов"
+
 RECURRENCE_LABELS = {
     "once": "Разовое",
     "daily": "Каждый день",
@@ -321,15 +336,20 @@ class LessonService:
         now = datetime.now(timezone.utc)
         student_user_id = lesson.get("student_user_id")
         if student_user_id:
-            # Single reminder 2 hours before the lesson (matches the promise on
-            # the landing). Skipped if the lesson is sooner than 2h (e.g. added
-            # the same day), so it never fires instantly with wrong wording.
-            send_at = starts_at - timedelta(hours=2)
+            # Reminder N hours before the lesson — N is the tutor's own setting
+            # (/settings, default 2h). Skipped if the lesson is sooner than that
+            # (e.g. added the same day), so it never fires instantly with wrong wording.
+            tutor_user_id = lesson.get("tutor_user_id")
+            reminder_hours = DEFAULT_REMINDER_HOURS
+            if tutor_user_id:
+                tutor = await self.repo.get_user_by_id(tutor_user_id)
+                reminder_hours = int((tutor or {}).get("reminder_hours") or DEFAULT_REMINDER_HOURS)
+            send_at = starts_at - timedelta(hours=reminder_hours)
             if send_at > now:
                 await self.repo.create_notification(
                     student_user_id,
                     NotificationType.LESSON_HOUR_BEFORE.value,
-                    "⏰ Занятие через 2 часа",
+                    f"⏰ Занятие через {reminder_hours} {_plural_hours(reminder_hours)}",
                     f"Занятие начнётся {_fmt_dt_local(starts_at, offset)}.\n"
                     "Нажми «Буду» или «Отменяю» ниже 👇",
                     {"lesson_id": lesson["id"]},

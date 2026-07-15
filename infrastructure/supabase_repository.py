@@ -148,6 +148,15 @@ class SupabasePinglyRepository:
     async def upsert_tutor_user(self, tg_id: int, full_name: str, tg_username: str | None) -> dict[str, Any]:
         return await self.upsert_user("tutor", tg_id, full_name, tg_username)
 
+    async def set_user_email_password(self, user_id: str, email: str, password_hash: str) -> dict[str, Any] | None:
+        result = await (
+            self._db().table("users")
+            .update({"email": email, "password_hash": password_hash})
+            .eq("id", user_id)
+            .execute()
+        )
+        return _one(result)
+
     async def set_user_telegram(self, user_id: str, tg_id: int, tg_username: str | None) -> dict[str, Any] | None:
         result = await (
             self._db().table("users")
@@ -667,6 +676,11 @@ class SupabasePinglyRepository:
             {"tz_offset_minutes": minutes}
         ).eq("id", user_id).execute()
 
+    async def set_reminder_hours(self, user_id: str, hours: int) -> None:
+        await self._db().table("users").update(
+            {"reminder_hours": hours}
+        ).eq("id", user_id).execute()
+
     async def bump_token_version(self, user_id: str) -> None:
         """S6: invalidate every existing session for this user (logout-all / password
         change) by advancing token_version — the value baked into each session cookie."""
@@ -1044,6 +1058,26 @@ class SupabasePinglyRepository:
             .execute()
         )
         return _one(result)
+
+    async def list_stale_pending_payments(self, min_age_minutes: int = 10, max_age_days: int = 7, limit: int = 50) -> list[dict[str, Any]]:
+        """Pending payments old enough that the webhook likely isn't coming (min_age
+        avoids racing an in-flight webhook/return-page reconcile) but not so old
+        they're almost certainly abandoned (max_age caps how far back we keep
+        polling Platega). Used by the periodic reconciliation job."""
+        now = datetime.now(timezone.utc)
+        newest = (now - timedelta(minutes=min_age_minutes)).isoformat()
+        oldest = (now - timedelta(days=max_age_days)).isoformat()
+        result = await (
+            self._db().table("subscription_payments")
+            .select("*")
+            .eq("status", "pending")
+            .lte("created_at", newest)
+            .gte("created_at", oldest)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return result.data or []
 
     async def mark_subscription_payment(self, transaction_id: str, status: str, confirmed: bool = False) -> dict[str, Any] | None:
         patch: dict[str, Any] = {"status": status}
