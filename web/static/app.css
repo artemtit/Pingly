@@ -296,8 +296,9 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .nl-actions { display: flex; gap: 8px; margin-top: 14px; }
 
 /* ---------------- onboarding card ---------------- */
-.onboarding-card { background: linear-gradient(135deg, #FFF7ED, #fff); border-color: var(--orange-200); }
-.onboarding-title { font-size: 18px; font-weight: 700; color: var(--fg1); margin-bottom: 4px; }
+.onboarding-card { position: relative; overflow: hidden; background: linear-gradient(135deg, #FFF7ED, #fff); border-color: var(--orange-200); }
+.onboarding-illustration { position: absolute; top: -14px; right: -14px; width: 116px; height: 116px; opacity: .9; pointer-events: none; }
+.onboarding-title { position: relative; font-size: 18px; font-weight: 700; color: var(--fg1); margin-bottom: 4px; max-width: calc(100% - 90px); }
 .onboarding-steps { display: flex; flex-direction: column; gap: 12px; }
 .onboarding-step { display: flex; align-items: flex-start; gap: 14px; }
 .onboarding-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--orange-500); color: #fff; font-size: 14px; font-weight: 800; display: grid; place-items: center; }
@@ -1392,6 +1393,8 @@ mark { background: var(--orange-100); color: inherit; border-radius: 3px; paddin
   /* calmer cards: bigger radius + more padding */
   .card { border-radius: 20px; padding: 20px; }
   .onboarding-card { border-radius: 20px; padding: 22px; }
+  .onboarding-illustration { width: 76px; height: 76px; top: -8px; right: -8px; }
+  .onboarding-title { max-width: calc(100% - 60px); }
 
   /* premium greeting: bigger, tighter heading */
   .topbar h1 { font-size: 27px; letter-spacing: -.02em; }
