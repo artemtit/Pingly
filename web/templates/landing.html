@@ -29,7 +29,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@700;800&display=swap">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/landing.css?v=28">
+  <link rel="stylesheet" href="/static/landing.css?v=29">
   <script src="/static/landing.js?v=8" defer></script>
 </head>
 <body>
@@ -427,17 +427,20 @@
   </div>
   <div class="reviews-marquee" data-reveal>
     <div class="reviews-track">
-      {% macro review_card(tag, quote, avatar, name, role, hidden=false) %}
+      {% macro review_card(tag, quote, avatar, initial, name, role, hidden=false) %}
       <article class="lcard review"{% if hidden %} aria-hidden="true"{% endif %}>
         <span class="review-tag">{{ tag }}</span>
         <p>{{ quote }}</p>
-        <div class="review-id"><img class="review-av" src="{{ avatar }}" alt="" width="40" height="40" loading="lazy"><div><div class="review-name">{{ name }}</div><div class="review-role">{{ role }}</div></div></div>
+        <div class="review-id">
+          <span class="review-av"><img src="{{ avatar }}" alt="" width="40" height="40" loading="lazy"><span class="review-av-letter" aria-hidden="true">{{ initial }}</span></span>
+          <div><div class="review-name">{{ name }}</div><div class="review-role">{{ role }}</div></div>
+        </div>
       </article>
       {% endmacro %}
       {% for dup in [false, true] %}
-      {{ review_card('математика', '«Главная боль — напомнить и уточнить за пару часов до занятия. Pingly делает это за меня.»', '/static/review-avatar-1.svg', 'Анна Олеговна', 'репетитор по математике', dup) }}
-      {{ review_card('английский', '«Раньше каждому писала вручную "у нас сегодня урок?". Теперь бот спрашивает сам.»', '/static/review-avatar-2.svg', 'Екатерина Алексеевна', 'репетитор по английскому', dup) }}
-      {{ review_card('языки', '«Ученики отменяли за 15 минут. Ввела правило 2 часов — а бот его сам напоминает.»', '/static/review-avatar-3.svg', 'Эля', 'репетитор по языкам', dup) }}
+      {{ review_card('математика', '«Главная боль — напомнить и уточнить за пару часов до занятия. Pingly делает это за меня.»', '/static/review-avatar-1.jpg', 'А', 'Анна Олеговна', 'репетитор по математике', dup) }}
+      {{ review_card('английский', '«Раньше каждому писала вручную "у нас сегодня урок?". Теперь бот спрашивает сам.»', '/static/review-avatar-2.jpg', 'Е', 'Екатерина Алексеевна', 'репетитор по английскому', dup) }}
+      {{ review_card('языки', '«Ученики отменяли за 15 минут. Ввела правило 2 часов — а бот его сам напоминает.»', '/static/review-avatar-3.jpg', 'Э', 'Эля', 'репетитор по языкам', dup) }}
       {% endfor %}
     </div>
   </div>
