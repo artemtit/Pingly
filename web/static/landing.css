@@ -194,8 +194,8 @@ img { display: block; }
 .pill .ic { width: 15px; height: 15px; }
 .hero h1 {
   font-family: var(--font-display);
-  font-size: clamp(2.2rem, 1.1rem + 3.4vw, 3.4rem); font-weight: 800;
-  letter-spacing: -.028em; line-height: 1.06; margin-top: 18px; max-width: 19ch; text-wrap: balance;
+  font-size: clamp(2.2rem, 1.05rem + 3.6vw, 3.6rem); font-weight: 800;
+  letter-spacing: -.03em; line-height: 1.05; margin-top: 18px; max-width: 19ch; text-wrap: balance;
 }
 .hero-sub { font-size: 18px; line-height: 1.6; color: var(--fg2); margin-top: 16px; max-width: 30em; }
 .hero-cta { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; justify-content: flex-start; }
@@ -496,6 +496,7 @@ img { display: block; }
 
 /* ---------------- Product tour (sticky scene + scroll-driven states) ---------------- */
 .tour { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; margin-top: 24px; }
+.tour-swipe-hint { display: none; } /* mobile-carousel affordance, shown ≤860px */
 .tour-items { position: relative; padding-left: 34px; }
 .tour-rail { position: absolute; left: 4px; top: 0; bottom: 0; width: 2px; background: var(--gray-100); border-radius: 2px; }
 .tour-rail-fill {
@@ -781,6 +782,8 @@ img { display: block; }
 .cta-band h2 { font-family: var(--font-display); font-size: clamp(1.6rem, 1rem + 2.3vw, 2.4rem); font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
 .cta-band p { font-size: 18px; opacity: .92; margin-top: 12px; }
 .cta-band .lbtn { margin-top: 26px; }
+.cta-band .cta-micro { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13.5px; font-weight: 500; opacity: .85; margin-top: 14px; }
+.cta-band .cta-micro .ic { opacity: .9; }
 
 /* ---------------- Footer ---------------- */
 .foot { background: rgba(255,255,255,.92); border-top: 1px solid rgba(17,24,39,.06); }
@@ -977,9 +980,165 @@ img { display: block; }
   .foot-copy { font-size: 12.5px; }
 }
 
+/* ============================================================
+   Mobile-only cinematic art direction (Higgsfield-generated)
+   Deliberately NOT a scaled-down desktop page: on phones the
+   hero, the pain section and the autopilot section each get a
+   full-bleed photographic/abstract backdrop with a dark scrim
+   for text contrast — desktop keeps its current clean light
+   background untouched. All three images are declared only
+   inside this max-width query, so desktop viewports never
+   request them (unmatched-media background-images aren't
+   fetched). The slow "Ken Burns" drift is pure decoration —
+   the global prefers-reduced-motion kill-switch in
+   design-tokens.css forces iteration-count:1 on it exactly
+   like every other animation on the page, so it just settles
+   on the end frame instead of looping.
+   ============================================================ */
+@media (max-width: 860px) {
+  /* ---- Hero: cinematic evening-desk backdrop replaces the light halo/dots ---- */
+  .hero-halo, .hero-dots, .hero-light, .hero-noise { display: none; }
+  .hero::before, .hero::after { content: ""; position: absolute; inset: 0; z-index: 0; }
+  .hero::before {
+    background-image: url('/static/mobile-hero-evening.webp');
+    background-size: cover; background-position: center 22%;
+    animation: kenBurns 26s ease-in-out infinite alternate;
+  }
+  .hero::after {
+    background: linear-gradient(180deg, rgba(6,9,15,.2) 0%, rgba(6,9,15,.52) 50%, rgba(6,9,15,.88) 100%);
+  }
+  .hero-grid { position: relative; z-index: 1; }
+  .hero .pill { background: rgba(255,255,255,.14); color: #FDBA74; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  .hero h1 { color: #fff; }
+  .hero .hero-sub { color: rgba(255,255,255,.82); }
+  .hero .hero-micro { color: rgba(255,255,255,.72); }
+  .hero .hero-micro .ic { color: #4ADE80; }
+  .hero .lbtn-ghost { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.28); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  .hero .lbtn-ghost:hover { background: rgba(255,255,255,.22); }
+
+  /* ---- Pain section: full-bleed cinematic cold-open before the before/after cards ---- */
+  .pain-banner {
+    position: relative; overflow: hidden; isolation: isolate;
+    margin: -48px 0 0; padding: 72px 16px 44px;
+  }
+  .pain-banner::before, .pain-banner::after { content: ""; position: absolute; inset: 0; z-index: -1; }
+  .pain-banner::before {
+    background-image: url('/static/mobile-pain-moment.webp');
+    background-size: cover; background-position: center 25%;
+    animation: kenBurns 26s ease-in-out infinite alternate;
+  }
+  /* top edge nearly solid so the banner fuses seamlessly with the dark proof
+     strip above it — the photo "opens up" mid-frame like a window */
+  .pain-banner::after {
+    background: linear-gradient(180deg, rgba(8,10,16,.96) 0%, rgba(8,10,16,.42) 34%, rgba(8,10,16,.62) 62%, rgba(8,10,16,.95) 100%);
+  }
+  .pain-banner .sechead { text-align: left; }
+  .pain-banner .over { color: #FDBA74; }
+  .pain-banner h2 { color: #fff; }
+  .pain-banner .sechead-sub { color: rgba(255,255,255,.82); margin-left: 0; }
+
+  /* ---- Autopilot: layered atmosphere behind the existing dot-grid/glow ---- */
+  .autopilot::before {
+    content: ""; position: absolute; inset: 0; z-index: 0; opacity: .5;
+    background-image: url('/static/mobile-autopilot-abstract.webp');
+    background-size: cover; background-position: center 12%;
+    animation: kenBurns 30s ease-in-out infinite alternate;
+  }
+
+  /* ---- Hero hierarchy: one dominant headline, one dominant CTA ---- */
+  .hero h1 { font-size: clamp(2.05rem, 8.6vw, 2.75rem); letter-spacing: -.032em; line-height: 1.05; }
+  .hero .pill { font-size: 12.5px; padding: 5px 12px; }
+  .hero .hero-micro { color: rgba(255,255,255,.8); }
+
+  /* ---- Proof strip: the night act continues — no light gap between the
+     hero and the pain scene, so the cinematic momentum never breaks ---- */
+  .proof-strip { background: #090D15; border-top-color: rgba(255,255,255,.05); border-bottom-color: rgba(255,255,255,.05); }
+  .proof-item > p { color: rgba(255,255,255,.72); }
+  .proof-num { color: #fff; }
+  .proof-counter .ic { color: #FB923C; }
+  .proof-strip .av-circle { border-color: #090D15; }
+  .proof-counter.loading .proof-num {
+    background: linear-gradient(90deg, rgba(255,255,255,.07) 25%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.07) 75%);
+    background-size: 200% 100%;
+  }
+
+  /* ---- Product tour: six long blocks become one horizontal snap carousel —
+     the section is ~5× shorter and swiping is the native mobile idiom ---- */
+  .tour-swipe-hint { display: block; text-align: center; font-size: 13px; font-weight: 600; color: var(--fg3); margin: 20px 0 0; }
+  .tour-items {
+    display: grid; grid-auto-flow: column; grid-auto-columns: min(84%, 330px);
+    gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+    margin: 0 -16px; padding: 12px 16px 22px;
+    scroll-padding-inline: 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .tour-items::-webkit-scrollbar { display: none; }
+  .tour-item {
+    display: flex; flex-direction: column; padding: 20px 18px 18px;
+    scroll-snap-align: start;
+    background: #fff; border: 1px solid rgba(17,24,39,.07); border-radius: 20px;
+    box-shadow: var(--l-shadow-2);
+  }
+  .tour-copy { text-align: left; }
+  .tour-copy h3 { font-size: 18px; }
+  .tour-copy > p { font-size: 14px; line-height: 1.5; margin-left: 0; margin-right: 0; }
+  .tour-fact { justify-content: flex-start; font-size: 13px; }
+  .tour-art { margin-top: auto; padding-top: 16px; }
+  /* inside a card the mini sheds its own panel chrome — its rows and chips
+     sit directly on the card, so shorter cards read as air, not as a hole */
+  .tour-art .mini { box-shadow: none; border: none; background: transparent; padding: 0; }
+  .tour-art .mini-total { flex-direction: row; align-items: center; }
+
+  /* ---- Pricing: the same dark premium stage as hero and autopilot;
+     the single white card becomes the protagonist ---- */
+  #price { position: relative; overflow: hidden; background: linear-gradient(180deg, #10151F 0%, #0A0E16 100%); }
+  #price::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1.4px);
+    background-size: 24px 24px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 24%, #000, transparent 76%);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 24%, #000, transparent 76%);
+  }
+  #price .wrap { position: relative; }
+  #price .over { color: #FDBA74; }
+  #price h2 { color: #F8FAFC; }
+  #price .price-anchor h3 { color: #fff; }
+  #price .price-anchor > p { color: rgba(255,255,255,.75); }
+  #price .price-anchor-list li { color: rgba(255,255,255,.75); }
+  #price .price-anchor-list .ic { color: #4ADE80; }
+  #price .price-card {
+    background: #fff; border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 30px 60px -22px rgba(0,0,0,.6), 0 18px 50px -14px rgba(249,115,22,.3);
+  }
+
+  /* ---- Final CTA: bookend — the page closes on the same evening scene it
+     opened with, but now the evening is quiet ---- */
+  .cta-band { background: #0A0E16; }
+  .cta-band::before {
+    opacity: 1;
+    background-image: url('/static/mobile-hero-evening.webp');
+    background-size: cover; background-position: center 72%;
+    animation: kenBurns 28s ease-in-out infinite alternate;
+  }
+  .cta-glow { background: linear-gradient(180deg, rgba(6,9,15,.82) 0%, rgba(6,9,15,.48) 46%, rgba(6,9,15,.86) 100%); }
+  .cta-band h2 { font-size: clamp(1.7rem, 7.4vw, 2.2rem); }
+  .cta-band .lbtn-light { box-shadow: 0 14px 40px rgba(0,0,0,.4); }
+
+  @keyframes kenBurns { from { transform: scale(1); } to { transform: scale(1.07); } }
+}
+
 @media (max-width: 640px) {
   /* phones: stacked full-width CTAs; tablets keep them side by side */
   .hero-cta .lbtn { width: 100%; }
+  .hero-cta { gap: 6px; }
+  /* the secondary CTA steps down to a text link: one clear primary action */
+  .hero .lbtn-ghost {
+    background: transparent; border: none; box-shadow: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    color: rgba(255,255,255,.85);
+    text-decoration: underline; text-underline-offset: 4px;
+    text-decoration-color: rgba(255,255,255,.35);
+  }
+  .hero .lbtn-ghost:hover { background: transparent; color: #fff; text-decoration-color: rgba(255,255,255,.6); }
 }
 
 @media (max-width: 420px) {
@@ -1038,6 +1197,11 @@ img { display: block; }
 @media (prefers-reduced-motion: reduce) {
   .js [data-reveal] { opacity: 1; }
   .js .steps-line-fill { transform: scaleX(1); }
+  /* chat demo shows its final state (all bubbles at once): the floating
+     «Сегодня» pill would sit on top of the first message — put it in flow
+     above the dialog instead of absolutely over it */
+  .chat-day { position: static; transform: none; align-self: center; }
+  .chat-feed { padding-top: 6px; }
   /* tour copy never stays dimmed; the skeleton shimmer freezes to a flat block */
   .tour-copy { opacity: 1; }
   .proof-counter.loading .proof-num { animation: none; background: var(--gray-100); }
@@ -1046,6 +1210,10 @@ img { display: block; }
   .auto-status { opacity: 1; transform: none; }
   .auto-stop .auto-dot { background: var(--orange-500); }
   .auto-stop .auto-dot::after { display: none; }
+}
+/* frozen counter skeleton must stay visible on the dark mobile proof strip */
+@media (max-width: 860px) and (prefers-reduced-motion: reduce) {
+  .proof-counter.loading .proof-num { background: rgba(255,255,255,.1); }
 }
 
 /* ============================================================

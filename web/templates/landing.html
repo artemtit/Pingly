@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0B0F17" media="(max-width: 860px)">
   <meta name="theme-color" content="#FBFBFD">
   <title>Pingly — напоминания для репетиторов</title>
   <meta name="description" content="Pingly сам напоминает твоим ученикам о занятиях за 2 часа. Настрой расписание один раз — и всё работает само.">
@@ -29,7 +30,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@700;800&display=swap">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/landing.css?v=29">
+  <link rel="stylesheet" href="/static/landing.css?v=32">
   <script src="/static/landing.js?v=8" defer></script>
 </head>
 <body>
@@ -173,12 +174,16 @@
 </section>
 
 <section class="section pain">
-  <div class="wrap">
-    <div class="sechead" data-reveal>
-      <span class="over">Знакомо?</span>
-      <h2>Каждый вечер одно и то же: «у нас завтра урок?»</h2>
-      <p class="sechead-sub">Семь чатов, одинаковые сообщения, кто-то не ответил, кто-то забыл. Pingly забирает эту рутину целиком.</p>
+  <div class="pain-banner">
+    <div class="wrap">
+      <div class="sechead" data-reveal>
+        <span class="over">Знакомо?</span>
+        <h2>Каждый вечер одно и то же: «у нас завтра урок?»</h2>
+        <p class="sechead-sub">Семь чатов, одинаковые сообщения, кто-то не ответил, кто-то забыл. Pingly забирает эту рутину целиком.</p>
+      </div>
     </div>
+  </div>
+  <div class="wrap">
     <div class="pain-grid">
       <div class="pain-col" data-reveal>
         <div class="pain-label">{{ ic('x', 14) }} Вечер без Pingly · 21:47</div>
@@ -262,6 +267,7 @@
       <p class="sechead-sub">Не только напоминания — весь учёт занятий, по шагам обычного дня.</p>
     </div>
     <div class="tour" id="tour">
+      <p class="tour-swipe-hint" aria-hidden="true">Листай карточки →</p>
       <div class="tour-items">
         <div class="tour-rail" aria-hidden="true"><div class="tour-rail-fill" id="tourRailFill"></div></div>
         <div class="tour-item active">
@@ -526,6 +532,7 @@
     <h2>Сегодня вечером можно никому не писать</h2>
     <p>Сделано для репетиторов. Настройка — 5 минут. Первые 14 дней — бесплатно.</p>
     <a class="lbtn lbtn-light lbtn-lg magnetic" href="/register">{{ ic('send', 19) }} Начать бесплатно</a>
+    <p class="cta-micro">{{ ic('check', 14) }} Карта не нужна · отключается в один клик</p>
   </div>
 </section>
 
