@@ -306,10 +306,15 @@ img { display: block; }
   overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
   gap: 9px; padding-top: 40px; padding-bottom: 6px;
 }
+/* floating date chip, Telegram-style: it deliberately hovers over scrolled
+   content, so it must be near-opaque with a blur backdrop — otherwise the
+   top message's text visually collides with the label once the feed fills */
 .chat-day {
-  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1;
   font-size: 11px; font-weight: 600; color: var(--fg3);
-  background: rgba(241,245,249,.9); padding: 3px 11px; border-radius: 999px;
+  background: rgba(241,245,249,.95); padding: 3px 11px; border-radius: 999px;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  box-shadow: 0 1px 4px rgba(15,23,42,.08);
 }
 .chat-row { display: none; }
 .chat-row.show { display: flex; animation: msgIn .35s var(--ease-out); }
