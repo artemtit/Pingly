@@ -30,7 +30,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@700;800&display=swap">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/landing.css?v=33">
+  <link rel="stylesheet" href="/static/landing.css?v=34">
   <script src="/static/landing.js?v=8" defer></script>
 </head>
 <body>
@@ -123,6 +123,7 @@
         </div>
         <div class="chat-feed" aria-live="polite">
           <div class="chat-day" aria-hidden="true">Сегодня</div>
+          <div class="chat-scroll">
           <div class="chat-row" data-step="typing1">
             <div class="chat-typing"><span></span><span></span><span></span></div>
           </div>
@@ -141,6 +142,7 @@
           </div>
           <div class="chat-row" data-step="final">
             <div class="chat-bubble bot" id="chatFinal">Отлично! Жду тебя в 15:00.</div>
+          </div>
           </div>
         </div>
         <div class="chat-notify" data-step="notify">

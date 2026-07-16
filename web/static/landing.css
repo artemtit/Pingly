@@ -303,8 +303,17 @@ img { display: block; }
   position: relative; flex: 1; min-height: 0;
   background: linear-gradient(180deg, rgba(255,247,237,.55), rgba(255,255,255,0) 46%);
   border-radius: 0 0 14px 14px;
-  overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+  overflow: hidden; display: flex; flex-direction: column;
+}
+/* rows live in their own scroll layer whose top dissolves via mask — old
+   messages melt away under the floating «Сегодня» chip instead of colliding
+   with it once the feed fills up (messenger-style frosted top edge) */
+.chat-scroll {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column; justify-content: flex-end;
   gap: 9px; padding-top: 40px; padding-bottom: 6px;
+  -webkit-mask-image: linear-gradient(180deg, transparent 28px, #000 70px);
+  mask-image: linear-gradient(180deg, transparent 28px, #000 70px);
 }
 /* floating date chip, Telegram-style: it deliberately hovers over scrolled
    content, so it must be near-opaque with a blur backdrop — otherwise the
@@ -1157,7 +1166,7 @@ img { display: block; }
   .hero-device { width: min(100%, 244px); }
   .phone { padding: 12px; }
   .phone-head { margin: -12px -12px 10px; padding: 12px 18px 10px; }
-  .chat-feed { gap: 8px; padding-top: 34px; }
+  .chat-scroll { gap: 8px; padding-top: 34px; }
   .chat-bubble { font-size: 13px; }
   .chat-btn { font-size: 13px; padding: 9px; }
   .mini-week { gap: 4px; }
@@ -1205,8 +1214,8 @@ img { display: block; }
   /* chat demo shows its final state (all bubbles at once): the floating
      «Сегодня» pill would sit on top of the first message — put it in flow
      above the dialog instead of absolutely over it */
-  .chat-day { position: static; transform: none; align-self: center; }
-  .chat-feed { padding-top: 6px; }
+  .chat-day { position: static; transform: none; align-self: center; margin-top: 6px; }
+  .chat-scroll { padding-top: 6px; }
   /* tour copy never stays dimmed; the skeleton shimmer freezes to a flat block */
   .tour-copy { opacity: 1; }
   .proof-counter.loading .proof-num { animation: none; background: var(--gray-100); }
