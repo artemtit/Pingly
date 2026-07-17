@@ -30,10 +30,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@700;800&display=swap">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/landing.css?v=34">
+  <link rel="stylesheet" href="/static/landing.css?v=35">
   <script src="/static/landing.js?v=8" defer></script>
 </head>
-<body>
+<body class="landing-page">
 
 {%- set I = {
   'send': '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
@@ -61,7 +61,7 @@
 
 <header class="nav">
   <div class="nav-inner">
-    <a href="/" aria-label="Pingly — на главную"><img src="/static/logo.svg" height="32" alt="Pingly"></a>
+    <a href="/" aria-label="Pingly — на главную"><img class="logo-light" src="/static/logo.svg" height="32" alt="Pingly"><img class="logo-dark" src="/static/logo-dark.png" height="32" alt="Pingly"></a>
     <nav class="nav-links" aria-label="Основное меню">
       <a class="navlink" href="#how">Как это работает</a>
       <a class="navlink" href="#features">Возможности</a>
@@ -112,7 +112,7 @@
           <span class="float-push-text"><b id="floatPushTitle">Маша подтвердила</b><i>уведомление репетитору</i></span>
         </div>
         <div class="device">
-          <span class="device-speaker" aria-hidden="true"></span>
+          <img class="device-frame" src="/static/phone-frame.webp" alt="" aria-hidden="true" width="700" height="1502">
           <div class="phone" id="chatDemo">
         <div class="phone-head">
           <img src="/static/logo-mark.svg" width="32" height="32" alt="">
@@ -541,7 +541,7 @@
 <footer class="foot">
   <div class="wrap">
     <div class="foot-brand">
-      <img src="/static/logo.svg" height="28" alt="Pingly">
+      <img class="logo-light" src="/static/logo.svg" height="28" alt="Pingly"><img class="logo-dark" src="/static/logo-dark.png" height="28" alt="Pingly">
       <p>Напоминания для репетиторов</p>
     </div>
     <div class="foot-links">

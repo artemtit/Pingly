@@ -94,6 +94,9 @@ img { display: block; }
 }
 .nav.scrolled { box-shadow: 0 6px 24px -12px rgba(15,23,42,.18); }
 .nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; max-width: 1200px; margin: 0 auto; }
+/* light/dark logo pair: light by default, dark variant swaps in on the
+   mobile dark theme (block below) */
+.logo-dark { display: none; }
 .nav-links { display: flex; align-items: center; gap: 28px; }
 .nav-links a.navlink { position: relative; color: var(--fg2); font-size: 15px; font-weight: 500; transition: color var(--l-dur-fast); }
 .nav-links a.navlink:hover { color: var(--fg1); }
@@ -210,43 +213,43 @@ img { display: block; }
 .js .hero-left .hero-micro { animation-delay: .34s; }
 .js .hero-right { animation: rise .7s var(--ease-out) .38s backwards; }
 
-/* ---------------- Device: flagship hardware frame around the demo ----------------
-   Body proportions ~1:2.05 (19.5:9-class display) come from aspect-ratio, so the
-   height is deterministic (no CLS) and the screen grows to fill the body. */
+/* ---------------- Device: photoreal Higgsfield-generated hardware frame ----------------
+   phone-frame.webp is a real product render (titanium body, dynamic island,
+   side buttons) with the screen cut to alpha. The live HTML chat sits UNDER
+   the frame overlay, positioned by the measured screen insets of the render
+   (left 3.9%, top 1.55%, right 3.81%, bottom 1.91% of the body box).
+   aspect-ratio matches the render (1050×2253), so height is deterministic. */
 .hero-device { position: relative; width: min(100%, 312px); }
 .device {
-  position: relative; width: 100%; aspect-ratio: 9 / 18.5;
-  display: flex; flex-direction: column;
-  border-radius: 44px; padding: 17px 8px 11px;
-  border: 1px solid transparent;
-  background:
-    linear-gradient(180deg, #2E3542, #171B24 32%, #0C0F16) padding-box,
-    linear-gradient(155deg, rgba(255,255,255,.55), rgba(255,255,255,.14) 28%, rgba(255,255,255,.05) 55%, rgba(255,255,255,.32)) border-box;
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.18),
-    0 2px 4px rgba(15,23,42,.18),
-    0 34px 64px -28px rgba(15,23,42,.42);
+  position: relative; width: 100%; aspect-ratio: 1050 / 2253;
+}
+.device-frame {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  z-index: 2; pointer-events: none; user-select: none;
 }
 /* soft orange glow reflected under the device */
 .device::after {
-  content: ""; position: absolute; left: 10%; right: 10%; bottom: -30px; height: 40px;
+  content: ""; position: absolute; left: 10%; right: 10%; bottom: -26px; height: 40px;
   border-radius: 50%; filter: blur(16px); z-index: -1;
   background: radial-gradient(ellipse at center, rgba(249,115,22,.3), transparent 70%);
 }
-.device-speaker {
-  position: absolute; top: 7px; left: 50%; transform: translateX(-50%);
-  width: 44px; height: 4px; border-radius: 999px; background: rgba(255,255,255,.16);
-}
 .device .phone {
-  width: 100%; flex: 1; min-height: 0;
-  display: flex; flex-direction: column;
-  box-shadow: none; border-radius: 34px;
+  position: absolute; z-index: 1;
+  left: 3.9%; top: 1.55%; right: 3.81%; bottom: 1.91%;
+  width: auto; display: flex; flex-direction: column;
+  box-shadow: none; border-radius: 9% / 4%; overflow: hidden;
+  padding: 0 12px 10px;
 }
-.device .phone-head { border-radius: 34px 34px 0 0; padding-left: 22px; padding-right: 22px; }
+/* head clears the dynamic island (island floats over the gradient, like a
+   real status area); logo/name are left-aligned so nothing collides */
+.device .phone-head {
+  margin: 0 -12px 10px; padding: 44px 22px 10px;
+  border-radius: 0;
+}
 /* static screen reflection */
 .device .phone::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: linear-gradient(115deg, rgba(255,255,255,.14), rgba(255,255,255,0) 30%);
+  background: linear-gradient(115deg, rgba(255,255,255,.1), rgba(255,255,255,0) 30%);
 }
 
 /* ---------------- Floating contextual cards (driven by the demo) ---------------- */
@@ -919,9 +922,6 @@ img { display: block; }
      the first screen, so the product is visible before any scrolling */
   .hero-grid { grid-template-columns: 1fr; gap: 28px; padding-top: 24px; padding-bottom: 40px; }
   .hero-device { width: min(100%, 258px); }
-  .device { border-radius: 40px; padding: 14px 7px 9px; }
-  .device .phone { border-radius: 32px; }
-  .device .phone-head { border-radius: 32px 32px 0 0; }
   .hero h1 {
     font-size: clamp(1.75rem, 7vw, 2.45rem);
     line-height: 1.08;
@@ -1138,6 +1138,95 @@ img { display: block; }
   .cta-band .lbtn-light { box-shadow: 0 14px 40px rgba(0,0,0,.4); }
 
   @keyframes kenBurns { from { transform: scale(1); } to { transform: scale(1.07); } }
+}
+
+/* ============================================================
+   Mobile: ONE dark cinematic theme for the whole page.
+   Principle: dark canvas, light cards — the page background is a
+   single night surface, and every white card (steps, tour slides,
+   reviews, FAQ, pricing) glows on it as a product/solution accent.
+   Scoped to body.landing-page so the auth pages (/login, /register),
+   which load this same stylesheet, keep their own light design.
+   Desktop (>860px) is untouched.
+   ============================================================ */
+@media (max-width: 860px) {
+  html:has(body.landing-page) { background: #0A0E16; }
+  body.landing-page {
+    background: linear-gradient(180deg, #0B0F17 0%, #0A0E16 100%);
+  }
+
+  /* ---- nav: dark glass; white logo variant; light burger ---- */
+  .landing-page .nav {
+    background: rgba(10,14,22,.72);
+    border-bottom-color: rgba(255,255,255,.07);
+  }
+  .landing-page .nav.scrolled { box-shadow: 0 6px 24px -12px rgba(0,0,0,.6); }
+  .landing-page .nav-burger span { background: #F1F5F9; }
+  .landing-page .nav-menu { background: rgba(10,14,22,.96); }
+  .landing-page .nav-menu-links a { color: #F1F5F9; }
+  .landing-page .nav-menu-links a:hover { background: rgba(255,255,255,.07); }
+  .landing-page .logo-light { display: none; }
+  .landing-page .logo-dark { display: block; }
+
+  /* ---- section chrome: transparent over the dark canvas ---- */
+  .landing-page .section-alt { background: transparent; border-color: rgba(255,255,255,.06); }
+  .landing-page .sechead h2 { color: #F8FAFC; }
+  .landing-page .sechead .over { color: #FDBA74; }
+  .landing-page .sechead-sub { color: rgba(255,255,255,.72); }
+  .landing-page .proof-strip { background: transparent; border-color: rgba(255,255,255,.06); }
+
+  /* flat (non-card) rows go light-on-dark */
+  .landing-page .principle-row { border-bottom-color: rgba(255,255,255,.08); }
+  .landing-page .principle-row h3 { color: #F1F5F9; }
+  .landing-page .principle-row p { color: rgba(255,255,255,.7); }
+  .landing-page .principle-ic { background: rgba(255,255,255,.08); color: #F8FAFC; }
+  .landing-page .pain-label { background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); }
+  .landing-page .pain-label.ok { background: rgba(34,197,94,.16); color: #4ADE80; }
+  .landing-page .tour-swipe-hint { color: rgba(255,255,255,.55); }
+  .landing-page .steps-cta .lbtn-ghost,
+  .landing-page .nav-menu .lbtn-ghost {
+    background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.24);
+  }
+
+  /* reviews marquee: edge fades must match the dark canvas */
+  .landing-page .reviews-marquee::before { background: linear-gradient(90deg, #0A0E16, transparent); }
+  .landing-page .reviews-marquee::after { background: linear-gradient(270deg, #0A0E16, transparent); }
+  .landing-page .review-av { box-shadow: 0 0 0 2px rgba(255,255,255,.14); }
+
+  /* pricing scene already dark — soften its own gradient into the canvas */
+  .landing-page #price { background: transparent; }
+
+  /* footer: quiet dark ending */
+  .landing-page .foot { background: transparent; border-top-color: rgba(255,255,255,.08); }
+  .landing-page .foot-brand p, .landing-page .foot-copy { color: rgba(255,255,255,.55); }
+  .landing-page .foot-links a { color: rgba(255,255,255,.75); }
+
+  /* ---- more life on the phone: touch has no hover, so key moments
+     animate on their own (all transform/opacity; the global
+     reduced-motion kill-switch caps each at one iteration) ---- */
+  .landing-page .lbtn-primary::after { animation: autoShimmer 4s var(--ease-out) 1.6s infinite; }
+  .landing-page .cta-band .lbtn-light::after { animation: autoShimmer 4.6s var(--ease-out) 2.4s infinite; }
+  @keyframes autoShimmer {
+    0% { transform: translateX(-130%); }
+    26% { transform: translateX(130%); }
+    100% { transform: translateX(130%); }
+  }
+  .landing-page .hero-device { animation: deviceFloat 7s var(--ease-in-out, ease-in-out) infinite alternate; }
+  @keyframes deviceFloat { from { transform: translateY(0); } to { transform: translateY(-8px); } }
+  .landing-page .device::after { animation: glowBreathe 5s ease-in-out infinite alternate; }
+  @keyframes glowBreathe { from { opacity: .55; } to { opacity: 1; } }
+  .landing-page .online-dot { animation: onlinePulse 2.4s ease-in-out infinite; }
+  @keyframes onlinePulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgb(34 197 94 / .18); }
+    50% { box-shadow: 0 0 0 5px rgb(34 197 94 / .3); }
+  }
+}
+
+/* reviews marquee on touch devices: hover/focus "sticks" after a tap and
+   would pause the loop forever — touch keeps it running unconditionally */
+@media (hover: none) {
+  .reviews-marquee:hover .reviews-track,
+  .reviews-marquee:focus-within .reviews-track { animation-play-state: running; }
 }
 
 @media (max-width: 640px) {
