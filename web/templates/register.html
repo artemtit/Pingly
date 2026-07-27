@@ -112,9 +112,9 @@
   // Live minimum-length hint.
   var hint = document.getElementById('pw-hint');
   input.addEventListener('input', function(){
-    var ok = input.value.length >= 6;
+    var ok = input.value.length >= 8;
     hint.classList.toggle('ok', ok);
-    hint.textContent = ok ? 'Длина в порядке' : 'Минимум 6 символов';
+    hint.textContent = ok ? 'Длина в порядке' : 'Минимум 8 символов';
   });
 }());
 </script>

@@ -681,7 +681,12 @@ img { display: block; }
 .reviews-marquee {
   position: relative;
   overflow: hidden;
-  margin-top: 44px;
+  margin: 44px auto 0;
+  /* seamless loop math: translateX(-50%) only stays gap-free while the
+     viewport is narrower than one full set of cards (~1130px for the
+     current 3 reviews) — capping the container keeps it inside that
+     bound on every screen instead of only on phones. */
+  max-width: 1040px;
 }
 /* Solid-color edge fades (not mask-image — inconsistent cross-browser
    compositing let a sliver of the next card show through un-faded). */
@@ -995,87 +1000,13 @@ img { display: block; }
 }
 
 /* ============================================================
-   Mobile-only cinematic art direction (Higgsfield-generated)
-   Deliberately NOT a scaled-down desktop page: on phones the
-   hero, the pain section and the autopilot section each get a
-   full-bleed photographic/abstract backdrop with a dark scrim
-   for text contrast — desktop keeps its current clean light
-   background untouched. All three images are declared only
-   inside this max-width query, so desktop viewports never
-   request them (unmatched-media background-images aren't
-   fetched). The slow "Ken Burns" drift is pure decoration —
-   the global prefers-reduced-motion kill-switch in
-   design-tokens.css forces iteration-count:1 on it exactly
-   like every other animation on the page, so it just settles
-   on the end frame instead of looping.
+   Mobile: same light theme as desktop (no separate dark art
+   direction — reverted). Only structural/layout differences below:
+   the product tour becomes a swipeable carousel, and a few
+   elements get self-playing "liveliness" animations since touch
+   has no hover.
    ============================================================ */
 @media (max-width: 860px) {
-  /* ---- Hero: cinematic evening-desk backdrop replaces the light halo/dots ---- */
-  .hero-halo, .hero-dots, .hero-light, .hero-noise { display: none; }
-  .hero::before, .hero::after { content: ""; position: absolute; inset: 0; z-index: 0; }
-  .hero::before {
-    background-image: url('/static/mobile-hero-evening.webp');
-    background-size: cover; background-position: center 22%;
-    animation: kenBurns 26s ease-in-out infinite alternate;
-  }
-  .hero::after {
-    background: linear-gradient(180deg, rgba(6,9,15,.2) 0%, rgba(6,9,15,.52) 50%, rgba(6,9,15,.88) 100%);
-  }
-  .hero-grid { position: relative; z-index: 1; }
-  .hero .pill { background: rgba(255,255,255,.14); color: #FDBA74; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-  .hero h1 { color: #fff; }
-  .hero .hero-sub { color: rgba(255,255,255,.82); }
-  .hero .hero-micro { color: rgba(255,255,255,.72); }
-  .hero .hero-micro .ic { color: #4ADE80; }
-  .hero .lbtn-ghost { background: rgba(255,255,255,.14); color: #fff; border-color: rgba(255,255,255,.28); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-  .hero .lbtn-ghost:hover { background: rgba(255,255,255,.22); }
-
-  /* ---- Pain section: full-bleed cinematic cold-open before the before/after cards ---- */
-  .pain-banner {
-    position: relative; overflow: hidden; isolation: isolate;
-    margin: -48px 0 0; padding: 72px 16px 44px;
-  }
-  .pain-banner::before, .pain-banner::after { content: ""; position: absolute; inset: 0; z-index: -1; }
-  .pain-banner::before {
-    background-image: url('/static/mobile-pain-moment.webp');
-    background-size: cover; background-position: center 25%;
-    animation: kenBurns 26s ease-in-out infinite alternate;
-  }
-  /* top edge nearly solid so the banner fuses seamlessly with the dark proof
-     strip above it — the photo "opens up" mid-frame like a window */
-  .pain-banner::after {
-    background: linear-gradient(180deg, rgba(8,10,16,.96) 0%, rgba(8,10,16,.42) 34%, rgba(8,10,16,.62) 62%, rgba(8,10,16,.95) 100%);
-  }
-  .pain-banner .sechead { text-align: left; }
-  .pain-banner .over { color: #FDBA74; }
-  .pain-banner h2 { color: #fff; }
-  .pain-banner .sechead-sub { color: rgba(255,255,255,.82); margin-left: 0; }
-
-  /* ---- Autopilot: layered atmosphere behind the existing dot-grid/glow ---- */
-  .autopilot::before {
-    content: ""; position: absolute; inset: 0; z-index: 0; opacity: .5;
-    background-image: url('/static/mobile-autopilot-abstract.webp');
-    background-size: cover; background-position: center 12%;
-    animation: kenBurns 30s ease-in-out infinite alternate;
-  }
-
-  /* ---- Hero hierarchy: one dominant headline, one dominant CTA ---- */
-  .hero h1 { font-size: clamp(2.05rem, 8.6vw, 2.75rem); letter-spacing: -.032em; line-height: 1.05; }
-  .hero .pill { font-size: 12.5px; padding: 5px 12px; }
-  .hero .hero-micro { color: rgba(255,255,255,.8); }
-
-  /* ---- Proof strip: the night act continues — no light gap between the
-     hero and the pain scene, so the cinematic momentum never breaks ---- */
-  .proof-strip { background: #090D15; border-top-color: rgba(255,255,255,.05); border-bottom-color: rgba(255,255,255,.05); }
-  .proof-item > p { color: rgba(255,255,255,.72); }
-  .proof-num { color: #fff; }
-  .proof-counter .ic { color: #FB923C; }
-  .proof-strip .av-circle { border-color: #090D15; }
-  .proof-counter.loading .proof-num {
-    background: linear-gradient(90deg, rgba(255,255,255,.07) 25%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.07) 75%);
-    background-size: 200% 100%;
-  }
-
   /* ---- Product tour: six long blocks become one horizontal snap carousel —
      the section is ~5× shorter and swiping is the native mobile idiom ---- */
   .tour-swipe-hint { display: block; text-align: center; font-size: 13px; font-weight: 600; color: var(--fg3); margin: 20px 0 0; }
@@ -1102,120 +1033,21 @@ img { display: block; }
   .tour-art .mini { box-shadow: none; border: none; background: transparent; padding: 0; }
   .tour-art .mini-total { flex-direction: row; align-items: center; }
 
-  /* ---- Pricing: the same dark premium stage as hero and autopilot;
-     the single white card becomes the protagonist ---- */
-  #price { position: relative; overflow: hidden; background: linear-gradient(180deg, #10151F 0%, #0A0E16 100%); }
-  #price::before {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1.4px);
-    background-size: 24px 24px;
-    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 24%, #000, transparent 76%);
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 24%, #000, transparent 76%);
-  }
-  #price .wrap { position: relative; }
-  #price .over { color: #FDBA74; }
-  #price h2 { color: #F8FAFC; }
-  #price .price-anchor h3 { color: #fff; }
-  #price .price-anchor > p { color: rgba(255,255,255,.75); }
-  #price .price-anchor-list li { color: rgba(255,255,255,.75); }
-  #price .price-anchor-list .ic { color: #4ADE80; }
-  #price .price-card {
-    background: #fff; border: 1px solid rgba(255,255,255,.12);
-    box-shadow: 0 30px 60px -22px rgba(0,0,0,.6), 0 18px 50px -14px rgba(249,115,22,.3);
-  }
-
-  /* ---- Final CTA: bookend — the page closes on the same evening scene it
-     opened with, but now the evening is quiet ---- */
-  .cta-band { background: #0A0E16; }
-  .cta-band::before {
-    opacity: 1;
-    background-image: url('/static/mobile-hero-evening.webp');
-    background-size: cover; background-position: center 72%;
-    animation: kenBurns 28s ease-in-out infinite alternate;
-  }
-  .cta-glow { background: linear-gradient(180deg, rgba(6,9,15,.82) 0%, rgba(6,9,15,.48) 46%, rgba(6,9,15,.86) 100%); }
-  .cta-band h2 { font-size: clamp(1.7rem, 7.4vw, 2.2rem); }
-  .cta-band .lbtn-light { box-shadow: 0 14px 40px rgba(0,0,0,.4); }
-
-  @keyframes kenBurns { from { transform: scale(1); } to { transform: scale(1.07); } }
-}
-
-/* ============================================================
-   Mobile: ONE dark cinematic theme for the whole page.
-   Principle: dark canvas, light cards — the page background is a
-   single night surface, and every white card (steps, tour slides,
-   reviews, FAQ, pricing) glows on it as a product/solution accent.
-   Scoped to body.landing-page so the auth pages (/login, /register),
-   which load this same stylesheet, keep their own light design.
-   Desktop (>860px) is untouched.
-   ============================================================ */
-@media (max-width: 860px) {
-  html:has(body.landing-page) { background: #0A0E16; }
-  body.landing-page {
-    background: linear-gradient(180deg, #0B0F17 0%, #0A0E16 100%);
-  }
-
-  /* ---- nav: dark glass; white logo variant; light burger ---- */
-  .landing-page .nav {
-    background: rgba(10,14,22,.72);
-    border-bottom-color: rgba(255,255,255,.07);
-  }
-  .landing-page .nav.scrolled { box-shadow: 0 6px 24px -12px rgba(0,0,0,.6); }
-  .landing-page .nav-burger span { background: #F1F5F9; }
-  .landing-page .nav-menu { background: rgba(10,14,22,.96); }
-  .landing-page .nav-menu-links a { color: #F1F5F9; }
-  .landing-page .nav-menu-links a:hover { background: rgba(255,255,255,.07); }
-  .landing-page .logo-light { display: none; }
-  .landing-page .logo-dark { display: block; }
-
-  /* ---- section chrome: transparent over the dark canvas ---- */
-  .landing-page .section-alt { background: transparent; border-color: rgba(255,255,255,.06); }
-  .landing-page .sechead h2 { color: #F8FAFC; }
-  .landing-page .sechead .over { color: #FDBA74; }
-  .landing-page .sechead-sub { color: rgba(255,255,255,.72); }
-  .landing-page .proof-strip { background: transparent; border-color: rgba(255,255,255,.06); }
-
-  /* flat (non-card) rows go light-on-dark */
-  .landing-page .principle-row { border-bottom-color: rgba(255,255,255,.08); }
-  .landing-page .principle-row h3 { color: #F1F5F9; }
-  .landing-page .principle-row p { color: rgba(255,255,255,.7); }
-  .landing-page .principle-ic { background: rgba(255,255,255,.08); color: #F8FAFC; }
-  .landing-page .pain-label { background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); }
-  .landing-page .pain-label.ok { background: rgba(34,197,94,.16); color: #4ADE80; }
-  .landing-page .tour-swipe-hint { color: rgba(255,255,255,.55); }
-  .landing-page .steps-cta .lbtn-ghost,
-  .landing-page .nav-menu .lbtn-ghost {
-    background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.24);
-  }
-
-  /* reviews marquee: edge fades must match the dark canvas */
-  .landing-page .reviews-marquee::before { background: linear-gradient(90deg, #0A0E16, transparent); }
-  .landing-page .reviews-marquee::after { background: linear-gradient(270deg, #0A0E16, transparent); }
-  .landing-page .review-av { box-shadow: 0 0 0 2px rgba(255,255,255,.14); }
-
-  /* pricing scene already dark — soften its own gradient into the canvas */
-  .landing-page #price { background: transparent; }
-
-  /* footer: quiet dark ending */
-  .landing-page .foot { background: transparent; border-top-color: rgba(255,255,255,.08); }
-  .landing-page .foot-brand p, .landing-page .foot-copy { color: rgba(255,255,255,.55); }
-  .landing-page .foot-links a { color: rgba(255,255,255,.75); }
-
-  /* ---- more life on the phone: touch has no hover, so key moments
-     animate on their own (all transform/opacity; the global
-     reduced-motion kill-switch caps each at one iteration) ---- */
-  .landing-page .lbtn-primary::after { animation: autoShimmer 4s var(--ease-out) 1.6s infinite; }
-  .landing-page .cta-band .lbtn-light::after { animation: autoShimmer 4.6s var(--ease-out) 2.4s infinite; }
+  /* ---- touch has no hover, so a few key moments animate on their own
+     (all transform/opacity; the global reduced-motion kill-switch caps
+     each at one iteration) ---- */
+  .lbtn-primary::after { animation: autoShimmer 4s var(--ease-out) 1.6s infinite; }
+  .cta-band .lbtn-light::after { animation: autoShimmer 4.6s var(--ease-out) 2.4s infinite; }
   @keyframes autoShimmer {
     0% { transform: translateX(-130%); }
     26% { transform: translateX(130%); }
     100% { transform: translateX(130%); }
   }
-  .landing-page .hero-device { animation: deviceFloat 7s var(--ease-in-out, ease-in-out) infinite alternate; }
+  .hero-device { animation: deviceFloat 7s var(--ease-in-out, ease-in-out) infinite alternate; }
   @keyframes deviceFloat { from { transform: translateY(0); } to { transform: translateY(-8px); } }
-  .landing-page .device::after { animation: glowBreathe 5s ease-in-out infinite alternate; }
+  .device::after { animation: glowBreathe 5s ease-in-out infinite alternate; }
   @keyframes glowBreathe { from { opacity: .55; } to { opacity: 1; } }
-  .landing-page .online-dot { animation: onlinePulse 2.4s ease-in-out infinite; }
+  .online-dot { animation: onlinePulse 2.4s ease-in-out infinite; }
   @keyframes onlinePulse {
     0%, 100% { box-shadow: 0 0 0 2px rgb(34 197 94 / .18); }
     50% { box-shadow: 0 0 0 5px rgb(34 197 94 / .3); }
@@ -1313,10 +1145,6 @@ img { display: block; }
   .auto-status { opacity: 1; transform: none; }
   .auto-stop .auto-dot { background: var(--orange-500); }
   .auto-stop .auto-dot::after { display: none; }
-}
-/* frozen counter skeleton must stay visible on the dark mobile proof strip */
-@media (max-width: 860px) and (prefers-reduced-motion: reduce) {
-  .proof-counter.loading .proof-num { background: rgba(255,255,255,.1); }
 }
 
 /* ============================================================
