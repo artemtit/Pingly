@@ -1,7 +1,7 @@
 * { box-sizing: border-box; }
 /* Matches body's base tone so iOS/Android momentum-scroll overscroll (which
    reveals html's background, not body's) never flashes a plain white strip. */
-html { background: #F4F5F8; }
+html { background: #F4F5F8; color-scheme: light; }
 body {
   margin: 0;
   min-height: 100vh;
@@ -42,7 +42,11 @@ body::before {
   transition: opacity .22s ease, transform .22s ease;
 }
 /* -------- dark theme overrides -------- */
-[data-theme="dark"] html { background: #0F172A; }
+/* `html` IS the [data-theme] element — the selector must be html[data-theme],
+   not a descendant one, иначе фон корня остаётся светлым и между переходами
+   страниц (body на opacity:0) мигает белый экран. color-scheme даёт браузеру
+   тёмный canvas на время самой навигации, до первой отрисовки. */
+html[data-theme="dark"] { background: #0F172A; color-scheme: dark; }
 [data-theme="dark"] body {
   background:
     radial-gradient(ellipse 44rem 32rem at 10% -8%, rgba(249,115,22,.16), transparent 60%),
@@ -329,6 +333,7 @@ a.timeline-body:hover .timeline-when { color: var(--orange-700, #c2410c); }
 .view-switch a.active { background: #fff; color: var(--color-text); box-shadow: 0 6px 18px -16px rgba(15,23,42,.24); }
 .cal-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 .legend { margin-left: auto; display: flex; gap: 14px; font-size: 12px; color: var(--color-text-muted); flex-wrap: wrap; }
+.cal-export { margin-left: auto; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .dot.scheduled { background: var(--color-info); } .dot.completed { background: var(--color-success); }
@@ -734,9 +739,13 @@ details.series-item:last-child { border-bottom: 0; }
   .card { overflow: hidden; }
   .day-lesson { flex-wrap: wrap; }
   .day-lesson-actions { width: 100%; }
-  .legend { margin-left: 0; }
-  .cal-nav { flex-wrap: nowrap; align-items: stretch; gap: 6px; }
-  .cal-nav .btn { flex: 1 1 0; width: auto; min-width: 0; padding: 8px 6px; font-size: 13px; white-space: nowrap; }
+  /* Календарь: три ряда вместо одной строки — иначе легенда и «Экспорт»
+     не влезают в nowrap-строку и наезжают на кнопки навигации. */
+  .cal-nav { flex-wrap: wrap; align-items: stretch; gap: 8px 6px; }
+  .cal-nav > .btn { flex: 1 1 0; width: auto; min-width: 0; padding: 8px 6px; font-size: 13px;
+    min-height: 40px; white-space: nowrap; }
+  .legend { order: 2; flex: 1 0 100%; margin-left: 0; justify-content: center; gap: 6px 10px; }
+  .cal-nav > .cal-export { order: 3; flex: 1 0 100%; margin-left: 0; justify-content: center; }
   .view-switch { width: 100%; justify-content: space-between; }
   .view-switch a { flex: 1 1 0; text-align: center; padding-inline: 10px; }
   .search { flex-direction: column; }
