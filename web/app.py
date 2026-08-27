@@ -673,6 +673,18 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         )
         return Response(content=body, media_type="text/plain")
 
+    @app.get("/yandex_{token}.html")
+    async def yandex_verification(token: str) -> Response:
+        # Яндекс.Вебмастер проверяет права по файлу в корне сайта.
+        # Файл лежит в web/static/, роут отдаёт его с корня. Токен — только hex,
+        # чтобы имя не могло увести FileResponse за пределы static/.
+        if not re.fullmatch(r"[0-9a-f]{6,64}", token):
+            raise HTTPException(status_code=404)
+        path = BASE_DIR / "static" / f"yandex_{token}.html"
+        if not path.is_file():
+            raise HTTPException(status_code=404)
+        return FileResponse(path, media_type="text/html")
+
     @app.get("/sitemap.xml")
     async def sitemap() -> Response:
         base = WEB_BASE_URL.rstrip("/")
