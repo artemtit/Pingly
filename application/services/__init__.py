@@ -8,6 +8,7 @@ from .notifications import NotificationService
 from .public import PublicService
 from .students import StudentService
 from .web_auth import WebAuthService
+from .webstats import WebStatsService
 
 __all__ = [
     "AdminService",
@@ -20,4 +21,5 @@ __all__ = [
     "PublicService",
     "StudentService",
     "WebAuthService",
+    "WebStatsService",
 ]

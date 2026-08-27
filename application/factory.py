@@ -11,6 +11,7 @@ from application.services import (
     PublicService,
     StudentService,
     WebAuthService,
+    WebStatsService,
 )
 from config import BOT_TOKEN, WEB_BASE_URL
 from infrastructure.supabase_repository import SupabasePinglyRepository
@@ -29,6 +30,7 @@ class Services:
         self.billing = BillingService(self.repo)
         self.admin = AdminService(self.repo)
         self.web_auth = WebAuthService(self.repo, WEB_BASE_URL, BOT_TOKEN)
+        self.webstats = WebStatsService(self.repo)
 
 
 def create_services() -> Services:

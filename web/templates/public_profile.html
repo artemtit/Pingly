@@ -267,7 +267,7 @@
         </div>
       </div>
 
-      <form method="post" action="/u/{{ slug }}/book"{% if example %} onsubmit="return false"{% endif %}>
+      <form method="post" action="/u/{{ slug }}/book"{% if example %} onsubmit="return false"{% else %} onsubmit="window.plTrack&&plTrack('booking_submitted')"{% endif %}>
         <div class="field">
           <label for="name">Имя</label>
           <div class="input-shell">

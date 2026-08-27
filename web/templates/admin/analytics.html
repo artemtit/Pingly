@@ -1,0 +1,159 @@
+{% extends "layout.html" %}
+{% import "macros.html" as ui %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <div class="eyebrow">Админка</div>
+    <h1>{{ ui.icon('trending-up', 24) }} Аналитика сайта</h1>
+  </div>
+</div>
+
+<div class="view-switch" style="margin-bottom:18px;">
+  <a href="/admin">Обзор</a>
+  <a href="/admin/tutors">Репетиторы</a>
+  <a href="/admin/analytics" class="active">Аналитика</a>
+  <a href="/admin/broadcast">Рассылка</a>
+</div>
+
+<div class="view-switch" style="margin-bottom:18px;">
+  {% for d in [7, 30, 90] %}
+    <a href="/admin/analytics?days={{ d }}"{% if stats.days == d %} class="active"{% endif %}>{{ d }} дней</a>
+  {% endfor %}
+</div>
+
+<section class="grid stats">
+  <div class="card stat">
+    <span class="stat-icon">{{ ui.icon('users') }}</span>
+    <div><div class="value">{{ stats.visitors }}</div><div class="label">Посетителей</div></div>
+  </div>
+  <div class="card stat">
+    <span class="stat-icon">{{ ui.icon('link') }}</span>
+    <div><div class="value">{{ stats.sessions }}</div><div class="label">Визитов</div></div>
+  </div>
+  <div class="card stat">
+    <span class="stat-icon">{{ ui.icon('eye') }}</span>
+    <div><div class="value">{{ stats.pageviews }}</div><div class="label">Просмотров</div></div>
+  </div>
+  <div class="card stat">
+    <span class="stat-icon accent">{{ ui.icon('gauge') }}</span>
+    <div>
+      <div class="value">{{ stats.funnel[2].percent }}%</div>
+      <div class="label">Конверсия в регистрацию</div>
+    </div>
+  </div>
+</section>
+
+{% if not stats.visitors %}
+  <div class="card" style="margin-top:18px;">
+    <p style="margin:0;">
+      Данных пока нет. Своя аналитика считает только живых людей — боты
+      отсекаются по User-Agent, поэтому цифры будут заметно ниже, чем в
+      Cloudflare, и это нормально: там боты посчитаны как посетители.
+    </p>
+  </div>
+{% else %}
+
+{# График: обычные div-полоски, без библиотек — так страница не тянет ничего
+   извне и одинаково работает при заблокированных CDN. #}
+{% set max_views = (stats.daily | map(attribute='pageviews') | list | max) if stats.daily else 0 %}
+<section class="card" style="margin-top:18px;">
+  <h2 style="margin-top:0;">По дням</h2>
+  <div style="display:flex; align-items:flex-end; gap:3px; height:140px; overflow-x:auto; padding-bottom:4px;">
+    {% for row in stats.daily %}
+      <div style="flex:1 0 14px; display:flex; flex-direction:column; justify-content:flex-end; height:100%;"
+           title="{{ row.day }} — {{ row.visitors }} посетителей, {{ row.pageviews }} просмотров">
+        <div style="background:var(--color-primary-600); border-radius:3px 3px 0 0;
+                    height:{{ (row.pageviews * 100 / max_views) if max_views else 0 }}%; min-height:2px;"></div>
+      </div>
+    {% endfor %}
+  </div>
+  <div style="display:flex; justify-content:space-between; font-size:12px; opacity:.6; margin-top:6px;">
+    <span>{{ stats.daily[0].day if stats.daily else '' }}</span>
+    <span>{{ stats.daily[-1].day if stats.daily else '' }}</span>
+  </div>
+</section>
+
+<section class="card" style="margin-top:18px;">
+  <h2 style="margin-top:0;">Воронка</h2>
+  <p style="margin-top:0; font-size:13px; opacity:.7;">
+    Считается по людям, а не по событиям: репетитор, добавивший трёх учеников,
+    — это одна конверсия, а не три.
+  </p>
+  {% for step in stats.funnel %}
+    <div style="margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:4px;">
+        <span>{{ step.label }}</span>
+        <span><strong>{{ step.value }}</strong> <span style="opacity:.6;">· {{ step.percent }}%</span></span>
+      </div>
+      <div style="background:var(--color-bg-muted); border-radius:6px; height:10px; overflow:hidden;">
+        <div style="background:var(--color-primary-600); height:100%; width:{{ step.percent }}%;"></div>
+      </div>
+    </div>
+  {% endfor %}
+</section>
+
+<div class="grid" style="margin-top:18px; gap:18px; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));">
+  <section class="card">
+    <h2 style="margin-top:0;">Источники</h2>
+    <table class="table">
+      <thead><tr><th>Откуда</th><th style="text-align:right;">Людей</th><th style="text-align:right;">Визитов</th></tr></thead>
+      <tbody>
+        {% for row in stats.sources %}
+          <tr><td>{{ row.source }}</td>
+              <td style="text-align:right;">{{ row.visitors }}</td>
+              <td style="text-align:right;">{{ row.sessions }}</td></tr>
+        {% else %}
+          <tr><td colspan="3" style="opacity:.6;">Пока пусто</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2 style="margin-top:0;">Страницы</h2>
+    <table class="table">
+      <thead><tr><th>Адрес</th><th style="text-align:right;">Просмотров</th><th style="text-align:right;">Людей</th></tr></thead>
+      <tbody>
+        {% for row in stats.paths %}
+          <tr><td>{{ row.path }}</td>
+              <td style="text-align:right;">{{ row.pageviews }}</td>
+              <td style="text-align:right;">{{ row.visitors }}</td></tr>
+        {% else %}
+          <tr><td colspan="3" style="opacity:.6;">Пока пусто</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2 style="margin-top:0;">Цели</h2>
+    <table class="table">
+      <thead><tr><th>Событие</th><th style="text-align:right;">Раз</th><th style="text-align:right;">Людей</th></tr></thead>
+      <tbody>
+        {% for row in stats.goals %}
+          <tr><td>{{ row.event }}</td>
+              <td style="text-align:right;">{{ row.hits }}</td>
+              <td style="text-align:right;">{{ row.visitors }}</td></tr>
+        {% else %}
+          <tr><td colspan="3" style="opacity:.6;">Пока пусто</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2 style="margin-top:0;">Устройства</h2>
+    <table class="table">
+      <thead><tr><th>Тип</th><th style="text-align:right;">Людей</th></tr></thead>
+      <tbody>
+        {% for row in stats.devices %}
+          <tr><td>{{ row.device }}</td><td style="text-align:right;">{{ row.visitors }}</td></tr>
+        {% else %}
+          <tr><td colspan="2" style="opacity:.6;">Пока пусто</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

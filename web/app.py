@@ -121,6 +121,8 @@ _REGISTER_RATE = (5, 900.0)  # per IP / 15 min — signup spam
 _VERIFY_RATE = (10, 600.0)   # per email / 10 min — code guessing
 _RESEND_RATE = (3, 600.0)    # per email / 10 min — email bombing
 _TG_AUTH_RATE = (20, 300.0)  # per IP / 5 min — forged Telegram auth_date/hash guessing
+_TRACK_RATE = (240, 60.0)    # per IP / 1 min — публичный приём событий аналитики.
+                             # Щедро: за одним IP сидит целый класс через NAT.
 
 # Public landing stats: cached in-process so landing traffic never hammers the DB.
 _PUBLIC_STATS: dict[str, float | int | None] = {"value": None, "at": 0.0}
@@ -684,6 +686,47 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
                 # Warm failure: keep serving the last known honest value.
         return JSONResponse({"reminders_sent": _PUBLIC_STATS["value"]},
                             headers={"Cache-Control": "public, max-age=300"})
+
+    @app.post("/api/track", status_code=204)
+    async def track_event(request: Request) -> Response:
+        """Приём событий собственной аналитики. Всегда отвечает 204, что бы ни
+        пришло: браузер шлёт это через sendBeacon и ответ всё равно не читает,
+        а одинаковый ответ не подсказывает ботам, по каким признакам их режут."""
+        empty = Response(status_code=204)
+        if not _rate_ok(f"track:{_client_ip(request)}", *_TRACK_RATE):
+            return empty
+        try:
+            body = await request.json()
+        except Exception:
+            return empty
+        if not isinstance(body, dict):
+            return empty
+
+        # user_id берём прямо из подписанной куки, без похода в БД: это самый
+        # частый запрос на сайте, лишний SELECT на каждый просмотр не нужен.
+        user_id = None
+        raw = request.cookies.get("pingly_session")
+        if raw:
+            decoded = _decode_session(raw)
+            if decoded:
+                user_id = decoded[0]
+
+        try:
+            await services.webstats.track(
+                event=str(body.get("event") or ""),
+                path=str(body.get("path") or "/"),
+                visitor_id=str(body.get("v") or ""),
+                session_id=str(body.get("s") or ""),
+                referrer=str(body.get("ref") or ""),
+                query=body.get("utm") if isinstance(body.get("utm"), dict) else {},
+                user_agent=request.headers.get("user-agent", ""),
+                user_id=user_id,
+                props=body.get("props") if isinstance(body.get("props"), dict) else {},
+            )
+        except Exception:
+            # Аналитика никогда не должна ронять запрос пользователя.
+            logging.getLogger("pingly.web").warning("track: insert failed", exc_info=True)
+        return empty
 
     @app.get("/robots.txt")
     async def robots() -> Response:
@@ -1938,6 +1981,16 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         stats = await services.admin.overview()
         return templates.TemplateResponse(
             "admin/overview.html", _ctx(request, user, "admin", stats=stats),
+        )
+
+    @app.get("/admin/analytics", response_class=HTMLResponse)
+    async def admin_analytics(
+        request: Request, days: int = 30, user: dict = Depends(current_user),
+    ) -> Response:
+        _require_admin(user)
+        stats = await services.webstats.dashboard(days)
+        return templates.TemplateResponse(
+            "admin/analytics.html", _ctx(request, user, "admin", stats=stats),
         )
 
     @app.get("/admin/tutors", response_class=HTMLResponse)

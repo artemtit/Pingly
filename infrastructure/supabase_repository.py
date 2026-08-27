@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import db
+from domain.slug import SLUG_MAX_LEN, slug_from_name
 
 # Statuses that count as "still upcoming" for a student (not finished/cancelled).
 ACTIVE_LESSON_STATUSES = ["scheduled", "confirmed", "reschedule_requested"]
@@ -21,6 +22,43 @@ def _gen_code() -> str:
 class SupabasePinglyRepository:
     def _db(self):
         return db.client()
+
+    # ---------------- Адрес публичной страницы ----------------
+    async def _free_slug(self, full_name: str) -> str:
+        """Свободный адрес страницы из имени: «Иван Петров» → ivan-petrov.
+
+        При коллизии добавляет -2, -3… Если из имени ничего не вышло (пустое,
+        одни эмодзи) — случайный tXXXXXXXX, как было раньше. Вызывается только
+        при регистрации, поэтому лишний запрос тут не на горячем пути.
+        """
+        base = slug_from_name(full_name)
+        if not base:
+            return "t" + _gen_code()
+        # base уже нормализован до [a-z0-9-], так что % / _ в like безопасны.
+        result = await self._db().table("tutor_profiles").select("slug").like("slug", f"{base}%").execute()
+        taken = {(r.get("slug") or "").lower() for r in (result.data or [])}
+        if base not in taken:
+            return base
+        stem = base[:SLUG_MAX_LEN - 3]
+        for n in range(2, 100):
+            candidate = f"{stem}-{n}"
+            if candidate not in taken:
+                return candidate
+        return "t" + _gen_code()
+
+    async def _insert_tutor_profile(self, user_id: str, full_name: str) -> None:
+        """Создать профиль репетитора с адресом страницы из имени.
+
+        Уникальность slug держит индекс в БД. Гонку (две регистрации с одним
+        именем одновременно) ловим и откатываемся на случайный адрес:
+        регистрация не имеет права упасть из-за красивого адреса.
+        """
+        row = {"user_id": user_id, "display_name": full_name, "slug": await self._free_slug(full_name)}
+        try:
+            await self._db().table("tutor_profiles").insert(row).execute()
+        except Exception:
+            row["slug"] = "t" + _gen_code()
+            await self._db().table("tutor_profiles").insert(row).execute()
 
     async def get_user_by_tg_id(self, tg_id: int) -> dict[str, Any] | None:
         result = await self._db().table("users").select("*").eq("tg_id", tg_id).execute()
@@ -54,11 +92,7 @@ class SupabasePinglyRepository:
         }).execute()
         user = result.data[0]
         if role == "tutor":
-            await self._db().table("tutor_profiles").insert({
-                "user_id": user["id"],
-                "display_name": full_name,
-                "slug": "t" + _gen_code(),
-            }).execute()
+            await self._insert_tutor_profile(user["id"], full_name)
         else:
             await self._db().table("student_profiles").insert({
                 "user_id": user["id"],
@@ -105,11 +139,7 @@ class SupabasePinglyRepository:
             "referral_code": _gen_code(),
         }).execute()
         user = result.data[0]
-        await self._db().table("tutor_profiles").insert({
-            "user_id": user["id"],
-            "display_name": full_name,
-            "slug": "t" + _gen_code(),
-        }).execute()
+        await self._insert_tutor_profile(user["id"], full_name)
         return user
 
     async def update_user_profile(self, user_id: str, full_name: str | None = None, role: str | None = None) -> dict[str, Any] | None:
@@ -132,7 +162,9 @@ class SupabasePinglyRepository:
         if role == "tutor":
             profile = await self._db().table("tutor_profiles").select("id").eq("user_id", user_id).execute()
             if not profile.data:
-                await self._db().table("tutor_profiles").insert({"user_id": user_id, "display_name": user["full_name"]}).execute()
+                # Раньше здесь профиль создавался БЕЗ slug — публичную страницу
+                # такому репетитору было не открыть. Теперь адрес выдаётся сразу.
+                await self._insert_tutor_profile(user_id, user["full_name"])
         if role == "student":
             profile = await self._db().table("student_profiles").select("id").eq("user_id", user_id).execute()
             if not profile.data:
@@ -784,8 +816,13 @@ class SupabasePinglyRepository:
         )
         return [r["slug"] for r in (result.data or []) if r.get("slug")]
 
-    async def update_tutor_profile(self, tutor_user_id: str, patch: dict[str, Any]) -> dict[str, Any] | None:
-        clean = {k: v for k, v in patch.items() if v is not None}
+    async def update_tutor_profile(self, tutor_user_id: str, patch: dict[str, Any], nullable: tuple[str, ...] = ()) -> dict[str, Any] | None:
+        # По умолчанию None = «не трогать поле» (так патч можно собирать из
+        # необязательных значений, не боясь затереть данные). Ключи из nullable —
+        # исключение: там None означает «записать NULL», иначе необязательные
+        # поля (цена, примечание, telegram) нельзя было бы очистить.
+        allow_null = set(nullable)
+        clean = {k: v for k, v in patch.items() if v is not None or k in allow_null}
         if not clean:
             return await self.get_tutor_profile(tutor_user_id)
         result = await self._db().table("tutor_profiles").update(clean).eq("user_id", tutor_user_id).execute()
@@ -1127,3 +1164,17 @@ class SupabasePinglyRepository:
             .execute()
         )
         return _one(result)
+
+    # ---------------- Собственная веб-аналитика (022) ----------------
+
+    async def insert_web_event(self, row: dict[str, Any]) -> None:
+        """Записать одно событие. Сознательно без возврата строки: вызывается
+        на каждый просмотр страницы, лишний round-trip тут не нужен."""
+        await self._db().table("web_events").insert(row).execute()
+
+    async def web_stats(self, fn: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+        """Агрегаты считает Postgres (функции web_stats_* из 022). Остальная
+        админка тянет строки и складывает в Python, но событий на порядки
+        больше — тащить их все на каждый заход в админку нельзя."""
+        result = await self._db().rpc(fn, params).execute()
+        return list(result.data or [])

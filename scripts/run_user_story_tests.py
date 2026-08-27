@@ -280,7 +280,10 @@ class FakePublic:
     async def mark_request(self, tutor_user_id: str, request_id: str, status: str) -> None:
         events.append(("mark_request", request_id, status))
 
-    async def update_profile(self, tutor_user_id: str, slug: str, bio: str, subjects: str, public_enabled: bool, badges: str = "", page_theme: str = "auto"):
+    def parse_reviews(self, raw) -> list[dict]:
+        return raw if isinstance(raw, list) else []
+
+    async def update_profile(self, tutor_user_id: str, slug: str, bio: str, subjects: str, public_enabled: bool, badges: str = "", page_theme: str = "auto", **extra):
         if public_enabled and len(slug) < 3:
             return None, "short slug"
         events.append(("update_public_profile", slug, public_enabled, page_theme))
@@ -388,6 +391,9 @@ fake_profile = {
     "user_id": "tutor", "slug": "alice-math", "public_enabled": True,
     "subjects": "Math, physics", "bio": "Clear explanations", "badges": "clock|Fast reply",
     "page_theme": "auto", "display_name": "Tutor One", "users": {"full_name": "Tutor One"},
+    "price_per_hour": 1200, "price_duration_min": 60, "price_note": "Первое занятие бесплатно",
+    "telegram_username": "tutor_one",
+    "reviews": [{"author": "Мама Пети", "text": "Сын перестал бояться математики", "position": 0}],
 }
 
 fake_requests = [{
