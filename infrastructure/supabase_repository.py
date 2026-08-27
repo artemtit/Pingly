@@ -127,8 +127,11 @@ class SupabasePinglyRepository:
         )
         return _one(result)
 
-    async def create_email_tutor(self, email: str, password_hash: str, full_name: str, email_verified: bool = True) -> dict[str, Any]:
-        result = await self._db().table("users").insert({
+    async def create_email_tutor(self, email: str, password_hash: str, full_name: str, email_verified: bool = True, consent_version: str | None = None) -> dict[str, Any]:
+        # Согласие на обработку ПДн пишется той же вставкой, что и аккаунт:
+        # отдельный UPDATE после создания оставил бы окно, в котором аккаунт
+        # уже есть, а доказательства согласия к нему ещё нет.
+        row: dict[str, Any] = {
             "role": "tutor",
             "email": email,
             "password_hash": password_hash,
@@ -137,7 +140,11 @@ class SupabasePinglyRepository:
             "trial_ends_at": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
             "subscription_status": "trial",
             "referral_code": _gen_code(),
-        }).execute()
+        }
+        if consent_version:
+            row["pd_consent_at"] = datetime.now(timezone.utc).isoformat()
+            row["pd_consent_version"] = consent_version
+        result = await self._db().table("users").insert(row).execute()
         user = result.data[0]
         await self._insert_tutor_profile(user["id"], full_name)
         return user

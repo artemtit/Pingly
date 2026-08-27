@@ -33,13 +33,15 @@ class FakeWebAuth:
             return fake_users["tutor"]
         return None
 
-    async def register_tutor_email(self, full_name: str, email: str, password: str, require_verification: bool = False):
+    async def register_tutor_email(self, full_name: str, email: str, password: str, require_verification: bool = False,
+                                   consent_version: str | None = None):
         if len(password) < 6:
             return None, "Password too short"
         user = deepcopy(fake_users["tutor"])
         user["full_name"] = full_name
         user["email"] = email
         user["email_verified"] = not require_verification
+        user["pd_consent_version"] = consent_version
         return user, None
 
     async def send_verification_code(self, user: dict):
@@ -60,9 +62,6 @@ class FakeWebAuth:
 
     async def consume_login_token(self, token: str) -> dict | None:
         return fake_users["tutor"] if token == "ok-token" else None
-
-    async def login_telegram_widget(self, data: dict[str, str]) -> dict | None:
-        return fake_users["tutor"] if data.get("hash") == "ok" else None
 
     async def link_telegram(self, user_id: str, data: dict[str, str]):
         if data.get("hash") == "ok":
@@ -211,6 +210,9 @@ class FakeLessons:
     async def finance_overview(self, tutor_user_id: str) -> dict:
         return {
             "month_earned": 3000,
+            # Ключ есть у настоящего finance_overview (lessons.py) и используется
+            # в tutor.html — без него шаблон падал на рендере кабинета.
+            "month_earned_change_pct": 12,
             "total_unpaid": 1000,
             "students": [{"student_id": "st1", "name": "Alice", "lessons": 3, "paid_sum": 2000, "unpaid_sum": 1000, "unpaid_count": 1}],
         }
@@ -478,12 +480,14 @@ async def run() -> None:
         r = await get("/", tutor_cookie)
         record("F001", r.status_code == 303 and r.headers.get("location") == "/tutor", "logged-in / redirects to tutor")
 
-        for sid, path in [("F002", "/privacy"), ("F002", "/terms"), ("F002", "/contacts")]:
+        for sid, path in [("F002", "/privacy"), ("F002", "/consent"), ("F002", "/terms"), ("F002", "/contacts")]:
             r = await get(path)
             record(sid, r.status_code == 200, f"GET {path} -> {r.status_code}")
 
-        r = await post("/register", {"full_name": "New Tutor", "email": "new@example.com", "password": "secret123", "ref": "REF123"})
+        r = await post("/register", {"full_name": "New Tutor", "email": "new@example.com", "password": "secret123", "ref": "REF123", "pd_consent": "1"})
         record("F003", r.status_code == 303 and r.headers.get("location") == "/tutor", "registration redirects to tutor")
+        r = await post("/register", {"full_name": "No Consent", "email": "nc@example.com", "password": "secret123"})
+        record("F003", r.status_code == 303 and "error=" in r.headers.get("location", ""), "registration without consent is rejected")
         record("F004", (await webapp.services.web_auth.register_tutor_email("", "bad", "1"))[1] is not None, "registration validation service returns errors")
         r = await post("/verify", {"email": "tutor@example.com", "code": "123456"})
         record("F005", r.status_code == 303 and r.headers.get("location") == "/tutor", "verification redirects to cabinet")
@@ -494,7 +498,7 @@ async def run() -> None:
         r = await post("/login", {"email": "wrong@example.com", "password": "bad"})
         record("F006", r.status_code == 303 and "bad_credentials" in r.headers.get("location", ""), "bad login redirects with error")
         r = await get("/auth/telegram/callback?hash=ok&ref=REF123")
-        record("F007", r.status_code == 303 and r.headers.get("location") == "/tutor", "telegram widget login redirects")
+        record("F007", r.status_code == 404, "telegram widget login route is gone (149-FZ art. 8 p. 10)")
         r = await get("/auth/telegram?token=ok-token")
         record("F008", r.status_code == 303 and r.headers.get("location") == "/tutor", "token auth redirects")
         r = await get("/logout")

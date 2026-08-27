@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <link rel="manifest" href="/static/manifest.json">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
-  <link rel="stylesheet" href="/static/landing.css?v=37">
+  <link rel="stylesheet" href="/static/landing.css?v=38">
 </head>
 <body>
 <div class="auth-page">
@@ -46,27 +46,21 @@
 
       <div class="auth-divider">или</div>
       <div class="auth-tg">
+        {# Виджет «Войти через Telegram» убран осознанно, не по недосмотру:
+           ст. 8 ч. 10 149-ФЗ запрещает передавать аутентификацию пользователей
+           из РФ иностранной информационной системе, а с 07.07.2026 за это
+           штрафуют (ст. 13.55 КоАП). Вход через бота при этом законен:
+           одноразовый токен выпускает сам Pingly (/auth/telegram?token=),
+           Telegram лишь доставляет сообщение — он транспорт, как СМС,
+           а не удостоверяющая личность сторона. #}
         {% if bot_username %}
-        <script async src="https://telegram.org/js/telegram-widget.js?22"></script>
-        <button type="button" class="tg-login-btn" onclick="tgLogin()">
+        <a class="tg-login-btn" href="https://t.me/{{ bot_username }}" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
-          Войти через Telegram
-        </button>
-        <script>
-          function onTelegramAuth(user) {
-            var qs = new URLSearchParams(user);
-            qs.append("intent", "login");
-            window.location.href = "/auth/telegram/callback?" + qs.toString();
-          }
-          function tgLogin() {
-            if (window.Telegram && Telegram.Login && Telegram.Login.auth) {
-              Telegram.Login.auth({ bot_id: "{{ tg_bot_id }}", request_access: "write" },
-                function (user) { if (user) onTelegramAuth(user); });
-            } else { setTimeout(tgLogin, 300); }
-          }
-        </script>
+          Получить ссылку в боте
+        </a>
+        <div class="auth-tg-note">Откроется бот — отправь ему команду <b>/web</b>, и он пришлёт ссылку в кабинет.</div>
         {% else %}
-        <div class="auth-tg-fallback">Вход через Telegram появится после настройки бота.</div>
+        <div class="auth-tg-fallback">Вход через бота появится после настройки Telegram.</div>
         {% endif %}
       </div>
 
@@ -74,6 +68,7 @@
     </div>
     <div class="auth-legal">
       <a href="/privacy">Политика конфиденциальности</a> ·
+      <a href="/consent">Согласие на обработку данных</a> ·
       <a href="/terms">Пользовательское соглашение</a> ·
       <a href="/contacts">Контакты</a>
     </div>

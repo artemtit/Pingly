@@ -121,6 +121,12 @@ _REGISTER_RATE = (5, 900.0)  # per IP / 15 min — signup spam
 _VERIFY_RATE = (10, 600.0)   # per email / 10 min — code guessing
 _RESEND_RATE = (3, 600.0)    # per email / 10 min — email bombing
 _TG_AUTH_RATE = (20, 300.0)  # per IP / 5 min — forged Telegram auth_date/hash guessing
+
+# Редакция текста согласия на обработку ПДн (страница /consent). Пишется в
+# users.pd_consent_version вместе с моментом согласия. Менять ОБЯЗАТЕЛЬНО при
+# любой правке смысла текста: иначе в базе будет написано, что человек
+# согласился с редакцией, которой он не видел.
+PD_CONSENT_VERSION = "2026-08-28"
 _TRACK_RATE = (240, 60.0)    # per IP / 1 min — публичный приём событий аналитики.
                              # Щедро: за одним IP сидит целый класс через NAT.
 
@@ -590,24 +596,6 @@ def _with_goal(url: str, goal: str) -> str:
     return f"{url}{'&' if '?' in url else '?'}goal={goal}"
 
 
-def _is_fresh_account(user: dict, within_seconds: int = 120) -> bool:
-    """Аккаунт создан только что? Telegram-виджет входа и регистрации — один и
-    тот же обработчик, и login_telegram_widget не сообщает, создал он юзера или
-    нашёл. Свежий created_at — достаточный признак, чтобы не засчитать вход
-    старого репетитора как регистрацию. Нет поля / кривая дата — считаем, что
-    это вход: лучше потерять цель, чем накрутить."""
-    raw = user.get("created_at")
-    if not raw:
-        return False
-    try:
-        created = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
-    except ValueError:
-        return False
-    if created.tzinfo is None:
-        created = created.replace(tzinfo=timezone.utc)
-    return (datetime.now(timezone.utc) - created).total_seconds() < within_seconds
-
-
 def _set_session(response: Response, user: dict) -> None:
     # S6: bind the cookie to the user's token_version so a logout-all / password
     # change can invalidate it. S5: Secure flag follows WEB_BASE_URL (https in prod).
@@ -756,7 +744,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/sitemap.xml")
     async def sitemap() -> Response:
         base = WEB_BASE_URL.rstrip("/")
-        paths = ["/", "/register", "/login", "/privacy", "/terms", "/contacts"]
+        paths = ["/", "/register", "/login", "/privacy", "/consent", "/terms", "/contacts"]
         # Public tutor pages are real, indexable content — include each enabled one.
         try:
             for slug in await services.public.list_public_slugs():
@@ -785,6 +773,15 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     @app.get("/terms", response_class=HTMLResponse)
     async def terms(request: Request) -> Response:
         return templates.TemplateResponse("legal_terms.html", {"request": request})
+
+    @app.get("/consent", response_class=HTMLResponse)
+    async def consent(request: Request) -> Response:
+        # Отдельный документ, а не раздел политики: политика информирует, а
+        # согласие по ст. 9 152-ФЗ — самостоятельный акт воли, и предъявлять
+        # его при проверке надо отдельно от всего остального.
+        return templates.TemplateResponse(
+            "legal_consent.html", {"request": request, "consent_version": PD_CONSENT_VERSION},
+        )
 
     @app.get("/contacts", response_class=HTMLResponse)
     async def contacts(request: Request) -> Response:
@@ -822,7 +819,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
     async def register_submit(
         request: Request,
         full_name: str = Form(...), email: str = Form(...), password: str = Form(...),
-        ref: str = Form(""),
+        ref: str = Form(""), pd_consent: str = Form(""),
         cf_turnstile_response: str = Form("", alias="cf-turnstile-response"),
     ) -> Response:
         from urllib.parse import quote
@@ -832,8 +829,16 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         if _config.CAPTCHA_ENABLED:
             if not await _captcha.verify_turnstile(cf_turnstile_response, ip):
                 return RedirectResponse(f"/register?error={quote('Подтвердите, что вы не робот')}", status_code=303)
+        # required у чекбокса — подсказка браузеру, а не защита: форму можно
+        # отправить и мимо страницы. Согласие проверяем здесь, иначе в базе
+        # окажутся аккаунты с записанным согласием, которого никто не давал.
+        if pd_consent != "1":
+            return RedirectResponse(
+                f"/register?error={quote('Нужно согласие на обработку персональных данных')}", status_code=303,
+            )
         user, err = await services.web_auth.register_tutor_email(
             full_name, email, password, require_verification=_config.EMAIL_VERIFICATION_ENABLED,
+            consent_version=PD_CONSENT_VERSION,
         )
         if err or not user:
             return RedirectResponse(f"/register?error={quote(err or 'Не удалось зарегистрироваться')}", status_code=303)
@@ -904,39 +909,23 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         _set_session(response, user)
         return response
 
-    @app.get("/auth/telegram/callback")
-    async def auth_telegram_widget(request: Request) -> Response:
-        ip = _client_ip(request)
-        if not _rate_ok(f"tgauth:{ip}", *_TG_AUTH_RATE):
-            return RedirectResponse("/login?error=too_many", status_code=303)
-        data = dict(request.query_params)
-        # `ref` and `intent` are not part of Telegram's signed payload — pop
-        # them before the hash check. apply_referral is idempotent (one bonus
-        # per account), so it's safe to call whenever a ref link is used.
-        ref = (data.pop("ref", "") or "").strip()
-        intent = data.pop("intent", "register")
-        if intent == "login":
-            # /login must never silently create a second, empty account for
-            # someone who already registered by email and just forgot to link
-            # Telegram — only log in if this tg_id is already linked.
-            user, sig_ok = await services.web_auth.find_tg_account(data)
-            if not sig_ok:
-                return RedirectResponse("/login?error=tg_failed", status_code=303)
-            if not user:
-                return RedirectResponse("/login?error=tg_no_account", status_code=303)
-        else:
-            user = await services.web_auth.login_telegram_widget(data)
-            if not user:
-                return RedirectResponse("/login?error=tg_failed", status_code=303)
-        if ref:
-            await services.accounts.apply_referral(user["id"], ref)
-        goal = "?goal=signup" if _is_fresh_account(user) else ""
-        response = RedirectResponse(f"{_cabinet_url(user)}{goal}", status_code=303)
-        _set_session(response, user)
-        return response
+    # Роут /auth/telegram/callback (Telegram Login Widget) удалён 28.08.2026.
+    # Ст. 8 ч. 10 149-ФЗ запрещает проводить авторизацию пользователей из РФ
+    # через иностранную информационную систему, а ст. 13.55 КоАП (с 07.07.2026)
+    # добавила за это штраф. Виджет подтверждал личность на стороне Telegram —
+    # это ровно запрещённый механизм, поэтому убран и он, и создававший под него
+    # аккаунты login_telegram_widget(). Вход через бота (/auth/telegram?token=)
+    # остался: токен выпускает Pingly, Telegram лишь доставляет сообщение.
+    # Привязка Telegram ниже — не авторизация: пользователь уже вошёл, и виджет
+    # тут лишь подтверждает владение аккаунтом для доставки уведомлений.
 
     @app.post("/auth/telegram/link")
     async def auth_telegram_link(request: Request, user: dict = Depends(current_user)) -> Response:
+        # Эндпоинт по-прежнему проверяет подпись Telegram, значит подпись можно
+        # пытаться подбирать. Лимит переехал сюда со снятого виджет-роута.
+        if not _rate_ok(f"tglink:{_client_ip(request)}", *_TG_AUTH_RATE):
+            base = "/tutor/settings" if user["role"] == "tutor" else "/student/settings"
+            return RedirectResponse(f"{base}?error=too_many", status_code=303)
         form = await request.form()
         data = {k: str(v) for k, v in form.items()}
         ok, err = await services.web_auth.link_telegram(user["id"], data)

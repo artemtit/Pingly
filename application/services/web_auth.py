@@ -88,6 +88,7 @@ class WebAuthService:
     # ---------------- Email + password ----------------
     async def register_tutor_email(
         self, full_name: str, email: str, password: str, require_verification: bool = False,
+        consent_version: str | None = None,
     ) -> tuple[dict | None, str | None]:
         full_name = (full_name or "").strip()
         email = (email or "").strip().lower()
@@ -103,6 +104,7 @@ class WebAuthService:
         try:
             user = await self.repo.create_email_tutor(
                 email, hash_password(password), full_name, email_verified=not require_verification,
+                consent_version=consent_version,
             )
         except Exception:
             # Two near-simultaneous registrations with the same email both pass
@@ -243,46 +245,14 @@ class WebAuthService:
         await self.repo.set_user_telegram(user_id, tg_id, data.get("username"))
         return True, None
 
-    async def find_tg_account(self, data: dict[str, str]) -> tuple[dict | None, bool]:
-        """Look up (never create) an account by Telegram widget data. Returns
-        (user_or_None, signature_ok) so the /login flow can tell "bad Telegram
-        payload" apart from "valid payload, no account linked yet" — the latter
-        must NOT silently create a duplicate for someone who already has an
-        email account (see login_telegram_widget's docstring)."""
-        if not self.verify_telegram_widget(data):
-            return None, False
-        tg_id = data.get("id")
-        if not tg_id or not str(tg_id).isdigit():
-            return None, False
-        return await self.repo.get_user_by_tg_id(int(tg_id)), True
-
-    async def login_telegram_widget(self, data: dict[str, str]) -> dict | None:
-        """Log in by Telegram widget, creating a brand-new tutor account if this
-        tg_id isn't linked to anyone yet. Only safe to call from a REGISTER
-        context — on /login use find_tg_account instead, since this always
-        creates on a miss and can't tell "new user" from "existing email-only
-        user who forgot to link Telegram" apart (the widget never exposes
-        email, so there's nothing to match against)."""
-        if not self.verify_telegram_widget(data):
-            return None
-        tg_id = data.get("id")
-        if not tg_id or not str(tg_id).isdigit():
-            return None
-        full_name = " ".join(filter(None, [data.get("first_name"), data.get("last_name")])).strip() or "Репетитор"
-        username = data.get("username")
-        existing = await self.repo.get_user_by_tg_id(int(tg_id))
-        if existing:
-            return existing
-        try:
-            user = await self.repo.upsert_tutor_user(int(tg_id), full_name, username)
-        except Exception:
-            # Two near-simultaneous widget logins for the same tg_id both pass the
-            # check above; the DB's unique constraint rejects the second insert —
-            # re-fetch instead of surfacing a 500.
-            user = await self.repo.get_user_by_tg_id(int(tg_id))
-            if not user:
-                raise
-        founder_notify.notify(
-            f"🆕 Регистрация (Telegram)\nИмя: {full_name}" + (f"\nTG: @{username}" if username else "")
-        )
-        return user
+    # find_tg_account() и login_telegram_widget() удалены 28.08.2026.
+    # Они обслуживали вход и регистрацию через Telegram Login Widget, то есть
+    # проводили авторизацию пользователя силами иностранной информационной
+    # системы — запрещено ст. 8 ч. 10 149-ФЗ, штраф по ст. 13.55 КоАП с
+    # 07.07.2026. Удалены вместе с роутом, а не оставлены «на всякий случай»:
+    # живой метод, создающий аккаунты по иностранному SSO, рано или поздно
+    # подключат обратно по невнимательности.
+    # Законные пути входа: пароль (login_email), одноразовый токен из бота
+    # (create_login_link_for_tg / consume_login_token) и привязка Telegram уже
+    # вошедшим пользователем (link_telegram) — она не авторизация, а канал
+    # доставки уведомлений.

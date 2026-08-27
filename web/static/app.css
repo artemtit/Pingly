@@ -947,6 +947,7 @@ details.series-item:last-child { border-bottom: 0; }
 .legal-article li { margin-bottom: 6px; }
 .legal-article a { color: var(--color-primary-700); font-weight: 600; text-decoration: underline; }
 .legal-meta { color: var(--color-text-muted); font-size: 13px; margin-bottom: 18px; }
+.legal-note { color: var(--color-text-muted); font-size: 13.5px; margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--color-border); }
 .legal-contacts { display: grid; gap: 12px; margin: 20px 0; }
 .legal-contact { display: flex; flex-direction: column; gap: 2px; padding: 14px 18px;
   border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-bg-subtle);

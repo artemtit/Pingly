@@ -42,6 +42,7 @@ def _legal_keyboard() -> InlineKeyboardMarkup:
     """Permanent-access buttons to the legal docs and support (payment review needs these)."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📄 Политика конфиденциальности", url=f"{WEB_URL}/privacy")],
+        [InlineKeyboardButton(text="✅ Согласие на обработку данных", url=f"{WEB_URL}/consent")],
         [InlineKeyboardButton(text="📑 Пользовательское соглашение", url=f"{WEB_URL}/terms")],
         [InlineKeyboardButton(text="💬 Поддержка", url=f"https://t.me/{config.SUPPORT_USERNAME}")],
     ])
