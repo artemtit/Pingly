@@ -6,8 +6,9 @@
   <meta name="theme-color" content="#FBFBFD" id="theme-color-meta">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="robots" content="noindex, nofollow">
-  <title>Pingly</title>
+  {% block robots %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+  <title>{% block title %}Pingly{% endblock %}</title>
+  {% block head_extra %}{% endblock %}
   <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <link rel="manifest" href="/static/manifest.json">

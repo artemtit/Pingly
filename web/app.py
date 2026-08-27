@@ -249,6 +249,7 @@ templates.env.globals["paywall_enabled"] = _config.PAYWALL_ENABLED and _config.P
 templates.env.globals["web_base"] = _config.WEB_BASE_URL
 templates.env.globals["posthog_key"] = _config.POSTHOG_KEY
 templates.env.globals["posthog_host"] = _config.POSTHOG_HOST
+templates.env.globals["metrika_id"] = _config.METRIKA_ID
 templates.env.globals["payments_enabled"] = _config.PAYMENTS_ENABLED
 templates.env.globals["captcha_enabled"] = _config.CAPTCHA_ENABLED
 templates.env.globals["turnstile_site_key"] = _config.TURNSTILE_SITE_KEY
@@ -581,6 +582,30 @@ def _cabinet_url(user: dict) -> str:
     return "/tutor" if user["role"] == "tutor" else "/student"
 
 
+def _with_goal(url: str, goal: str) -> str:
+    """Прицепить ?goal=<имя> к redirect-адресу. Фронт (partials/analytics.html)
+    отправит цель в Метрику и вычистит параметр из адресной строки."""
+    return f"{url}{'&' if '?' in url else '?'}goal={goal}"
+
+
+def _is_fresh_account(user: dict, within_seconds: int = 120) -> bool:
+    """Аккаунт создан только что? Telegram-виджет входа и регистрации — один и
+    тот же обработчик, и login_telegram_widget не сообщает, создал он юзера или
+    нашёл. Свежий created_at — достаточный признак, чтобы не засчитать вход
+    старого репетитора как регистрацию. Нет поля / кривая дата — считаем, что
+    это вход: лучше потерять цель, чем накрутить."""
+    raw = user.get("created_at")
+    if not raw:
+        return False
+    try:
+        created = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - created).total_seconds() < within_seconds
+
+
 def _set_session(response: Response, user: dict) -> None:
     # S6: bind the cookie to the user's token_version so a logout-all / password
     # change can invalidate it. S5: Secure flag follows WEB_BASE_URL (https in prod).
@@ -774,7 +799,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         if _config.EMAIL_VERIFICATION_ENABLED:
             await services.web_auth.send_verification_code(user)
             return RedirectResponse(f"/verify?email={quote(user['email'])}", status_code=303)
-        response = RedirectResponse(_cabinet_url(user), status_code=303)
+        response = RedirectResponse(f"{_cabinet_url(user)}?goal=signup", status_code=303)
         _set_session(response, user)
         return response
 
@@ -862,7 +887,8 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
                 return RedirectResponse("/login?error=tg_failed", status_code=303)
         if ref:
             await services.accounts.apply_referral(user["id"], ref)
-        response = RedirectResponse(_cabinet_url(user), status_code=303)
+        goal = "?goal=signup" if _is_fresh_account(user) else ""
+        response = RedirectResponse(f"{_cabinet_url(user)}{goal}", status_code=303)
         _set_session(response, user)
         return response
 
@@ -1005,7 +1031,7 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         student = await services.students.create_student_for_user(
             user["id"], name, tg_username, subject_summary,
         )
-        return RedirectResponse(f"/tutor/students/{student['id']}?created=1", status_code=303)
+        return RedirectResponse(f"/tutor/students/{student['id']}?created=1&goal=student_added", status_code=303)
 
     @app.get("/tutor/students/{student_id}", response_class=HTMLResponse)
     async def tutor_student_card(
@@ -1147,8 +1173,8 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
             )
         # quick-add from the calendar returns to the same view, not to month
         if back.startswith("/tutor/"):
-            return RedirectResponse(back, status_code=303)
-        return RedirectResponse("/tutor/calendar?view=month", status_code=303)
+            return RedirectResponse(_with_goal(back, "schedule_created"), status_code=303)
+        return RedirectResponse("/tutor/calendar?view=month&goal=schedule_created", status_code=303)
 
     @app.get("/tutor/homework", response_class=HTMLResponse)
     async def tutor_homework(request: Request, user: dict = Depends(current_user)) -> Response:

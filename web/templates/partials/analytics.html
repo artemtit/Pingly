@@ -14,3 +14,50 @@
   window.plTrack = function (name, props) { try { if (window.posthog) posthog.capture(name, props || {}); } catch (e) {} };
 </script>
 {% endif %}
+
+{% if metrika_id %}
+{# Яндекс.Метрика. webvisor пишет DOM страницы, поэтому он включается только
+   там, где шаблон сам выставил metrika_webvisor — на маркетинговых страницах
+   без чужих персданных. В кабинете (base.html) он выключен: там ФИО учеников,
+   их телефоны и переписка. #}
+<script type="text/javascript">
+   (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+   m[i].l=1*new Date();
+   for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+   k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+   (window, document,'script','https://mc.yandex.ru/metrika/tag.js?id={{ metrika_id }}', 'ym');
+
+   ym({{ metrika_id }}, 'init', {ssr:true, webvisor:{{ 'true' if metrika_webvisor|default(false) else 'false' }}, clickmap:true, accurateTrackBounce:true, trackLinks:true});
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/{{ metrika_id }}" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+{% endif %}
+
+<script>
+  // Один хелпер на обе системы: существующие вызовы plTrack(...) из шаблонов
+  // становятся целями Метрики без правки мест вызова. Определяется всегда,
+  // даже когда обе системы выключены, — иначе onsubmit-обработчики упадут.
+  (function () {
+    var prev = window.plTrack;
+    window.plTrack = function (name, props) {
+      try { if (prev) prev(name, props); } catch (e) {}
+      try { if (window.ym) ym({{ metrika_id or 0 }}, 'reachGoal', name, props || {}); } catch (e) {}
+    };
+  }());
+
+  // Серверные цели: редирект после успешного действия несёт ?goal=<имя>.
+  // Список закрытый — параметр приходит из адресной строки, и без него любой
+  // желающий накрутил бы конверсии, просто открыв /tutor?goal=signup.
+  (function () {
+    var ALLOWED = ['signup', 'student_added', 'schedule_created'];
+    try {
+      var q = new URLSearchParams(location.search);
+      var goal = q.get('goal');
+      if (!goal) return;
+      if (ALLOWED.indexOf(goal) !== -1) window.plTrack(goal);
+      // Параметр убираем из URL: иначе F5 засчитает цель повторно.
+      q.delete('goal');
+      var qs = q.toString();
+      history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+    } catch (e) {}
+  }());
+</script>

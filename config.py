@@ -76,6 +76,12 @@ RESEND_FROM: str = os.getenv("RESEND_FROM", "Pingly <onboarding@resend.dev>")
 POSTHOG_KEY: str = os.getenv("POSTHOG_KEY", "")
 POSTHOG_HOST: str = os.getenv("POSTHOG_HOST", "https://us.i.posthog.com")
 
+# Яндекс.Метрика. ID счётчика не секрет (он и так виден в HTML), поэтому лежит
+# в коде — METRIKA_ID= в .env выключает счётчик целиком. Вебвизор пишет DOM
+# страницы, поэтому включается ТОЛЬКО на маркетинговых страницах без чужих
+# персданных (см. metrika_webvisor в шаблонах) — никогда в кабинете.
+METRIKA_ID: str = os.getenv("METRIKA_ID", "112019163")
+
 # Cloudflare Turnstile CAPTCHA on registration. Off until site/secret keys are set.
 CAPTCHA_ENABLED: bool = os.getenv("CAPTCHA_ENABLED", "0") == "1"
 TURNSTILE_SITE_KEY: str = os.getenv("TURNSTILE_SITE_KEY", "")
