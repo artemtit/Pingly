@@ -145,6 +145,17 @@
   .card-head p { margin: 2px 0 0; font-size: 13.5px; color: var(--fg2); }
 
   .field { margin-bottom: 16px; }
+  /* Согласие на ПДн: крупная область клика, по 16-пиксельному чекбоксу
+     на телефоне не попасть, а без отметки заявка не уйдёт. */
+  .book-consent {
+    display: flex; align-items: flex-start; gap: 10px; margin: 4px 0 18px;
+    font-size: 13px; line-height: 1.5; color: var(--fg2); cursor: pointer;
+  }
+  .book-consent input {
+    flex: 0 0 auto; width: 18px; height: 18px; margin: 1px 0 0;
+    accent-color: var(--accent, #F97316); cursor: pointer;
+  }
+  .book-consent a { color: var(--fg1); font-weight: 600; text-decoration: underline; }
   .field label { display: block; margin-bottom: 7px; font-size: 14px; font-weight: 600; color: var(--fg1); }
   .field .opt { font-weight: 500; color: var(--fg2); }
   .input-shell { position: relative; display: flex; align-items: center; }
@@ -243,6 +254,15 @@
     {% if profile.bio %}<p class="bio reveal d2">{{ profile.bio }}</p>{% endif %}
 
     <main>
+    {% if error == "consent" %}
+    <section class="success reveal" aria-live="polite" style="border-color:#EF4444;">
+      <div class="badge" aria-hidden="true" style="background:#EF4444;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="8" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      </div>
+      <h2>Заявка не отправлена</h2>
+      <p>Нужно отметить согласие на обработку персональных данных — без него мы не можем передать заявку репетитору.</p>
+    </section>
+    {% endif %}
     {% if sent %}
     <section class="success reveal" aria-live="polite">
       <div class="badge" aria-hidden="true">
@@ -296,6 +316,14 @@
           <label for="comment">Комментарий <span class="opt">— необязательно</span></label>
           <textarea class="textarea" id="comment" name="comment" placeholder="Цель занятий, класс, что хочется подтянуть"></textarea>
         </div>
+
+        {# Форма собирает имя и контакт человека, часто — школьника или его
+           родителя. С 01.09.2025 (ФЗ-156) согласие должно быть отдельным
+           осознанным действием, а не следствием нажатия «Записаться». #}
+        <label class="book-consent">
+          <input type="checkbox" name="pd_consent" value="1" required>
+          <span>Я даю <a href="/consent" target="_blank" rel="noopener">согласие на обработку персональных данных</a>. Если записывается несовершеннолетний, согласие даёт родитель или иной законный представитель.</span>
+        </label>
 
         <button class="btn" type="submit">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path><path d="m21.854 2.147-10.94 10.939"></path></svg>

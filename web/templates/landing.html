@@ -26,9 +26,10 @@
   <link rel="icon" type="image/svg+xml" href="/static/logo-mark.svg">
   <link rel="apple-touch-icon" href="/static/icon-192.png">
   <link rel="manifest" href="/static/manifest.json">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@700;800&display=swap">
+  <!-- Onest со своего сервера, а не с fonts.googleapis.com: загрузка с Google
+       отправляла бы IP и User-Agent посетителя в США — трансграничная передача
+       ПДн (ст. 12 152-ФЗ). Заодно перестанет зависеть от доступности Google. -->
+  <link rel="stylesheet" href="/static/fonts/onest.css?v=1">
   <link rel="stylesheet" href="/design-tokens.css?v=2">
   <link rel="stylesheet" href="/static/landing.css?v=38">
   <script src="/static/landing.js?v=8" defer></script>

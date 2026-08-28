@@ -28,7 +28,12 @@
       <a href="/terms">Пользовательское соглашение</a>
       <a href="/contacts">Контакты и поддержка</a>
     </div>
-    <div class="muted">© 2026 Pingly · pingly-app.ru</div>
+    <div class="muted">
+      © 2026 Pingly · pingly-app.ru
+      {# Ст. 10 149-ФЗ: кто распространяет информацию. Появляется, когда
+         OWNER_NAME задан в .env — см. комментарий в config.py. #}
+      {% if owner_name %}<br>{{ owner_name }}{% if owner_status %}, {{ owner_status }}{% endif %} · {{ support_email }}{% endif %}
+    </div>
   </footer>
 </div>
 {% endblock %}

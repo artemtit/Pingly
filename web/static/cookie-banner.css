@@ -1,0 +1,45 @@
+/* Баннер согласия на куки. Собственные стили, без зависимости от app.css
+   или landing.css: баннер показывается и на лендинге, и в кабинете,
+   а у них разные наборы переменных. */
+.pl-cookie {
+  position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 9999;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+  max-width: 720px; margin: 0 auto; padding: 16px 18px;
+  background: #FFFFFF; color: #0F172A;
+  border: 1px solid #E2E8F0; border-radius: 14px;
+  box-shadow: 0 18px 40px -18px rgba(15, 23, 42, .45);
+  font-family: inherit; font-size: 13.5px; line-height: 1.5;
+  opacity: 0; transform: translateY(12px);
+  transition: opacity .25s ease, transform .25s ease;
+}
+.pl-cookie--in  { opacity: 1; transform: translateY(0); }
+.pl-cookie--out { opacity: 0; transform: translateY(12px); }
+.pl-cookie__text { flex: 1 1 320px; }
+.pl-cookie__text a { color: #C2410C; font-weight: 600; text-decoration: underline; }
+.pl-cookie__btns { display: flex; gap: 8px; flex: 0 0 auto; }
+.pl-cookie button {
+  font: inherit; font-weight: 600; cursor: pointer;
+  padding: 9px 16px; border-radius: 10px; border: 1px solid transparent;
+  transition: background .15s ease, border-color .15s ease;
+}
+.pl-cookie__no  { background: transparent; border-color: #CBD5E1; color: #475569; }
+.pl-cookie__no:hover  { background: #F1F5F9; }
+.pl-cookie__yes { background: #F97316; color: #fff; }
+.pl-cookie__yes:hover { background: #EA580C; }
+.pl-cookie button:focus-visible { outline: 2px solid #EA580C; outline-offset: 2px; }
+
+@media (prefers-color-scheme: dark) {
+  .pl-cookie { background: #1E293B; color: #E2E8F0; border-color: #334155; }
+  .pl-cookie__text a { color: #FB923C; }
+  .pl-cookie__no { border-color: #475569; color: #CBD5E1; }
+  .pl-cookie__no:hover { background: #334155; }
+}
+:root[data-theme="dark"] .pl-cookie { background: #1E293B; color: #E2E8F0; border-color: #334155; }
+:root[data-theme="dark"] .pl-cookie__text a { color: #FB923C; }
+:root[data-theme="dark"] .pl-cookie__no { border-color: #475569; color: #CBD5E1; }
+
+@media (max-width: 560px) {
+  .pl-cookie { padding: 14px; gap: 12px; }
+  .pl-cookie__btns { width: 100%; }
+  .pl-cookie button { flex: 1; }
+}

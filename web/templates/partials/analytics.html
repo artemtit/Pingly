@@ -16,20 +16,29 @@
 {% endif %}
 
 {% if metrika_id %}
-{# Яндекс.Метрика. webvisor пишет DOM страницы, поэтому он включается только
-   там, где шаблон сам выставил metrika_webvisor — на маркетинговых страницах
-   без чужих персданных. В кабинете (base.html) он выключен: там ФИО учеников,
-   их телефоны и переписка. #}
-<script type="text/javascript">
-   (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-   m[i].l=1*new Date();
-   for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-   k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-   (window, document,'script','https://mc.yandex.ru/metrika/tag.js?id={{ metrika_id }}', 'ym');
+{# Метрика НЕ стартует сама. Она ставит _ym_uid и другие cookie-идентификаторы,
+   а РКН считает их персональными данными: с 01.09.2025 (ФЗ-156) на них нужно
+   отдельное согласие. Поэтому весь код обёрнут в plStartMetrika(), а вызывает
+   его cookie-banner.js — либо сразу, если согласие уже сохранено, либо после
+   нажатия «Принять».
 
-   ym({{ metrika_id }}, 'init', {ssr:true, webvisor:{{ 'true' if metrika_webvisor|default(false) else 'false' }}, clickmap:true, accurateTrackBounce:true, trackLinks:true});
+   webvisor пишет DOM страницы, поэтому включается только там, где шаблон сам
+   выставил metrika_webvisor — на маркетинговых страницах без чужих персданных.
+   В кабинете (base.html) он выключен: там ФИО учеников, их телефоны
+   и переписка. #}
+<script type="text/javascript">
+  window.plStartMetrika = function () {
+    if (window.__plMetrikaStarted) return;
+    window.__plMetrikaStarted = true;
+    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+    m[i].l=1*new Date();
+    for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+    k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+    (window, document,'script','https://mc.yandex.ru/metrika/tag.js?id={{ metrika_id }}', 'ym');
+
+    ym({{ metrika_id }}, 'init', {ssr:true, webvisor:{{ 'true' if metrika_webvisor|default(false) else 'false' }}, clickmap:true, accurateTrackBounce:true, trackLinks:true});
+  };
 </script>
-<noscript><div><img src="https://mc.yandex.ru/watch/{{ metrika_id }}" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 {% endif %}
 
 <script>
@@ -46,9 +55,16 @@
 
 </script>
 
-{# Собственная аналитика. Идёт последней в цепочке plTrack и всегда включена:
-   это наши данные, они никуда не уходят, и только они дают честные цифры. #}
+{# Собственная аналитика. Идёт последней в цепочке plTrack и работает без
+   баннера сознательно: не ставит кук, не хранит IP, идентификатор в ней —
+   случайное число, а не отпечаток браузера, и она уважает Do Not Track.
+   Гасить её вместе с Метрикой значило бы остаться без честных цифр
+   ради формальности. #}
 <script src="/static/pl-metrics.js?v=1"></script>
+
+{# Баннер грузится после Метрики: он вызывает plStartMetrika(). #}
+<link rel="stylesheet" href="/static/cookie-banner.css?v=1">
+<script src="/static/cookie-banner.js?v=1" defer></script>
 
 <script>
   // Серверные цели: редирект после успешного действия несёт ?goal=<имя>.

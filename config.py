@@ -26,6 +26,18 @@ SUPPORT_TG_ID: int = int(os.getenv("SUPPORT_TG_ID", "2091126912") or 0)
 SUPPORT_USERNAME: str = os.getenv("SUPPORT_USERNAME", "Pingly_Admin").lstrip("@")
 SUPPORT_EMAIL: str = os.getenv("SUPPORT_EMAIL", "support@pingly-app.ru")
 
+# Реквизиты владельца сайта. Ст. 10 149-ФЗ требует, чтобы распространяемая
+# информация содержала сведения, достаточные для идентификации того, кто её
+# распространяет. Для физлица это ФИО. Пусто = блок в подвале не рисуется:
+# публиковать чужое имя без явного решения нельзя, поэтому значение задаётся
+# только через .env, а не хардкодом.
+OWNER_NAME: str = os.getenv("OWNER_NAME", "")
+OWNER_STATUS: str = os.getenv("OWNER_STATUS", "")  # напр. «самозанятый» — когда появится
+# Ст. 9 ч. 4 152-ФЗ требует в тексте согласия адрес оператора. Публиковать
+# домашний адрес несовершеннолетнего — плохая идея, поэтому значение задаёт
+# Артём сам: можно ограничиться городом. Пусто = блок не рисуется.
+OWNER_ADDRESS: str = os.getenv("OWNER_ADDRESS", "")
+
 # Founder ops alerts: a *separate* Telegram bot that pings the founder on key business
 # events (new registration, payment). Token lives in .env only. Delivery target defaults
 # to SUPPORT_TG_ID (Артём); the founder must open a chat with this bot once (/start) or

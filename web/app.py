@@ -251,6 +251,9 @@ templates.env.filters["ru_days"] = _ru_days
 templates.env.filters["ru_hours"] = lambda n: _plural_hours(int(n))
 templates.env.globals["subscription_info"] = _subscription_info
 templates.env.globals["support_email"] = _config.SUPPORT_EMAIL
+templates.env.globals["owner_name"] = _config.OWNER_NAME
+templates.env.globals["owner_status"] = _config.OWNER_STATUS
+templates.env.globals["owner_address"] = _config.OWNER_ADDRESS
 templates.env.globals["support_username"] = _config.SUPPORT_USERNAME
 templates.env.globals["tg_bot_id"] = _config.BOT_ID
 templates.env.globals["paywall_enabled"] = _config.PAYWALL_ENABLED and _config.PAYMENTS_ENABLED
@@ -973,14 +976,16 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
 
     # ---------------- PUBLIC BOOKING (/u/<slug>) ----------------
     @app.get("/u/{slug}", response_class=HTMLResponse)
-    async def public_profile(request: Request, slug: str, sent: str | None = None) -> Response:
+    async def public_profile(request: Request, slug: str, sent: str | None = None,
+                             error: str | None = None) -> Response:
         profile = await services.public.get_public_profile(slug)
         if not profile:
             raise HTTPException(status_code=404)
         tutor_name = (profile.get("users") or {}).get("full_name") or profile.get("display_name") or "Репетитор"
         return templates.TemplateResponse("public_profile.html", {
             "request": request, "profile": profile, "tutor_name": tutor_name,
-            "slug": profile.get("slug"), "sent": sent, "bot_username": _config.BOT_USERNAME,
+            "slug": profile.get("slug"), "sent": sent, "error": error,
+            "bot_username": _config.BOT_USERNAME,
             "badges": services.public.parse_badges(profile.get("badges")),
             "page_theme": profile.get("page_theme") or "auto",
             "web_base": _config.WEB_BASE_URL,
@@ -994,10 +999,15 @@ def register_routes(app: FastAPI) -> None:  # noqa: C901 - route table
         contact: str = Form(...),
         preferred_time: str = Form(""),
         comment: str = Form(""),
+        pd_consent: str = Form(""),
     ) -> Response:
         client_ip = _client_ip(request)
         if not _rate_ok(f"book:{client_ip}:{slug}", _BOOK_RATE_MAX, _BOOK_RATE_WINDOW):
             return RedirectResponse(f"/u/{slug}?sent=1", status_code=303)
+        # Без согласия заявку не принимаем. Молча игнорировать нельзя: человек
+        # решит, что записался, и будет ждать ответа, которого не будет.
+        if pd_consent != "1":
+            return RedirectResponse(f"/u/{slug}?error=consent", status_code=303)
         request_row = await services.public.create_booking(slug, name, contact, preferred_time, comment)
         if request_row:
             target = await services.public.booking_push_target(request_row["tutor_user_id"], name.strip(), contact.strip())
