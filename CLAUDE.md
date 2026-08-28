@@ -22,7 +22,12 @@
 - Python + aiogram 3
 - Supabase (PostgreSQL)
 - APScheduler — напоминания по расписанию
-- VPS Timeweb (Ubuntu 22.04, IP: 81.85.73.173)
+- VPS **vdska, Варшава (Польша)** — Ubuntu 22.04, IP 81.85.73.173, hostname `vdska`,
+  AS49791 Newserverlife LLC. **Не Timeweb и не Россия** — проверено 28.08.2026 по IP.
+  Машина общая: рядом живут Nota (3 юнита), flowly, lmh-bank, личный VPN `sing-box`,
+  nginx, redis и **postgresql@14** (порт 5432 занят — учитывать при установке БД).
+  Заграничное расположение = нерешённая локализация ПДн по ч. 5 ст. 18 152-ФЗ,
+  см. `scripts/migrate_to_ru/README.md`.
 
 ## Деплой — обязательно после каждого изменения
 После любого изменения кода нужно:
