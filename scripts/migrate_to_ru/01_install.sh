@@ -111,6 +111,47 @@ UNIT
 systemctl daemon-reload
 systemctl enable --now postgrest
 
+echo "==> ежедневное резервное копирование"
+# Не необязательная роскошь: в уведомлении РКН заявлено «резервное копирование
+# базы данных», и на Supabase оно было встроенным. После переезда его надо
+# обеспечить самому, иначе заявленная мера защиты перестанет существовать.
+cat > /usr/local/bin/pingly-backup <<'BAK'
+#!/usr/bin/env bash
+set -euo pipefail
+DIR=/var/backups/pingly
+mkdir -p "$DIR"
+FILE="$DIR/pingly-$(date +%Y%m%d-%H%M).sql.gz"
+sudo -u postgres pg_dump pingly | gzip > "$FILE"
+chmod 600 "$FILE"
+# Держим две недели: дольше не нужно, а место на диске тут не бесконечное.
+find "$DIR" -name 'pingly-*.sql.gz' -mtime +14 -delete
+BAK
+chmod 700 /usr/local/bin/pingly-backup
+
+cat > /etc/systemd/system/pingly-backup.service <<UNIT
+[Unit]
+Description=Pingly database backup
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pingly-backup
+UNIT
+
+cat > /etc/systemd/system/pingly-backup.timer <<UNIT
+[Unit]
+Description=Ежедневный бэкап базы Pingly
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable --now pingly-backup.timer
+
 echo "==> anon-ключ (JWT с role=anon, как у Supabase)"
 # Заголовок и payload в base64url, подпись HMAC-SHA256 — тот же формат,
 # который supabase-py уже умеет отправлять.
